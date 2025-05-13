@@ -59,7 +59,7 @@ If you prefer not to or cannot use the App Store or SideStore/AltStore (Sources)
 
 ---
 
-## Usage guide
+# Post-install Usage Guide
 
 ## Pairing Instructions
 
@@ -87,7 +87,7 @@ If you prefer not to or cannot use the App Store or SideStore/AltStore (Sources)
 2. **Set a passcode** for your device if you haven't already. Unlock your device and connect it to your computer via cable. When a prompt appears, tap "Trust."
 3. Open your device to the homescreen.
 4. Execute `jitterbugpair` by double-clicking or right-clicking and selecting "Open".
-5. If you get "macOS cannot verify that this app is free from malware":
+5. If you get the message" "macOS cannot verify that this app is free from malware":
    - Go to System Settings > Privacy & Security
    - Scroll down to the message about the app
    - Click "Open Anyway"
