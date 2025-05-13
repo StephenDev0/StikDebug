@@ -86,12 +86,12 @@ If you prefer not to or cannot use the App Store, SideStore, or AltStore, altern
 1. **Extract** `jitterbugpair-macos.zip`.
 2. **Set a passcode** for your device if you haven't already. Unlock your device and connect it to your computer via cable. When a prompt appears, tap "Trust."
 3. Open your device to the homescreen.
-4. Execute `jitterbugpair` by double-clicking or right-clicking and selecting "Open".
+4. Open `jitterbugpair` by double-clicking it or right-clicking it and selecting "Open."
 5. If you get the message" "macOS cannot verify that this app is free from malware":
    - Go to System Settings > Privacy & Security
    - Scroll down to the message about the app
    - Click "Open Anyway"
-   - If the program doesn't run automatically, try manually runnin git again
+   - If the program doesn't run automatically, try manually running it again
 6. JitterbugPair will generate a **pairing file** with the extension `.mobiledevicepairing` to your user's home folder.
 7. **Transfer the pairing file** to your iOS device using AirDrop, iCloud/One/Google Drive, email, or any other method. For best results, compress the file into a .zip folder first.
 
