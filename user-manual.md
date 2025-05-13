@@ -134,7 +134,7 @@ If you prefer not to or cannot use the App Store or SideStore/AltStore (Sources)
    - StikJIT or StikDebug will now be **paired** with your iDevice.
    
 2. **Enable VPN:**  
-   Start by activating StosVPN for StikJIT or the built-in VPN in StikDebug.
+   Activate StosVPN for StikJIT or the built-in VPN in StikDebug.
 
 3. **Upload the Pairing File:**  
    When prompted, import the **unzipped pairing file** obtained via JitterbugPair.
