@@ -43,7 +43,7 @@ This document outlines the installation process for StikJIT, both with and witho
 
 ## StikJIT installation without SideStore or AltStore
 
-If you prefer not to or cannot use the App Store or SideStore/AltStore (Sources), alternative methods such as Sideloadly are available.
+If you prefer not to or cannot use the App Store, SideStore, or AltStore, alternative methods such as Sideloadly are available.
 
 1. **Install StosVPN:**  
    Get the latest version of [StosVPN](https://apps.apple.com/us/app/stosvpn/id6744003051) from the App Store.
