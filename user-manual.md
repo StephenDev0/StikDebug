@@ -1,40 +1,4 @@
-## Pairing Instructions
-
-### Downloads
-Downloads for JitterbugPair can be found [here.](https://github.com/osy/Jitterbug/releases/latest)
-
----
-
-### For Windows
-
-1. **Extract** `Jitterbugpair-win64.zip`.
-2. **Set a passcode** for your device if you haven't already. Unlock your device and connect it to your computer via cable. When a prompt appears, tap "Trust."
-3. Open your device to the homescreen.
-4. In File Explorer, locate `jitterbugpair.exe` and run it by double-clicking or right-clicking and selecting "Open".
-5. JitterbugPair will generate a **pairing file** in the same folder. This file will have the extension `.mobiledevicepairing`.
-6. **Transfer the pairing file** to your iOS device using One/iCloud/Google Drive, email, or any other method. For best results, compress the file into a .zip folder first.
-
----
-
-### For macOS
-
-1. **Extract** `Jitterbugpair-macos.zip`.
-2. **Set a passcode** for your device if you haven't already. Unlock your device and connect it to your computer via cable. When a prompt appears, tap "Trust."
-3. Open your device to the homescreen.
-4. Execute `bugpair` by double-clicking or right-clicking and selecting "Open".
-5. JitterbugPair will generate a **pairing file** with the extension `.mobiledevicepairing` to your user's home folder.
-6. **Transfer the pairing file** to your iOS device using AirDrop, iCloud/One/Google Drive, email, or any other method. For best results, compress the file into a .zip folder first.
-
----
-
-### Notes
-
-- If you **update or reset your iDevice**, the pairing file will become **invalid**, and you’ll need to repeat the pairing process.
-- To prompt StikJIT to ask for the pairing file again, go to **StikJIT > Settings** and tap **Import New Pairing File**.
-
----
-
-# How to Install StikJIT or StikDebug
+# How to Install StikJIT (or StikDebug)
 
 This document outlines the installation process for StikJIT, both with and without SideStore, along with usage instructions, troubleshooting tips, and frequently asked questions.
 
@@ -63,7 +27,7 @@ This document outlines the installation process for StikJIT, both with and witho
 2. **Installation procedures:**
    Follow the standard installation procedures in the usage guide below or from the official guide [here](https://github.com/StephenDev0/StikDebug-Guide/blob/main/pairing_file.md).
    
-## StikDebug installation with AltStore PAL (EU Only)
+## StikDebug installation with AltStore PAL (EU only)
 
 1. **Install StikDebug:**  
    Install StikDebug from AltStore PAL [here](https://tinyurl.com/AltstorePALStikJIT).
@@ -87,7 +51,7 @@ If you prefer not to or cannot use the App Store or SideStore/AltStore (Sources)
 2. **Download the StikJIT IPA:**  
    Obtain the latest StikJIT IPA from [StikJIT](https://github.com/StephenDev0/StikJIT/releases/latest).
 
-3. **Alternative install:**
+3. **Install via alternative method:**
    Install the downloaded IPA through your preferred method.
    
 4. **Installation procedures:**
@@ -97,10 +61,75 @@ If you prefer not to or cannot use the App Store or SideStore/AltStore (Sources)
 
 ## Usage guide
 
-### Standard installation procedures:
+## Pairing Instructions
+
+### Downloads
+- **Windows**: [Jitterbugpair-win64.zip](https://github.com/osy/Jitterbug/releases/download/v1.3.1/jitterbugpair-win64.zip)
+- **macOS**: [Jitterbugpair-macos.zip](https://github.com/osy/Jitterbug/releases/download/v1.3.1/jitterbugpair-macos.zip)
+- **Linux**: [Jitterbugpair-linux.zip](https://github.com/osy/Jitterbug/releases/download/v1.3.1/jitterbugpair-linux.zip)
+
+---
+
+### For Windows
+
+1. **Extract** `jitterbugpair-win64.zip`.
+2. **Set a passcode** for your device if you haven't already. Unlock your device and connect it to your computer via cable. When a prompt appears, tap "Trust."
+3. Open your device to the homescreen.
+4. In File Explorer, locate `jitterbugpair.exe` and run it by double-clicking or right-clicking and selecting "Open".
+5. JitterbugPair will generate a **pairing file** in the same folder. This file will have the extension `.mobiledevicepairing`.
+6. **Transfer the pairing file** to your iOS device using One/iCloud/Google Drive, email, or any other method. For best results, compress the file into a .zip folder first.
+
+---
+
+### For macOS
+
+1. **Extract** `jitterbugpair-macos.zip`.
+2. **Set a passcode** for your device if you haven't already. Unlock your device and connect it to your computer via cable. When a prompt appears, tap "Trust."
+3. Open your device to the homescreen.
+4. Execute `jitterbugpair` by double-clicking or right-clicking and selecting "Open".
+5. If you get "macOS cannot verify that this app is free from malware":
+   - Go to System Settings > Privacy & Security
+   - Scroll down to the message about the app
+   - Click "Open Anyway"
+   - If the program doesn't run automatically, try manually runnin git again
+6. JitterbugPair will generate a **pairing file** with the extension `.mobiledevicepairing` to your user's home folder.
+7. **Transfer the pairing file** to your iOS device using AirDrop, iCloud/One/Google Drive, email, or any other method. For best results, compress the file into a .zip folder first.
+
+---
+
+### For Linux
+
+1. **Extract** `jitterbugpair-linux.zip`.
+2. Open a terminal in the extracted directory.
+3. Make the program executable:
+   ```bash
+   chmod +x ./jitterbugpair
+   ```
+4. **Set a passcode** for your device if you haven't already. Unlock your device, connect it to your computer via cable. If a prompt appears: tap "Trust."
+5. Open your device to the homescreen.
+6. Execute the program:
+   ```bash
+   ./jitterbugpair
+   ```
+7. JitterBugPair will generate a **pairing file** with the extension `.mobiledevicepairing`.
+8. **Transfer the pairing file** to your iOS device using your preferred method. For best results, compress the file into a .zip folder first.
+
+> [!TIP]
+> When using cloud storage, the file extension might change (usually to .txt). It is always recommended to zip your pairing file before transferring it. StikJIT only accepts `.mobiledevicepairing` or `.plist` files.
+
+---
+
+### Notes
+
+- If you **update or reset your iDevice**, the pairing file will become **invalid**, and you’ll need to repeat the pairing process.
+- To prompt StikJIT to ask for the pairing file again, go to **StikJIT > Settings** and tap **Import New Pairing File**.
+
+---
+
+## Standard installation procedures:
 
 1. **Pair your device:**  
-   - Follow the instructions in the Pairing Guide section to generate a pairing file. In the **Files app** on your iDevice, locate your newly-generated pairing file. (If zipped, long-press your zipped pairing file and select **Uncompress**.)
+   - Follow the instructions in the pairing guide section above to generate a pairing file. In the **Files app** on your iDevice, locate your newly-generated pairing file. (If zipped, long-press your zipped pairing file and select **Uncompress**.)
    - When prompted, import the **unzipped pairing file**.
    - StikJIT or StikDebug will now be **paired** with your iDevice.
    
@@ -110,7 +139,7 @@ If you prefer not to or cannot use the App Store or SideStore/AltStore (Sources)
 3. **Upload the Pairing File:**  
    When prompted, import the **unzipped pairing file** obtained via JitterbugPair.
 
-### Every time:
+## To enable JIT (Every time):
 
 1. **Enable VPN:**  
    Start by activating StosVPN for StikJIT or the built-in VPN in StikDebug. If Wi-Fi is avaliable, leave it on, otherwise disable Wi-Fi and mobile data (Airplane Mode).
@@ -160,7 +189,7 @@ The first launch requires Wi-Fi to mount the DDI. After that you can use Wi-Fi o
 - **Is WireGuard still an option, or is StosVPN required?**  
 StosVPN is required for StikJIT to work properly. It is not needed for StikDebug because the VPN is built in.
 
-# Idevice Error Codes 
+# iDevice Error Codes 
 
 ## Main Library Errors
 - `Socket` (-1)
