@@ -88,7 +88,7 @@ If you prefer not to or cannot use the App Store or SideStore/AltStore (Sources)
    Obtain the latest StikJIT IPA from [StikJIT](https://github.com/StephenDev0/StikJIT/releases/latest).
 
 3. **Alternative install:**
-   Install the downloaded IPA through your prefered method.
+   Install the downloaded IPA through your preferred method.
    
 4. **Installation procedures:**
    Follow the standard installation procedures in the usage guide below.
