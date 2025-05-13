@@ -55,6 +55,14 @@ This document outlines the installation process for StikJIT, both with and witho
 6. **Installation procedures:**
    Follow the standard installation procedures in the usage guide below.
 
+## StikDebug installation with App Store (US)
+
+1. **Install StikDebug:**
+   Install StikDebug from the App Store [here](https://apps.apple.com/us/app/stikdebug/id6744045754)
+
+2. **Installation procedures:**
+   Follow the standard installation procedures in the usage guide below or from the official guide [here](https://github.com/StephenDev0/StikDebug-Guide/blob/main/pairing_file.md).
+   
 ## StikDebug installation with AltStore PAL (EU Only)
 
 1. **Install StikDebug:**  
@@ -68,14 +76,6 @@ This document outlines the installation process for StikJIT, both with and witho
 
 5. **Enabling JIT:**  
    In AltStore Classic, press and hold the desired app, then select the "Enable JIT" option to activate the feature.
-
-## StikDebug installation with App Store
-
-1. **Install StikDebug**
-   Install StikDebug from the App Store [here](https://apps.apple.com/us/app/stikdebug/id6744045754)
-
-2. **Installation procedures:**
-   Follow the standard installation procedures in the usage guide below.
 
 ## StikJIT installation without SideStore or AltStore
 
