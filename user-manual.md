@@ -86,14 +86,17 @@ If you prefer not to or cannot use the App Store, SideStore, or AltStore, altern
 1. **Extract** `jitterbugpair-macos.zip`.
 2. **Set a passcode** for your device if you haven't already. Unlock your device and connect it to your computer via cable. When a prompt appears, tap "Trust."
 3. Open your device to the homescreen.
-4. Open `jitterbugpair` by double-clicking it or right-clicking it and selecting "Open."
+4. Find and open the extracted `jitterbugpair` file (it should have a black and green icon) by double-clicking it or right-clicking it and selecting "Open."
 5. If you get the message" "macOS cannot verify that this app is free from malware":
    - Go to System Settings > Privacy & Security
    - Scroll down to the message about the app
-   - Click "Open Anyway"
-   - If the program doesn't run automatically, try manually running it again
+   - Click "Open Anyway," if the program doesn't run automatically, try manually running it again
 6. JitterbugPair will generate a **pairing file** with the extension `.mobiledevicepairing` to your user's home folder.
-7. **Transfer the pairing file** to your iOS device using AirDrop, iCloud/One/Google Drive, email, or any other method. For best results, compress the file into a .zip folder first.
+7. If you can't find the pairing file:
+   - Copy the name of the pairing file generated
+   - Paste it into Finder
+   - If you ran the program more than once, all pairing files for your device should appear since they share the same name
+8. **Transfer the pairing file** to your iOS device using AirDrop, iCloud/One/Google Drive, email, or any other method. For best results, compress the file into a .zip folder first.
 
 ---
 
@@ -129,15 +132,16 @@ If you prefer not to or cannot use the App Store, SideStore, or AltStore, altern
 ## Standard installation procedures:
 
 1. **Pair your device:**  
-   - Follow the instructions in the pairing guide section above to generate a pairing file. In the **Files app** on your iDevice, locate your newly-generated pairing file. (If zipped, long-press your zipped pairing file and select **Uncompress**.)
-   - When prompted, import the **unzipped pairing file**.
-   - StikJIT or StikDebug will now be **paired** with your iDevice.
+   Follow the instructions in the pairing guide section above to generate a pairing file. In the **Files app** on your iOS/iPadOS device:, locate your newly-generated pairing file. (If zipped, long-press your zipped pairing file and select **Uncompress**.)
    
 2. **Enable VPN:**  
-   Activate StosVPN for StikJIT or the built-in VPN in StikDebug.
+   Activate StosVPN if using StikJIT.
 
-3. **Upload the Pairing File:**  
-   When prompted, import the **unzipped pairing file** obtained via JitterbugPair.
+3. **Open the app:**
+   Launch the **StikJIT** app. If it doesn't appear, restart your device.
+
+4. **Import your pairing file:**
+   Upon launching the app, tap **Import Pairing File**, then navigate to and select your **unzipped pairing file**.
 
 ## To enable JIT (Every time):
 
