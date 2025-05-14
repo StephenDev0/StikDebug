@@ -64,11 +64,13 @@ If you prefer not to or cannot use the App Store, SideStore, or AltStore, altern
 ## Pairing Instructions
 
 ### Downloads
-- **Windows**: [Jitterbugpair-win64.zip](https://github.com/osy/Jitterbug/releases/download/v1.3.1/jitterbugpair-win64.zip)
-- **macOS**: [Jitterbugpair-macos.zip](https://github.com/osy/Jitterbug/releases/download/v1.3.1/jitterbugpair-macos.zip)
-- **Linux**: [Jitterbugpair-linux.zip](https://github.com/osy/Jitterbug/releases/download/v1.3.1/jitterbugpair-linux.zip)
+- **Windows**: [jitterbugpair-win64.zip](https://github.com/osy/Jitterbug/releases/download/v1.3.1/jitterbugpair-win64.zip)
+- **macOS**: [jitterbugpair](https://github.com/SideStore/SideStore-Docs/releases/download/need-a-place-to-put-jittterbug/jitterbugpair)
+- **Linux**: [jitterbugpair-linux.zip](https://github.com/osy/Jitterbug/releases/download/v1.3.1/jitterbugpair-linux.zip)
 
 ---
+> [!TIP]
+> When using cloud storage, the file extension might change (usually to .txt). It is always recommended to zip your pairing file before transferring it. StikJIT only accepts `.mobiledevicepairing` or `.plist` files.
 
 ### For Windows
 
@@ -83,7 +85,7 @@ If you prefer not to or cannot use the App Store, SideStore, or AltStore, altern
 
 ### For macOS
 
-1. **Extract** `jitterbugpair-macos.zip`.
+1. **Extract** `jitterbugpair-macos.zip` (if applicable).
 2. **Set a passcode** for your device if you haven't already. Unlock your device and connect it to your computer via cable. When a prompt appears, tap "Trust."
 3. Open your device to the homescreen.
 4. Find and open the extracted `jitterbugpair` file (it should have a black and green icon) by double-clicking it or right-clicking it and selecting "Open."
@@ -116,9 +118,6 @@ If you prefer not to or cannot use the App Store, SideStore, or AltStore, altern
    ```
 7. JitterBugPair will generate a **pairing file** with the extension `.mobiledevicepairing`.
 8. **Transfer the pairing file** to your iOS device using your preferred method. For best results, compress the file into a .zip folder first.
-
-> [!TIP]
-> When using cloud storage, the file extension might change (usually to .txt). It is always recommended to zip your pairing file before transferring it. StikJIT only accepts `.mobiledevicepairing` or `.plist` files.
 
 ---
 
