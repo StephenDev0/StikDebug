@@ -65,7 +65,7 @@ If you prefer not to or cannot use the App Store, SideStore, or AltStore, altern
 
 ### Downloads
 - **Windows**: [jitterbugpair-win64.zip](https://github.com/osy/Jitterbug/releases/download/v1.3.1/jitterbugpair-win64.zip)
-- **macOS**: [jitterbugpair](https://github.com/SideStore/SideStore-Docs/releases/download/need-a-place-to-put-jittterbug/jitterbugpair)
+- **macOS**: [jitterbugpair](https://github.com/osy/Jitterbug/releases/download/v1.3.1/jitterbugpair-macos.zip)
 - **Linux**: [jitterbugpair-linux.zip](https://github.com/osy/Jitterbug/releases/download/v1.3.1/jitterbugpair-linux.zip)
 
 ---
