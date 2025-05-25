@@ -15,47 +15,80 @@ struct InstalledAppsListView: View {
     var onSelectApp: (String) -> Void
 
     var body: some View {
-        NavigationView {
-            List {
-                if !recentApps.isEmpty {
-                    Section {
-                        ForEach(recentApps, id: \.self) { bundleID in
-                            AppButton(bundleID: bundleID, appName: viewModel.apps[bundleID] ?? "", recentApps: $recentApps, appIcons: $appIcons, onSelectApp: onSelectApp)
-                                .swipeActions(edge: .trailing) {
-                                    Button(role: .destructive) {
-                                        withAnimation {
-                                            recentApps.removeAll(where: { $0 == bundleID })
+        if viewModel.apps.isEmpty {
+            NavigationView {
+                VStack(spacing: 16) {
+                    Image(systemName: "magnifyingglass")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 60, height: 60)
+                        .foregroundColor(.gray)
+                    
+                    Text("No Debuggable App Found")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    
+                    Text("StikDebug can only connect to apps with the \"**get-task-allow**\" entitlement. Please check if the app you want to connect to is signed with a **development** certificate.")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground))
+                .toolbar(content: {
+                    Button("Done") {
+                        dismiss()
+                    }
+                })
+            }
+
+        } else {
+            
+            NavigationView {
+                List {
+                    if !recentApps.isEmpty {
+                        Section {
+                            ForEach(recentApps, id: \.self) { bundleID in
+                                AppButton(bundleID: bundleID, appName: viewModel.apps[bundleID] ?? "", recentApps: $recentApps, appIcons: $appIcons, onSelectApp: onSelectApp)
+                                    .swipeActions(edge: .trailing) {
+                                        Button(role: .destructive) {
+                                            withAnimation {
+                                                recentApps.removeAll(where: { $0 == bundleID })
+                                            }
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
                                         }
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
                                     }
-                                }
+                            }
+                        } header: {
+                            Text("Recents")
+                        }
+                    }
+                    Section {
+                        ForEach(viewModel.apps.sorted(by: { $0.key < $1.key }), id: \.key) { bundleID, appName in
+                            AppButton(bundleID: bundleID, appName: appName, recentApps: $recentApps, appIcons: $appIcons, onSelectApp: onSelectApp)
                         }
                     } header: {
-                        Text("Recents")
+                        if !recentApps.isEmpty {
+                            Text("All applications")
+                        } else {
+                            EmptyView()
+                        }
                     }
                 }
-                Section {
-                    ForEach(viewModel.apps.sorted(by: { $0.key < $1.key }), id: \.key) { bundleID, appName in
-                        AppButton(bundleID: bundleID, appName: appName, recentApps: $recentApps, appIcons: $appIcons, onSelectApp: onSelectApp)
+                .listStyle(.plain)
+                .navigationTitle("Installed Apps")
+                .toolbar(content: {
+                    Button("Done") {
+                        dismiss()
                     }
-                } header: {
-                    if !recentApps.isEmpty {
-                        Text("All applications")
-                    } else {
-                        EmptyView()
-                    }
-                }
+                })
             }
-            .listStyle(.plain)
-            .navigationTitle("Installed Apps")
-            .toolbar(content: {
-                Button("Done") {
-                    dismiss()
-                }
-            })
+            .background(Color(UIColor.systemGroupedBackground).edgesIgnoringSafeArea(.all))
         }
-        .background(Color(UIColor.systemGroupedBackground).edgesIgnoringSafeArea(.all))
     }
 }
 

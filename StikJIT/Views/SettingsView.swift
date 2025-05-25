@@ -12,7 +12,7 @@ struct SettingsView: View {
     @AppStorage("customAccentColor") private var customAccentColorHex: String = ""
     @AppStorage("selectedAppIcon") private var selectedAppIcon: String = "AppIcon"
     @AppStorage("autoQuitAfterEnablingJIT") private var doAutoQuitAfterEnablingJIT = false
-    @AppStorage("skipGetTaskAllowCheck") private var doSkipGetTaskAllowCheck = true
+
     @State private var isShowingPairingFilePicker = false
     @Environment(\.colorScheme) private var colorScheme
 
@@ -114,21 +114,6 @@ struct SettingsView: View {
                                 }
                                 .padding(.vertical, 8)
                             }
-                        }
-                        .padding(.vertical, 20)
-                        .padding(.horizontal, 16)
-                    }
-                    
-                    // Behavior section
-                    SettingsCard {
-                        VStack(alignment: .leading, spacing: 20) {
-                            Text("Behavior")
-                                .font(.headline)
-                                .foregroundColor(.primary)
-                                .padding(.bottom, 4)
-                            Toggle("Skip get-task-allow Check", isOn: $doSkipGetTaskAllowCheck)
-                                .foregroundColor(.primary)
-                                .padding(.vertical, 6)
                         }
                         .padding(.vertical, 20)
                         .padding(.horizontal, 16)

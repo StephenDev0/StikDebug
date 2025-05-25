@@ -7,6 +7,12 @@
 
 import SwiftUI
 
+public enum MessageType {
+    case error
+    case success
+    case info
+}
+
 struct CustomErrorView: View {
     var title: String
     var message: String
@@ -32,11 +38,6 @@ struct CustomErrorView: View {
         }
     }
     
-    enum MessageType {
-        case error
-        case success
-        case info
-    }
     
     var body: some View {
         ZStack {

@@ -50,7 +50,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		DC5716242D9564760099302E /* em_proxy.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = em_proxy.xcframework; sourceTree = "<group>"; };
 		DC6F1D372D94EADD0071B2B6 /* StikDebug.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StikDebug.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DC6F1D482D94EADF0071B2B6 /* StikDebugTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StikDebugTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DC6F1D522D94EADF0071B2B6 /* StikDebugUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StikDebugUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -62,6 +61,7 @@
 		1775D3612D9644FD00DFA8E0 /* Exceptions for "StikJIT" folder in "StikDebug" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				idevice/libem_proxy.a,
 				Info.plist,
 			);
 			target = DC6F1D362D94EADD0071B2B6 /* StikDebug */;
@@ -163,7 +163,6 @@
 		DC6F1D752D94EB620071B2B6 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				DC5716242D9564760099302E /* em_proxy.xcframework */,
 				DCA690112DAF660E007C91A8 /* NetworkExtension.framework */,
 			);
 			name = Frameworks;

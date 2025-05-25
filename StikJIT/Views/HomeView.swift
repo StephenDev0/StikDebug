@@ -33,8 +33,12 @@ struct HomeView: View {
     @State private var showingConsoleLogsView = false
     @State private var importProgress: Float = 0.0
     
+    @State private var pidTextAlertShow = false
+    @State private var pidStr = ""
+    
     @State private var viewDidAppeared = false
     @State private var pendingBundleIdToEnableJIT : String? = nil
+    @State private var pendingPIDToEnableJIT : Int? = nil
     
     private var accentColor: Color {
         if customAccentColorHex.isEmpty {
@@ -98,6 +102,27 @@ struct HomeView: View {
                     .shadow(color: accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
                 .padding(.horizontal, 20)
+                
+                if pairingFileExists {
+                    Button(action: {
+                        pidTextAlertShow = true
+                    }) {
+                        HStack {
+                            Image(systemName: "cable.connector.horizontal")
+                                .font(.system(size: 20))
+                            Text("Connect by PID")
+                                .font(.system(.title3, design: .rounded))
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(accentColor)
+                        .foregroundColor(accentColor.contrastText())
+                        .cornerRadius(16)
+                        .shadow(color: accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
+                    }
+                    .padding(.horizontal, 20)
+                }
                 
                 Button(action: {
                     showingConsoleLogsView = true
@@ -271,6 +296,28 @@ struct HomeView: View {
                 startJITInBackground(with: selectedBundle)
             }
         }
+        .textFieldAlert(
+            isPresented: $pidTextAlertShow,
+            title: "Please enter the PID of the process you want to connect to",
+            text: $pidStr,
+            placeholder: "",
+            action: { newText in
+
+                guard let pidStr = newText, pidStr != "" else {
+                    return
+                }
+                
+                guard let pid = Int(pidStr) else {
+                    showAlert(title: "", message: "Invalid PID", showOk: true, completion: { _ in })
+                    return
+                }
+                startJITInBackground(with: pid)
+                
+            },
+            actionCancel: {_ in
+                pidStr = ""
+            }
+        )
         .onOpenURL { url in
             print(url.path())
             if url.host() != "enable-jit" {
@@ -284,6 +331,12 @@ struct HomeView: View {
                 } else {
                     pendingBundleIdToEnableJIT = bundleId
                 }
+            } else if let pidStr = components?.queryItems?.first(where: { $0.name == "pid" })?.value, let pid = Int(pidStr) {
+                if viewDidAppeared {
+                    startJITInBackground(with: pid)
+                } else {
+                    pendingPIDToEnableJIT = pid
+                }
             }
             
         }
@@ -292,6 +345,10 @@ struct HomeView: View {
             if let pendingBundleIdToEnableJIT {
                 startJITInBackground(with: pendingBundleIdToEnableJIT)
                 self.pendingBundleIdToEnableJIT = nil
+            }
+            if let pendingPIDToEnableJIT {
+                startJITInBackground(with: pendingPIDToEnableJIT)
+                self.pendingPIDToEnableJIT = nil
             }
         }
     }
@@ -334,6 +391,34 @@ struct HomeView: View {
             
             DispatchQueue.main.async {
                 LogManager.shared.addInfoLog("Debug process completed for \(bundleID)")
+                isProcessing = false
+                
+                if success && doAutoQuitAfterEnablingJIT {
+                    exit(0)
+                }
+            }
+        }
+    }
+    
+    private func startJITInBackground(with pid: Int) {
+        isProcessing = true
+        
+        // Add log message
+        LogManager.shared.addInfoLog("Starting JIT for pid \(pid)")
+        
+        DispatchQueue.global(qos: .background).async {
+
+            let success = JITEnableContext.shared.debugApp(withPID: Int32(pid), logger: { message in
+
+                if let message = message {
+                    // Log messages from the JIT process
+                    LogManager.shared.addInfoLog(message)
+                }
+            })
+            
+            DispatchQueue.main.async {
+                LogManager.shared.addInfoLog("JIT process completed for \(pid)")
+                showAlert(title: "Success", message: "JIT has been enabled for pid \(pid).", showOk: true, messageType: .success, completion: { _ in })
                 isProcessing = false
                 
                 if success && doAutoQuitAfterEnablingJIT {

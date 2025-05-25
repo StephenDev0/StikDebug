@@ -4,7 +4,6 @@
 //
 //  Created by s s on 2025/3/28.
 //
-
 #include "idevice.h"
 #include <arpa/inet.h>
 #include <stdlib.h>
@@ -131,6 +130,19 @@ JITEnableContext* sharedJITContext = nil;
     }
     return debug_app(provider,
                      [bundleID UTF8String],
+                     [self createCLogger:logger]) == 0;
+}
+
+- (BOOL)debugAppWithPID:(int)pid logger:(LogFunc)logger {
+    if (!provider) {
+        if (logger) {
+            logger(@"Provider not initialized!");
+        }
+        NSLog(@"Provider not initialized!");
+        return NO;
+    }
+    return debug_app_pid(provider,
+                     pid,
                      [self createCLogger:logger]) == 0;
 }
 

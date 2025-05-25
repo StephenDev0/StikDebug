@@ -520,39 +520,32 @@ struct HeartbeatApp: App {
                     LoadingView(showAlert: $show_alert, alertTitle: $alert_title, alertMessage: $alert_string)
                         .onAppear {
                             dnsChecker.checkDNS()
-                            
-                            startProxy() { result, error in
+                            checkVPNConnection() { result, vpn_error in
                                 if result {
-                                    checkVPNConnection() { result, vpn_error in
-                                        if result {
-                                            if FileManager.default.fileExists(atPath: URL.documentsDirectory.appendingPathComponent("pairingFile.plist").path) {
-                                                Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
-                                                    if pubHeartBeat {
-                                                        isLoading2 = false
-                                                        timer.invalidate()
-                                                    } else {
-                                                        if let error {
-                                                            if error == -9 {  // InvalidHostID is -9
-                                                                isPairing = true
-                                                            } else {
-                                                                startHeartbeatInBackground()
-                                                            }
-                                                            self.error = nil
-                                                        }
-                                                    }
-                                                }
-                                                startHeartbeatInBackground()
-                                            } else {
+                                    if FileManager.default.fileExists(atPath: URL.documentsDirectory.appendingPathComponent("pairingFile.plist").path) {
+                                        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+                                            if pubHeartBeat {
                                                 isLoading2 = false
-                                            }
-                                        } else if let vpn_error {
-                                            showAlert(title: "Error", message: "EM Proxy failed to connect: \(vpn_error)", showOk: true) { _ in
-                                                exit(0)
+                                                timer.invalidate()
+                                            } else {
+                                                if let error {
+                                                    if error == -9 {  // InvalidHostID is -9
+                                                        isPairing = true
+                                                    } else {
+                                                        startHeartbeatInBackground()
+                                                    }
+                                                    self.error = nil
+                                                }
                                             }
                                         }
+                                        startHeartbeatInBackground()
+                                    } else {
+                                        isLoading2 = false
                                     }
-                                } else if let error {
-                                    showAlert(title: "Error", message: "EM Proxy Failed to start \(error)", showOk: true) { _ in }
+                                } else if let vpn_error {
+                                    showAlert(title: "Error", message: "EM Proxy failed to connect: \(vpn_error)", showOk: true) { _ in
+                                        exit(0)
+                                    }
                                 }
                             }
                         }
@@ -654,24 +647,6 @@ struct HeartbeatApp: App {
                 alert_title = "Network Issue"
                 alert_string = errorMsg
                 show_alert = true
-            }
-        }
-    }
-    
-    func startProxy(callback: @escaping (Bool, Int?) -> Void) {
-        let port = 51820
-        let bindAddr = "127.0.0.1:\(port)"
-        
-        DispatchQueue.global(qos: .background).async {
-            let result = start_emotional_damage(bindAddr)
-            DispatchQueue.main.async {
-                if result == 0 {
-                    print("DEBUG: em_proxy started successfully on port \(port)")
-                    callback(true, nil)
-                } else {
-                    print("DEBUG: Failed to start em_proxy")
-                    callback(false, Int(result))
-                }
             }
         }
     }
@@ -948,10 +923,12 @@ struct LoadingView: View {
     }
 }
 
-public func showAlert(title: String, message: String, showOk: Bool, showTryAgain: Bool = false, primaryButtonText: String? = nil, completion: @escaping (Bool) -> Void) {
+public func showAlert(title: String, message: String, showOk: Bool, showTryAgain: Bool = false, primaryButtonText: String? = nil, messageType: MessageType = .error, completion: @escaping (Bool) -> Void) {
     DispatchQueue.main.async {
-        let rootViewController = UIApplication.shared.windows.last?.rootViewController
-        
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene else {
+            return
+        }
+        let rootViewController = scene.windows.first?.rootViewController
         if showTryAgain {
             let customErrorView = CustomErrorView(
                 title: title,
@@ -964,7 +941,8 @@ public func showAlert(title: String, message: String, showOk: Bool, showTryAgain
                 primaryButtonText: primaryButtonText ?? "Try Again",
                 onPrimaryButtonTap: {
                     completion(true)
-                }
+                },
+                messageType: messageType
             )
             let hostingController = UIHostingController(rootView: customErrorView)
             hostingController.modalPresentationStyle = .overFullScreen
@@ -984,7 +962,8 @@ public func showAlert(title: String, message: String, showOk: Bool, showTryAgain
                 onPrimaryButtonTap: {
                     rootViewController?.presentedViewController?.dismiss(animated: true)
                     completion(true)
-                }
+                },
+                messageType: messageType
             )
             let hostingController = UIHostingController(rootView: customErrorView)
             hostingController.modalPresentationStyle = .overFullScreen
@@ -999,7 +978,8 @@ public func showAlert(title: String, message: String, showOk: Bool, showTryAgain
                     rootViewController?.presentedViewController?.dismiss(animated: true)
                     completion(false)
                 },
-                showButton: false
+                showButton: false,
+                messageType: messageType
             )
             let hostingController = UIHostingController(rootView: customErrorView)
             hostingController.modalPresentationStyle = .overFullScreen
