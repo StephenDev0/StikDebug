@@ -74,8 +74,8 @@ struct SettingsView: View {
                 
                 DispatchQueue.main.async {
                     UIApplication.shared.perform(#selector(NSXPCConnection.suspend))
-                    sleep(1)
-                    exit(1)
+                    Thread.sleep(forTimeInterval: 1)
+                    exit(0)
                 }
             }
         }
