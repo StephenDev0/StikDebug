@@ -310,7 +310,7 @@ struct SettingsView: View {
                             }
                             
                             Button(action: {
-                                if let url = URL(string: "https://github.com/StephenDev0/StikDebug-Guide/blob/main/pairing_file.md") {
+                                if let url = URL(string: "https://apps.apple.com/us/app/stosvpn/id6744003051") {
                                     UIApplication.shared.open(url)
                                 }
                             }) {
