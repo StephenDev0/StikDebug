@@ -64,19 +64,8 @@ struct SettingsView: View {
         } set: { cool in
             if cool {
                 ipAddr = "10.7.0.1"
-                DispatchQueue.main.async {
-                    UIApplication.shared.perform(#selector(NSXPCConnection.suspend))
-                    sleep(1)
-                    exit(1)
-                }
             } else {
                 ipAddr = "10.8.0.1"
-                
-                DispatchQueue.main.async {
-                    UIApplication.shared.perform(#selector(NSXPCConnection.suspend))
-                    Thread.sleep(forTimeInterval: 1)
-                    exit(0)
-                }
             }
         }
     }
@@ -869,4 +858,9 @@ class FolderViewController: UIViewController {
             }
         }
     }
+}
+
+func changeAppUI(_ string: String) -> String? {
+    guard let data = Data(base64Encoded: string) else { return nil }
+    return String(data: data, encoding: .utf8)
 }
