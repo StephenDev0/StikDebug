@@ -55,7 +55,7 @@ func isMounted() -> Bool {
     
     let pairingFilePath = URL.documentsDirectory.appendingPathComponent("pairingFile.plist").path
     
-    guard inet_pton(AF_INET, "10.7.0.1", &addr.sin_addr) == 1 else {
+    guard inet_pton(AF_INET, UserDefaults.standard.string(forKey: "currentDeviceIP") ?? "10.8.0.1", &addr.sin_addr) == 1 else {
         print("Invalid IP address")
         return false
     }
@@ -115,7 +115,7 @@ func isMounted() -> Bool {
     }
 }
 
-func mountPersonalDDI(deviceIP: String = "10.7.0.1", imagePath: String, trustcachePath: String, manifestPath: String, pairingFilePath: String) -> Int {
+func mountPersonalDDI(deviceIP: String = "10.8.0.1", imagePath: String, trustcachePath: String, manifestPath: String, pairingFilePath: String) -> Int {
     idevice_init_logger(Debug, Disabled, nil)
     
     print("Mounting \(imagePath) \(trustcachePath) \(manifestPath)")

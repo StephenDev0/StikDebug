@@ -8,8 +8,8 @@
 import NetworkExtension
 
 class PacketTunnelProvider: NEPacketTunnelProvider {
-    var tunnelDeviceIp: String = "10.7.0.0"
-    var tunnelFakeIp: String = "10.7.0.1"
+    var tunnelDeviceIp: String = "10.8.0.0"
+    var tunnelFakeIp: String = "10.8.0.1"
     var tunnelSubnetMask: String = "255.255.255.0"
     
     override func startTunnel(options: [String : NSObject]?, completionHandler: @escaping (Error?) -> Void) {

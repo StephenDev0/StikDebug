@@ -12,6 +12,8 @@ struct SettingsView: View {
     @AppStorage("customAccentColor") private var customAccentColorHex: String = ""
     @AppStorage("selectedAppIcon") private var selectedAppIcon: String = "AppIcon"
     @AppStorage("autoQuitAfterEnablingJIT") private var doAutoQuitAfterEnablingJIT = false
+    
+    @AppStorage("currentDeviceIP") private var ipAddr = "10.8.0.1"
 
     @State private var isShowingPairingFilePicker = false
     @Environment(\.colorScheme) private var colorScheme
@@ -53,6 +55,29 @@ struct SettingsView: View {
             return .blue
         } else {
             return Color(hex: customAccentColorHex) ?? .blue
+        }
+    }
+    
+    private var usingStos: Binding<Bool> {
+        Binding {
+            return ipAddr == "10.7.0.1"
+        } set: { cool in
+            if cool {
+                ipAddr = "10.7.0.1"
+                DispatchQueue.main.async {
+                    UIApplication.shared.perform(#selector(NSXPCConnection.suspend))
+                    sleep(1)
+                    exit(1)
+                }
+            } else {
+                ipAddr = "10.8.0.1"
+                
+                DispatchQueue.main.async {
+                    UIApplication.shared.perform(#selector(NSXPCConnection.suspend))
+                    sleep(1)
+                    exit(1)
+                }
+            }
         }
     }
 
@@ -263,6 +288,46 @@ struct SettingsView: View {
                         .onAppear {
                             self.mounted = isMounted()
                         }
+                    }
+                    
+                    // VPN
+                    SettingsCard {
+                        VStack(alignment: .leading, spacing: 20) {
+                            Text("VPN")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                                .padding(.bottom, 4)
+                            
+                            Toggle(isOn: usingStos) {
+                                HStack {
+                                    Image(systemName: "bolt")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(.primary.opacity(0.8))
+                                    Text("Use StosVPN")
+                                        .foregroundColor(.primary.opacity(0.8))
+                                }
+                                .padding(.vertical, 8)
+                            }
+                            
+                            Button(action: {
+                                if let url = URL(string: "https://github.com/StephenDev0/StikDebug-Guide/blob/main/pairing_file.md") {
+                                    UIApplication.shared.open(url)
+                                }
+                            }) {
+                                HStack {
+                                    Image(systemName: "questionmark.circle")
+                                        .font(.system(size: 18))
+                                        .foregroundColor(.primary.opacity(0.8))
+                                    Text("Download StosVPN")
+                                        .foregroundColor(.primary.opacity(0.8))
+                                    Spacer()
+                                }
+                                .padding(.vertical, 8)
+                            }
+                        }
+                        .padding(.vertical, 20)
+                        .padding(.horizontal, 16)
+                        .frame(maxWidth: .infinity)
                     }
                     
                     // About section

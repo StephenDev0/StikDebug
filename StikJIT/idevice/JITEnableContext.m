@@ -105,9 +105,16 @@ JITEnableContext* sharedJITContext = nil;
         completionHandler(err.code, err.localizedDescription);
         return;
     }
+    
+    NSString *value = [[NSUserDefaults standardUserDefaults] stringForKey:@"currentDeviceIP"];
+    if (value == NULL) {
+        value = @"10.8.0.1";
+    }
+    const char *cString = [value UTF8String];
 
     self->heartbeatSessionId = arc4random();
     startHeartbeat(
+        cString,
         pairingFile,
         &provider,
         &heartbeatSessionId,

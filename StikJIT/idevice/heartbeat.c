@@ -14,20 +14,25 @@
 
 bool isHeartbeat = false;
 
-
-void startHeartbeat(IdevicePairingFile* pairing_file, TcpProviderHandle** provider, int* heartbeatSessionId, HeartbeatCompletionHandlerC completion, LogFuncC logger) {
+void startHeartbeat(const char* ipAddr, IdevicePairingFile* pairing_file, TcpProviderHandle** provider, int* heartbeatSessionId, HeartbeatCompletionHandlerC completion, LogFuncC logger) {
     int currentSessionId = *heartbeatSessionId;
     
     isHeartbeat = true;
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    if (inet_pton(AF_INET, "10.7.0.1", &addr.sin_addr) <= 0) {
+    if (inet_pton(AF_INET, ipAddr, &addr.sin_addr) <= 0) {
         logger("DEBUG: Error converting IP address.");
         isHeartbeat = false;
         return;
     }
-    logger("DEBUG: Socket address created for IP 10.7.0.1");
+    
+    char buffer[64];
+
+    snprintf(buffer, sizeof(buffer), "DEBUG: Socket address created for IP %s", ipAddr);
+
+    
+    logger(buffer);
     
     IdeviceErrorCode err = IdeviceSuccess;
     

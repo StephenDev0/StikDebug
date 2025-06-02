@@ -88,10 +88,10 @@ class TunnelManager: ObservableObject {
     
     private var vpnManager: NETunnelProviderManager?
     private var tunnelDeviceIp: String {
-        UserDefaults.standard.string(forKey: "TunnelDeviceIP") ?? "10.7.0.0"
+        UserDefaults.standard.string(forKey: "TunnelDeviceIP") ?? "10.8.0.0"
     }
     private var tunnelFakeIp: String {
-        UserDefaults.standard.string(forKey: "TunnelFakeIP") ?? "10.7.0.1"
+        UserDefaults.standard.string(forKey: "TunnelFakeIP") ?? "10.8.0.1"
     }
     private var tunnelSubnetMask: String {
         UserDefaults.standard.string(forKey: "TunnelSubnetMask") ?? "255.255.255.0"
@@ -447,6 +447,7 @@ struct HeartbeatApp: App {
     @StateObject private var dnsChecker = DNSChecker()  // New DNS check state object
     @AppStorage("appTheme") private var appTheme: String = "system"
     @Environment(\.scenePhase) private var scenePhase   // Observe scene lifecycle
+    @AppStorage("currentDeviceIP") private var ipAddr = "10.8.0.1"
     
     let urls: [String] = [
         "https://github.com/doronz88/DeveloperDiskImage/raw/refs/heads/main/PersonalizedImages/Xcode_iOS_DDI_Personalized/BuildManifest.plist",
@@ -512,6 +513,7 @@ struct HeartbeatApp: App {
             }
         }
     }
+    
     
     var body: some Scene {
         WindowGroup {
@@ -624,15 +626,18 @@ struct HeartbeatApp: App {
                 if !hasLaunchedBefore {
                     showWelcomeSheet = true
                 } else {
-                    TunnelManager.shared.startVPN()
+                    if ipAddr == "10.8.0.1" {
+                        TunnelManager.shared.startVPN()
+                    }
                 }
             }
             .sheet(isPresented: $showWelcomeSheet) {
                 WelcomeSheetView {
-                    // When the user taps "Continue", mark the app as launched and start the VPN.
                     hasLaunchedBefore = true
                     showWelcomeSheet = false
-                    TunnelManager.shared.startVPN()
+                    if ipAddr == "10.8.0.1" {
+                        TunnelManager.shared.startVPN()
+                    }
                 }
             }
         }
@@ -652,7 +657,7 @@ struct HeartbeatApp: App {
     }
     
     private func checkVPNConnection(callback: @escaping (Bool, String?) -> Void) {
-        let host = NWEndpoint.Host("10.7.0.1")
+        let host = NWEndpoint.Host(ipAddr)
         let port = NWEndpoint.Port(rawValue: 62078)!
         let connection = NWConnection(host: host, port: port, using: .tcp)
         var timeoutWorkItem: DispatchWorkItem?
@@ -753,6 +758,7 @@ class MountingProgress: ObservableObject {
             
             mountingThread = Thread {
                 let mountResult = mountPersonalDDI(
+                    deviceIP: UserDefaults.standard.string(forKey: "currentDeviceIP") ?? "10.8.0.1",
                     imagePath: URL.documentsDirectory.appendingPathComponent("DDI/Image.dmg").path,
                     trustcachePath: URL.documentsDirectory.appendingPathComponent("DDI/Image.dmg.trustcache").path,
                     manifestPath: URL.documentsDirectory.appendingPathComponent("DDI/BuildManifest.plist").path,
