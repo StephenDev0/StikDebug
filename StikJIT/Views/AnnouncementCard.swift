@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AnnouncementCard: View {
     var announcement: Announcement
+    var onDismiss: (() -> Void)? = nil
     @AppStorage("customAccentColor") private var customAccentColorHex: String = ""
 
     private var accentColor: Color {
@@ -9,6 +10,16 @@ struct AnnouncementCard: View {
             return .blue
         } else {
             return Color(hex: customAccentColorHex) ?? .blue
+        }
+    }
+
+    private var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        if let date = formatter.date(from: "\(announcement.date) \(announcement.time)") {
+            return formatter.string(from: date)
+        } else {
+            return "\(announcement.date) \(announcement.time)"
         }
     }
 
@@ -20,7 +31,8 @@ struct AnnouncementCard: View {
             Text(announcement.body)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
-            Text("\(announcement.date) \(announcement.time)")
+                .fixedSize(horizontal: false, vertical: true)
+            Text(formattedDate)
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -30,6 +42,18 @@ struct AnnouncementCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(accentColor, lineWidth: 2)
+        )
+        .overlay(
+            HStack {
+                Spacer()
+                Button(action: {
+                    onDismiss?()
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(8)
         )
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.08), radius: 3, x: 0, y: 2)

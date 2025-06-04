@@ -37,6 +37,12 @@ struct HomeView: View {
     @State private var importProgress: Float = 0.0
 
     @State private var announcements: [Announcement] = []
+    @AppStorage("dismissedAnnouncementIDs") private var dismissedIDsStorage: String = ""
+
+    private var dismissedIDs: Set<Int> {
+        get { Set(dismissedIDsStorage.split(separator: ",").compactMap { Int($0) }) }
+        set { dismissedIDsStorage = newValue.map(String.init).joined(separator: ",") }
+    }
     
     @State private var pidTextAlertShow = false
     @State private var pidStr = ""
@@ -60,7 +66,17 @@ struct HomeView: View {
             .edgesIgnoringSafeArea(.all)
             
             VStack(spacing: 25) {
-                Spacer()
+                if !announcements.isEmpty {
+                    VStack(spacing: 12) {
+                        ForEach(announcements) { announcement in
+                            AnnouncementCard(announcement: announcement, onDismiss: {
+                                dismiss(announcement)
+                            })
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+
                 VStack(spacing: 5) {
                     Text("Welcome to StikDebug \(username)!")
                         .font(.system(.largeTitle, design: .rounded))
@@ -73,14 +89,7 @@ struct HomeView: View {
                 }
                 .padding(.top, 40)
 
-                if !announcements.isEmpty {
-                    VStack(spacing: 12) {
-                        ForEach(announcements) { announcement in
-                            AnnouncementCard(announcement: announcement)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                }
+                Spacer()
 
                 Button(action: {
                     
@@ -222,7 +231,7 @@ struct HomeView: View {
             refreshBackground()
 
             AnnouncementManager.fetchAnnouncements { loaded in
-                announcements = loaded
+                announcements = loaded.filter { !dismissedIDs.contains($0.id) }
             }
 
             // Add notification observer for showing pairing file picker
@@ -389,6 +398,15 @@ struct HomeView: View {
     private func refreshBackground() {
         // This function is no longer needed for background color
         // but we'll keep it empty to avoid breaking anything
+    }
+
+    private func dismiss(_ announcement: Announcement) {
+        var ids = dismissedIDs
+        ids.insert(announcement.id)
+        dismissedIDsStorage = ids.map(String.init).joined(separator: ",")
+        withAnimation {
+            announcements.removeAll { $0.id == announcement.id }
+        }
     }
     
     private func startJITInBackground(with bundleID: String) {
