@@ -9,11 +9,13 @@
 #ifndef HEARTBEAT_H
 #define HEARTBEAT_H
 #include "idevice.h"
+@import Foundation;
 
 typedef void (^HeartbeatCompletionHandlerC)(int result, const char *message);
 typedef void (^LogFuncC)(const char* message, ...);
 
 extern bool isHeartbeat;
+extern NSDate* lastHeartbeatDate;
 
 void startHeartbeat(IdevicePairingFile* pairintFile, TcpProviderHandle** provider, int* heartbeatSessionId, HeartbeatCompletionHandlerC completion, LogFuncC logger);
 

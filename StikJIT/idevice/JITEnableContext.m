@@ -120,6 +120,15 @@ JITEnableContext* sharedJITContext = nil;
     );
 }
 
+- (void)ensureHeartbeat {
+    // wait a bit until heartbeat finish. wait at most 10s
+    int deadline = 50;
+    while((!lastHeartbeatDate || [[NSDate now] timeIntervalSinceDate:lastHeartbeatDate] > 15) && deadline) {
+        --deadline;
+        usleep(200);
+    }
+}
+
 - (BOOL)debugAppWithBundleID:(NSString*)bundleID logger:(LogFunc)logger {
     if (!provider) {
         if (logger) {
@@ -128,6 +137,9 @@ JITEnableContext* sharedJITContext = nil;
         NSLog(@"Provider not initialized!");
         return NO;
     }
+    
+    [self ensureHeartbeat];
+    
     return debug_app(provider,
                      [bundleID UTF8String],
                      [self createCLogger:logger]) == 0;
@@ -141,6 +153,9 @@ JITEnableContext* sharedJITContext = nil;
         NSLog(@"Provider not initialized!");
         return NO;
     }
+    
+    [self ensureHeartbeat];
+    
     return debug_app_pid(provider,
                      pid,
                      [self createCLogger:logger]) == 0;

@@ -13,7 +13,7 @@
 
 
 bool isHeartbeat = false;
-
+NSDate* lastHeartbeatDate = nil;
 
 void startHeartbeat(IdevicePairingFile* pairing_file, TcpProviderHandle** provider, int* heartbeatSessionId, HeartbeatCompletionHandlerC completion, LogFuncC logger) {
     int currentSessionId = *heartbeatSessionId;
@@ -82,6 +82,7 @@ void startHeartbeat(IdevicePairingFile* pairing_file, TcpProviderHandle** provid
             return;
         }
         logger("DEBUG: Polo reply sent successfully.");
+        lastHeartbeatDate = [NSDate date];
         isHeartbeat = true;
     }
 }
