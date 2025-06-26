@@ -18,6 +18,9 @@ typedef void (^LogFunc)(NSString *message);
 - (void)startHeartbeatWithCompletionHandler:(HeartbeatCompletionHandler)completionHandler logger:(LogFunc)logger;
 - (BOOL)debugAppWithBundleID:(NSString*)bundleID logger:(LogFunc)logger;
 - (BOOL)debugAppWithPID:(int)pid logger:(LogFunc)logger;
+- (BOOL)startDebugSessionWithBundleID:(NSString*)bundleID logger:(LogFunc)logger;
+- (BOOL)startDebugSessionWithPID:(int)pid logger:(LogFunc)logger;
+- (void)detachDebugSession:(LogFunc)logger;
 - (NSDictionary<NSString*, NSString*>*)getAppListWithError:(NSError**)error;
 - (UIImage*)getAppIconWithBundleId:(NSString*)bundleId error:(NSError**)error;
 @end

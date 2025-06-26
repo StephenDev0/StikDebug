@@ -161,6 +161,42 @@ JITEnableContext* sharedJITContext = nil;
                      [self createCLogger:logger]) == 0;
 }
 
+- (BOOL)startDebugSessionWithBundleID:(NSString*)bundleID logger:(LogFunc)logger {
+    if (!provider) {
+        if (logger) {
+            logger(@"Provider not initialized!");
+        }
+        NSLog(@"Provider not initialized!");
+        return NO;
+    }
+
+    [self ensureHeartbeat];
+
+    return start_debug_session(provider,
+                               [bundleID UTF8String],
+                               [self createCLogger:logger]) == 0;
+}
+
+- (BOOL)startDebugSessionWithPID:(int)pid logger:(LogFunc)logger {
+    if (!provider) {
+        if (logger) {
+            logger(@"Provider not initialized!");
+        }
+        NSLog(@"Provider not initialized!");
+        return NO;
+    }
+
+    [self ensureHeartbeat];
+
+    return start_debug_session_pid(provider,
+                                   pid,
+                                   [self createCLogger:logger]) == 0;
+}
+
+- (void)detachDebugSession:(LogFunc)logger {
+    detach_debug_session([self createCLogger:logger]);
+}
+
 - (NSDictionary<NSString*, NSString*>*)getAppListWithError:(NSError**)error {
     if (!provider) {
         NSLog(@"Provider not initialized!");

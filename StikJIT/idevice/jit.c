@@ -18,6 +18,10 @@
 
 #include "jit.h"
 
+static DebugProxyAdapterHandle *active_debug_proxy = NULL;
+static XPCServiceHandle *active_debug_service = NULL;
+static XPCServiceHandle *active_pc_service = NULL;
+
 int debug_app(TcpProviderHandle* tcp_provider, const char *bundle_id, LogFuncC logger) {
     // Initialize logger
     idevice_init_logger(Debug, Disabled, NULL);
@@ -488,4 +492,410 @@ int debug_app_pid(TcpProviderHandle* tcp_provider, int pid, LogFuncC logger) {
     
     logger("Debug session completed");
     return 0;
+}
+
+int start_debug_session(TcpProviderHandle* tcp_provider, const char *bundle_id, LogFuncC logger) {
+    if (active_debug_proxy) {
+        logger("Debug session already active");
+        return 1;
+    }
+
+    // Reuse debug_app but skip detach and cleanup
+    idevice_init_logger(Debug, Disabled, NULL);
+    IdeviceErrorCode err = IdeviceSuccess;
+
+    CoreDeviceProxyHandle *core_device = NULL;
+    err = core_device_proxy_connect_tcp(tcp_provider, &core_device);
+    if (err != IdeviceSuccess) {
+        logger("Failed to connect to CoreDeviceProxy: %d", err);
+        return 1;
+    }
+
+    uint16_t rsd_port;
+    err = core_device_proxy_get_server_rsd_port(core_device, &rsd_port);
+    if (err != IdeviceSuccess) {
+        logger("Failed to get server RSD port: %d", err);
+        core_device_proxy_free(core_device);
+        return 1;
+    }
+
+    AdapterHandle *adapter = NULL;
+    err = core_device_proxy_create_tcp_adapter(core_device, &adapter);
+    if (err != IdeviceSuccess) {
+        logger("Failed to create TCP adapter: %d", err);
+        core_device_proxy_free(core_device);
+        return 1;
+    }
+
+    err = adapter_connect(adapter, rsd_port);
+    if (err != IdeviceSuccess) {
+        logger("Failed to connect to RSD port: %d", err);
+        adapter_free(adapter);
+        return 1;
+    }
+
+    XPCDeviceAdapterHandle *xpc_device = NULL;
+    err = xpc_device_new(adapter, &xpc_device);
+    if (err != IdeviceSuccess) {
+        logger("Failed to create XPC device: %d", err);
+        adapter_free(adapter);
+        return 1;
+    }
+
+    XPCServiceHandle *debug_service = NULL;
+    err = xpc_device_get_service(xpc_device, "com.apple.internal.dt.remote.debugproxy", &debug_service);
+    if (err != IdeviceSuccess) {
+        logger("Failed to get debug proxy service: %d", err);
+        xpc_device_free(xpc_device);
+        return 1;
+    }
+
+    XPCServiceHandle *pc_service = NULL;
+    err = xpc_device_get_service(xpc_device, "com.apple.instruments.dtservicehub", &pc_service);
+    if (err != IdeviceSuccess) {
+        logger("Failed to get process control service: %d", err);
+        xpc_service_free(debug_service);
+        xpc_device_free(xpc_device);
+        return 1;
+    }
+
+    AdapterHandle *pc_adapter = NULL;
+    err = xpc_device_adapter_into_inner(xpc_device, &pc_adapter);
+    if (err != IdeviceSuccess) {
+        logger("Failed to extract adapter: %d", err);
+        xpc_service_free(pc_service);
+        xpc_service_free(debug_service);
+        return 1;
+    }
+
+    err = adapter_connect(pc_adapter, pc_service->port);
+    if (err != IdeviceSuccess) {
+        logger("Failed to connect to process control port: %d", err);
+        adapter_free(pc_adapter);
+        xpc_service_free(pc_service);
+        xpc_service_free(debug_service);
+        return 1;
+    }
+
+    RemoteServerAdapterHandle *remote_server = NULL;
+    err = remote_server_adapter_new(pc_adapter, &remote_server);
+    if (err != IdeviceSuccess) {
+        logger("Failed to create remote server: %d", err);
+        adapter_free(pc_adapter);
+        xpc_service_free(pc_service);
+        xpc_service_free(debug_service);
+        return 1;
+    }
+
+    ProcessControlAdapterHandle *process_control = NULL;
+    err = process_control_new(remote_server, &process_control);
+    if (err != IdeviceSuccess) {
+        logger("Failed to create process control client: %d", err);
+        remote_server_free(remote_server);
+        xpc_service_free(pc_service);
+        xpc_service_free(debug_service);
+        return 1;
+    }
+
+    uint64_t pid;
+    err = process_control_launch_app(process_control, bundle_id, NULL, 0, NULL, 0, true, false, &pid);
+    if (err != IdeviceSuccess) {
+        logger("Failed to launch app: %d", err);
+        process_control_free(process_control);
+        remote_server_free(remote_server);
+        xpc_service_free(pc_service);
+        xpc_service_free(debug_service);
+        return 1;
+    }
+
+    err = process_control_disable_memory_limit(process_control, pid);
+    if (err != IdeviceSuccess) {
+        logger("failed to disable memory limit: %d", err);
+    }
+
+    AdapterHandle *debug_adapter = NULL;
+    err = remote_server_adapter_into_inner(remote_server, &debug_adapter);
+    if (err != IdeviceSuccess) {
+        logger("Failed to extract adapter: %d", err);
+        xpc_service_free(debug_service);
+        process_control_free(process_control);
+        remote_server_free(remote_server);
+        xpc_service_free(pc_service);
+        return 1;
+    }
+
+    err = adapter_connect(debug_adapter, debug_service->port);
+    if (err != IdeviceSuccess) {
+        logger("Failed to connect to debug proxy port: %d", err);
+        adapter_free(debug_adapter);
+        xpc_service_free(debug_service);
+        process_control_free(process_control);
+        remote_server_free(remote_server);
+        xpc_service_free(pc_service);
+        return 1;
+    }
+
+    DebugProxyAdapterHandle *debug_proxy = NULL;
+    err = debug_proxy_adapter_new(debug_adapter, &debug_proxy);
+    if (err != IdeviceSuccess) {
+        logger("Failed to create debug proxy client: %d", err);
+        adapter_free(debug_adapter);
+        xpc_service_free(debug_service);
+        process_control_free(process_control);
+        remote_server_free(remote_server);
+        xpc_service_free(pc_service);
+        return 1;
+    }
+
+    char attach_command[64];
+    snprintf(attach_command, sizeof(attach_command), "vAttach;%" PRIx64, pid);
+
+    DebugserverCommandHandle *attach_cmd = debugserver_command_new(attach_command, NULL, 0);
+    if (attach_cmd == NULL) {
+        logger("Failed to create attach command");
+        debug_proxy_free(debug_proxy);
+        xpc_service_free(debug_service);
+        process_control_free(process_control);
+        remote_server_free(remote_server);
+        xpc_service_free(pc_service);
+        return 1;
+    }
+
+    char *attach_response = NULL;
+    err = debug_proxy_send_command(debug_proxy, attach_cmd, &attach_response);
+    debugserver_command_free(attach_cmd);
+
+    if (err != IdeviceSuccess) {
+        logger("Failed to attach to process: %d", err);
+        debug_proxy_free(debug_proxy);
+        xpc_service_free(debug_service);
+        process_control_free(process_control);
+        remote_server_free(remote_server);
+        xpc_service_free(pc_service);
+        return 1;
+    } else if (attach_response != NULL) {
+        logger("Attach response: %s", attach_response);
+        idevice_string_free(attach_response);
+    }
+
+    active_debug_proxy = debug_proxy;
+    active_debug_service = debug_service;
+    active_pc_service = pc_service;
+
+    return 0;
+}
+
+int start_debug_session_pid(TcpProviderHandle* tcp_provider, int pid, LogFuncC logger) {
+    if (active_debug_proxy) {
+        logger("Debug session already active");
+        return 1;
+    }
+
+    idevice_init_logger(Debug, Disabled, NULL);
+    IdeviceErrorCode err = IdeviceSuccess;
+
+    CoreDeviceProxyHandle *core_device = NULL;
+    err = core_device_proxy_connect_tcp(tcp_provider, &core_device);
+    if (err != IdeviceSuccess) {
+        logger("Failed to connect to CoreDeviceProxy: %d", err);
+        return 1;
+    }
+
+    uint16_t rsd_port;
+    err = core_device_proxy_get_server_rsd_port(core_device, &rsd_port);
+    if (err != IdeviceSuccess) {
+        logger("Failed to get server RSD port: %d", err);
+        core_device_proxy_free(core_device);
+        return 1;
+    }
+
+    AdapterHandle *adapter = NULL;
+    err = core_device_proxy_create_tcp_adapter(core_device, &adapter);
+    if (err != IdeviceSuccess) {
+        logger("Failed to create TCP adapter: %d", err);
+        core_device_proxy_free(core_device);
+        return 1;
+    }
+
+    err = adapter_connect(adapter, rsd_port);
+    if (err != IdeviceSuccess) {
+        logger("Failed to connect to RSD port: %d", err);
+        adapter_free(adapter);
+        return 1;
+    }
+
+    XPCDeviceAdapterHandle *xpc_device = NULL;
+    err = xpc_device_new(adapter, &xpc_device);
+    if (err != IdeviceSuccess) {
+        logger("Failed to create XPC device: %d", err);
+        adapter_free(adapter);
+        return 1;
+    }
+
+    XPCServiceHandle *debug_service = NULL;
+    err = xpc_device_get_service(xpc_device, "com.apple.internal.dt.remote.debugproxy", &debug_service);
+    if (err != IdeviceSuccess) {
+        logger("Failed to get debug proxy service: %d", err);
+        xpc_device_free(xpc_device);
+        return 1;
+    }
+
+    XPCServiceHandle *pc_service = NULL;
+    err = xpc_device_get_service(xpc_device, "com.apple.instruments.dtservicehub", &pc_service);
+    if (err != IdeviceSuccess) {
+        logger("Failed to get process control service: %d", err);
+        xpc_service_free(debug_service);
+        xpc_device_free(xpc_device);
+        return 1;
+    }
+
+    AdapterHandle *pc_adapter = NULL;
+    err = xpc_device_adapter_into_inner(xpc_device, &pc_adapter);
+    if (err != IdeviceSuccess) {
+        logger("Failed to extract adapter: %d", err);
+        xpc_service_free(pc_service);
+        xpc_service_free(debug_service);
+        return 1;
+    }
+
+    err = adapter_connect(pc_adapter, pc_service->port);
+    if (err != IdeviceSuccess) {
+        logger("Failed to connect to process control port: %d", err);
+        adapter_free(pc_adapter);
+        xpc_service_free(pc_service);
+        xpc_service_free(debug_service);
+        return 1;
+    }
+
+    RemoteServerAdapterHandle *remote_server = NULL;
+    err = remote_server_adapter_new(pc_adapter, &remote_server);
+    if (err != IdeviceSuccess) {
+        logger("Failed to create remote server: %d", err);
+        adapter_free(pc_adapter);
+        xpc_service_free(pc_service);
+        xpc_service_free(debug_service);
+        return 1;
+    }
+
+    ProcessControlAdapterHandle *process_control = NULL;
+    err = process_control_new(remote_server, &process_control);
+    if (err != IdeviceSuccess) {
+        logger("Failed to create process control client: %d", err);
+        remote_server_free(remote_server);
+        xpc_service_free(pc_service);
+        xpc_service_free(debug_service);
+        return 1;
+    }
+
+    err = process_control_disable_memory_limit(process_control, pid);
+    if (err != IdeviceSuccess) {
+        logger("failed to disable memory limit: %d", err);
+    }
+
+    AdapterHandle *debug_adapter = NULL;
+    err = remote_server_adapter_into_inner(remote_server, &debug_adapter);
+    if (err != IdeviceSuccess) {
+        logger("Failed to extract adapter: %d", err);
+        xpc_service_free(debug_service);
+        process_control_free(process_control);
+        remote_server_free(remote_server);
+        xpc_service_free(pc_service);
+        return 1;
+    }
+
+    err = adapter_connect(debug_adapter, debug_service->port);
+    if (err != IdeviceSuccess) {
+        logger("Failed to connect to debug proxy port: %d", err);
+        adapter_free(debug_adapter);
+        xpc_service_free(debug_service);
+        process_control_free(process_control);
+        remote_server_free(remote_server);
+        xpc_service_free(pc_service);
+        return 1;
+    }
+
+    DebugProxyAdapterHandle *debug_proxy = NULL;
+    err = debug_proxy_adapter_new(debug_adapter, &debug_proxy);
+    if (err != IdeviceSuccess) {
+        logger("Failed to create debug proxy client: %d", err);
+        adapter_free(debug_adapter);
+        xpc_service_free(debug_service);
+        process_control_free(process_control);
+        remote_server_free(remote_server);
+        xpc_service_free(pc_service);
+        return 1;
+    }
+
+    char attach_command[64];
+    snprintf(attach_command, sizeof(attach_command), "vAttach;%x", pid);
+
+    DebugserverCommandHandle *attach_cmd = debugserver_command_new(attach_command, NULL, 0);
+    if (attach_cmd == NULL) {
+        logger("Failed to create attach command");
+        debug_proxy_free(debug_proxy);
+        xpc_service_free(debug_service);
+        process_control_free(process_control);
+        remote_server_free(remote_server);
+        xpc_service_free(pc_service);
+        return 1;
+    }
+
+    char *attach_response = NULL;
+    err = debug_proxy_send_command(debug_proxy, attach_cmd, &attach_response);
+    debugserver_command_free(attach_cmd);
+
+    if (err != IdeviceSuccess) {
+        logger("Failed to attach to process: %d", err);
+        debug_proxy_free(debug_proxy);
+        xpc_service_free(debug_service);
+        process_control_free(process_control);
+        remote_server_free(remote_server);
+        xpc_service_free(pc_service);
+        return 1;
+    } else if (attach_response != NULL) {
+        logger("Attach response: %s", attach_response);
+        idevice_string_free(attach_response);
+    }
+
+    active_debug_proxy = debug_proxy;
+    active_debug_service = debug_service;
+    active_pc_service = pc_service;
+
+    return 0;
+}
+
+void detach_debug_session(LogFuncC logger) {
+    if (!active_debug_proxy) {
+        logger("No active debug session");
+        return;
+    }
+
+    DebugserverCommandHandle *detach_cmd = debugserver_command_new("D", NULL, 0);
+    if (detach_cmd == NULL) {
+        logger("Failed to create detach command");
+    } else {
+        char *detach_response = NULL;
+        IdeviceErrorCode err;
+        err = debug_proxy_send_command(active_debug_proxy, detach_cmd, &detach_response);
+        err = debug_proxy_send_command(active_debug_proxy, detach_cmd, &detach_response);
+        err = debug_proxy_send_command(active_debug_proxy, detach_cmd, &detach_response);
+        debugserver_command_free(detach_cmd);
+
+        if (err != IdeviceSuccess) {
+            logger("Failed to detach from process: %d", err);
+        } else if (detach_response != NULL) {
+            logger("Detach response: %s", detach_response);
+            idevice_string_free(detach_response);
+        }
+    }
+
+    debug_proxy_free(active_debug_proxy);
+    xpc_service_free(active_debug_service);
+    xpc_service_free(active_pc_service);
+
+    active_debug_proxy = NULL;
+    active_debug_service = NULL;
+    active_pc_service = NULL;
+
+    logger("Debug session detached");
 }

@@ -39,6 +39,7 @@ struct HomeView: View {
     @State private var viewDidAppeared = false
     @State private var pendingBundleIdToEnableJIT : String? = nil
     @State private var pendingPIDToEnableJIT : Int? = nil
+    @State private var isDebugging = false
     
     private var accentColor: Color {
         if customAccentColorHex.isEmpty {
@@ -144,6 +145,27 @@ struct HomeView: View {
                 .padding(.horizontal, 20)
                 .sheet(isPresented: $showingConsoleLogsView) {
                     ConsoleLogsView()
+                }
+
+                if isDebugging {
+                    Button(action: {
+                        detachDebugSession()
+                    }) {
+                        HStack {
+                            Image(systemName: "eject.fill")
+                                .font(.system(size: 20))
+                            Text("Detach Debugger")
+                                .font(.system(.title3, design: .rounded))
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(accentColor)
+                        .foregroundColor(accentColor.contrastText())
+                        .cornerRadius(16)
+                        .shadow(color: accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
+                    }
+                    .padding(.horizontal, 20)
                 }
                 
                 // Status message area - keeps layout consistent
@@ -380,20 +402,29 @@ struct HomeView: View {
         LogManager.shared.addInfoLog("Starting Debug for \(bundleID)")
         
         DispatchQueue.global(qos: .background).async {
-
-            let success = JITEnableContext.shared.debugApp(withBundleID: bundleID, logger: { message in
-
-                if let message = message {
-                    // Log messages from the JIT process
-                    LogManager.shared.addInfoLog(message)
-                }
-            })
+            let os = ProcessInfo.processInfo.operatingSystemVersion
+            let success: Bool
+            if os.majorVersion >= 19 {
+                success = JITEnableContext.shared.startDebugSession(withBundleID: bundleID, logger: { message in
+                    if let message = message {
+                        LogManager.shared.addInfoLog(message)
+                    }
+                })
+            } else {
+                success = JITEnableContext.shared.debugApp(withBundleID: bundleID, logger: { message in
+                    if let message = message {
+                        LogManager.shared.addInfoLog(message)
+                    }
+                })
+            }
             
             DispatchQueue.main.async {
                 LogManager.shared.addInfoLog("Debug process completed for \(bundleID)")
                 isProcessing = false
-                
-                if success && doAutoQuitAfterEnablingJIT {
+
+                if os.majorVersion >= 19 {
+                    if success { isDebugging = true }
+                } else if success && doAutoQuitAfterEnablingJIT {
                     exit(0)
                 }
             }
@@ -407,23 +438,49 @@ struct HomeView: View {
         LogManager.shared.addInfoLog("Starting JIT for pid \(pid)")
         
         DispatchQueue.global(qos: .background).async {
-
-            let success = JITEnableContext.shared.debugApp(withPID: Int32(pid), logger: { message in
-
-                if let message = message {
-                    // Log messages from the JIT process
-                    LogManager.shared.addInfoLog(message)
-                }
-            })
+            let os = ProcessInfo.processInfo.operatingSystemVersion
+            let success: Bool
+            if os.majorVersion >= 19 {
+                success = JITEnableContext.shared.startDebugSession(withPID: Int32(pid), logger: { message in
+                    if let message = message {
+                        LogManager.shared.addInfoLog(message)
+                    }
+                })
+            } else {
+                success = JITEnableContext.shared.debugApp(withPID: Int32(pid), logger: { message in
+                    if let message = message {
+                        LogManager.shared.addInfoLog(message)
+                    }
+                })
+            }
             
             DispatchQueue.main.async {
                 LogManager.shared.addInfoLog("JIT process completed for \(pid)")
                 showAlert(title: "Success", message: "JIT has been enabled for pid \(pid).", showOk: true, messageType: .success, completion: { _ in })
                 isProcessing = false
-                
-                if success && doAutoQuitAfterEnablingJIT {
+
+                if os.majorVersion >= 19 {
+                    if success { isDebugging = true }
+                } else if success && doAutoQuitAfterEnablingJIT {
                     exit(0)
                 }
+            }
+        }
+    }
+
+    private func detachDebugSession() {
+        isProcessing = true
+
+        DispatchQueue.global(qos: .background).async {
+            JITEnableContext.shared.detachDebugSession { message in
+                if let message = message {
+                    LogManager.shared.addInfoLog(message)
+                }
+            }
+
+            DispatchQueue.main.async {
+                isProcessing = false
+                isDebugging = false
             }
         }
     }
