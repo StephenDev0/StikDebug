@@ -402,10 +402,10 @@ struct HomeView: View {
     }
     
     private func getJsCallback() -> DebugAppCallback? {
-        let selectedScript = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let selectedScriptURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("scripts").appendingPathComponent(selectedScript)
         
-        if !FileManager.default.fileExists(atPath: selectedScript.path()) {
+        if !FileManager.default.fileExists(atPath: selectedScriptURL.path()) {
             return nil
         }
         
@@ -414,7 +414,7 @@ struct HomeView: View {
             scriptViewShow = true
             DispatchQueue.global(qos: .background).async {
                 do {
-                    try jsModel?.runScript(path: selectedScript)
+                    try jsModel?.runScript(path: selectedScriptURL)
                 } catch {
                     showAlert(title: "Error Occurred While Executing the Default Script.", message: error.localizedDescription, showOk: true)
                 }

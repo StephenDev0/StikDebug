@@ -18,7 +18,7 @@
 JITEnableContext* sharedJITContext = nil;
 
 @implementation JITEnableContext {
-    int heartbeatSessionId;
+    bool heartbeatRunning;
     TcpProviderHandle* provider;
 }
 
@@ -106,11 +106,13 @@ JITEnableContext* sharedJITContext = nil;
         return;
     }
 
-    self->heartbeatSessionId = arc4random();
+    if(heartbeatRunning) {
+        return;
+    }
     startHeartbeat(
         pairingFile,
         &provider,
-        &heartbeatSessionId,
+        &heartbeatRunning,
         ^(int result, const char *message) {
             completionHandler(result,
                               [NSString stringWithCString:message
@@ -194,7 +196,6 @@ JITEnableContext* sharedJITContext = nil;
 }
 
 - (void)dealloc {
-    heartbeatSessionId = arc4random();
     if (provider) {
         tcp_provider_free(provider);
     }

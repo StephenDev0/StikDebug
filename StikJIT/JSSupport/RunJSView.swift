@@ -31,8 +31,13 @@ class RunJSViewModel : ObservableObject {
             return self.pid
         }
         
-        let sendCommandFunction: @convention(block) (String) -> String = { commandStr in
-            return handleJSContextSendDebugCommand(self.context, commandStr, self.debugProxy)
+        let sendCommandFunction: @convention(block) (String?) -> String? = { commandStr in
+            guard let commandStr else {
+                self.context?.exception = JSValue(object: "command should not be nil", in: self.context!)
+                return nil
+            }
+            
+            return handleJSContextSendDebugCommand(self.context, commandStr, self.debugProxy) ?? ""
         }
         
         let logFunction: @convention(block) (String) -> Void = { logStr in
