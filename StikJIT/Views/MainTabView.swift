@@ -24,6 +24,10 @@ struct MainTabView: View {
                 .tabItem {
                     Label("Home", systemImage: "house")
                 }
+            ScriptListView()
+                .tabItem {
+                    Label("Scripts", systemImage: "scroll")
+                }
             SettingsView()
                 .tabItem {
                     Label("Settings", systemImage: "gearshape.fill")

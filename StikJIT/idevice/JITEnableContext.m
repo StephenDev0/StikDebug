@@ -33,7 +33,7 @@ JITEnableContext* sharedJITContext = nil;
     NSFileManager* fm = [NSFileManager defaultManager];
     NSURL* docPathUrl = [fm URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
     NSURL* logURL = [docPathUrl URLByAppendingPathComponent:@"idevice_log.txt"];
-    idevice_init_logger(Debug, Debug, (char*)logURL.path.UTF8String);
+    idevice_init_logger(Info, Debug, (char*)logURL.path.UTF8String);
     return self;
 }
 
@@ -129,7 +129,7 @@ JITEnableContext* sharedJITContext = nil;
     }
 }
 
-- (BOOL)debugAppWithBundleID:(NSString*)bundleID logger:(LogFunc)logger {
+- (BOOL)debugAppWithBundleID:(NSString*)bundleID logger:(LogFunc)logger jsCallback:(DebugAppCallback)jsCallback {
     if (!provider) {
         if (logger) {
             logger(@"Provider not initialized!");
@@ -142,10 +142,10 @@ JITEnableContext* sharedJITContext = nil;
     
     return debug_app(provider,
                      [bundleID UTF8String],
-                     [self createCLogger:logger]) == 0;
+                     [self createCLogger:logger], jsCallback) == 0;
 }
 
-- (BOOL)debugAppWithPID:(int)pid logger:(LogFunc)logger {
+- (BOOL)debugAppWithPID:(int)pid logger:(LogFunc)logger jsCallback:(DebugAppCallback)jsCallback {
     if (!provider) {
         if (logger) {
             logger(@"Provider not initialized!");
@@ -158,7 +158,7 @@ JITEnableContext* sharedJITContext = nil;
     
     return debug_app_pid(provider,
                      pid,
-                     [self createCLogger:logger]) == 0;
+                     [self createCLogger:logger], jsCallback) == 0;
 }
 
 - (NSDictionary<NSString*, NSString*>*)getAppListWithError:(NSError**)error {

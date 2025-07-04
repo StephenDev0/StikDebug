@@ -18,9 +18,82 @@
 
 #include "jit.h"
 
-int debug_app(TcpProviderHandle* tcp_provider, const char *bundle_id, LogFuncC logger) {
+IdeviceErrorCode debug_proxy_send_command2(struct DebugProxyAdapterHandle *handle, struct DebugserverCommandHandle *command, char **response) {
+    IdeviceErrorCode err = debug_proxy_send_command(handle, command, response);
+    if(err != IdeviceSuccess) {
+        return err;
+    }
+    for(int i = 0; i < 10; ++i) {
+        if(*response) {
+            return err;
+        }
+        debug_proxy_read_response(handle, response);
+    }
+    return err;
+}
+
+void runDebugServerCommand(int pid, DebugProxyAdapterHandle* debug_proxy, LogFuncC logger, DebugAppCallback callback) {
+    // enable QStartNoAckMode
+    char *disableResponse = NULL;
+    debug_proxy_send_ack(debug_proxy);
+    debug_proxy_send_ack(debug_proxy);
+    DebugserverCommandHandle *disableAckCommand = debugserver_command_new("QStartNoAckMode", NULL, 0);
+    IdeviceErrorCode err = debug_proxy_send_command(debug_proxy, disableAckCommand, &disableResponse);
+    debugserver_command_free(disableAckCommand);
+    logger("QStartNoAckMode result = %s, err = %d", disableResponse, err);
+    idevice_string_free(disableResponse);
+    debug_proxy_set_ack_mode(debug_proxy, false);
+    
+    if(callback) {
+        dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+        callback(pid, debug_proxy, semaphore);
+        dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+        
+    } else {
+        // Send vAttach command with PID in hex
+        char attach_command[64];
+        snprintf(attach_command, sizeof(attach_command), "vAttach;%" PRIx64, pid);
+        
+        DebugserverCommandHandle *attach_cmd = debugserver_command_new(attach_command, NULL, 0);
+        if (attach_cmd == NULL) {
+            logger("Failed to create attach command");
+            return;
+        }
+        
+        char *attach_response = NULL;
+        err = debug_proxy_send_command2(debug_proxy, attach_cmd, &attach_response);
+        debugserver_command_free(attach_cmd);
+        
+        if (err != IdeviceSuccess) {
+            logger("Failed to attach to process: %d", err);
+        } else if (attach_response != NULL) {
+            logger("Attach response: %s", attach_response);
+            idevice_string_free(attach_response);
+        }
+        
+    }
+
+    // Send detach command
+    DebugserverCommandHandle *detach_cmd = debugserver_command_new("D", NULL, 0);
+    if (detach_cmd == NULL) {
+        logger("Failed to create detach command");
+    } else {
+        char *detach_response = NULL;
+        err = debug_proxy_send_command2(debug_proxy, detach_cmd, &detach_response);
+        debugserver_command_free(detach_cmd);
+        
+        if (err != IdeviceSuccess) {
+            logger("Failed to detach from process: %d", err);
+        } else if (detach_response != NULL) {
+            logger("Detach response: %s", detach_response);
+            idevice_string_free(detach_response);
+        }
+    }
+}
+
+int debug_app(TcpProviderHandle* tcp_provider, const char *bundle_id, LogFuncC logger, DebugAppCallback callback) {
     // Initialize logger
-    idevice_init_logger(Debug, Disabled, NULL);
+    idevice_init_logger(Info, Disabled, NULL);
     IdeviceErrorCode err = IdeviceSuccess;
     
     // Connect to CoreDeviceProxy
@@ -208,50 +281,7 @@ int debug_app(TcpProviderHandle* tcp_provider, const char *bundle_id, LogFuncC l
         return 1;
     }
     
-    // Send vAttach command with PID in hex
-    char attach_command[64];
-    snprintf(attach_command, sizeof(attach_command), "vAttach;%" PRIx64, pid);
-    
-    DebugserverCommandHandle *attach_cmd = debugserver_command_new(attach_command, NULL, 0);
-    if (attach_cmd == NULL) {
-        logger("Failed to create attach command");
-        debug_proxy_free(debug_proxy);
-        xpc_service_free(debug_service);
-        process_control_free(process_control);
-        remote_server_free(remote_server);
-        xpc_service_free(pc_service);
-        return 1;
-    }
-    
-    char *attach_response = NULL;
-    err = debug_proxy_send_command(debug_proxy, attach_cmd, &attach_response);
-    debugserver_command_free(attach_cmd);
-    
-    if (err != IdeviceSuccess) {
-        logger("Failed to attach to process: %d", err);
-    } else if (attach_response != NULL) {
-        logger("Attach response: %s", attach_response);
-        idevice_string_free(attach_response);
-    }
-    
-    // Send detach command
-    DebugserverCommandHandle *detach_cmd = debugserver_command_new("D", NULL, 0);
-    if (detach_cmd == NULL) {
-        logger("Failed to create detach command");
-    } else {
-        char *detach_response = NULL;
-        err = debug_proxy_send_command(debug_proxy, detach_cmd, &detach_response);
-        err = debug_proxy_send_command(debug_proxy, detach_cmd, &detach_response);
-        err = debug_proxy_send_command(debug_proxy, detach_cmd, &detach_response);
-        debugserver_command_free(detach_cmd);
-        
-        if (err != IdeviceSuccess) {
-            logger("Failed to detach from process: %d", err);
-        } else if (detach_response != NULL) {
-            logger("Detach response: %s", detach_response);
-            idevice_string_free(detach_response);
-        }
-    }
+    runDebugServerCommand(pid, debug_proxy, logger, callback);
     
     /*****************************************************************
      * Cleanup
@@ -265,7 +295,7 @@ int debug_app(TcpProviderHandle* tcp_provider, const char *bundle_id, LogFuncC l
 }
 
 
-int debug_app_pid(TcpProviderHandle* tcp_provider, int pid, LogFuncC logger) {
+int debug_app_pid(TcpProviderHandle* tcp_provider, int pid, LogFuncC logger, DebugAppCallback callback) {
     // Connect to CoreDeviceProxy
     CoreDeviceProxyHandle *core_device = NULL;
     IdeviceErrorCode err = core_device_proxy_connect_tcp(tcp_provider, &core_device);
@@ -434,50 +464,7 @@ int debug_app_pid(TcpProviderHandle* tcp_provider, int pid, LogFuncC logger) {
         return 1;
     }
     
-    // Send vAttach command with PID in hex
-    char attach_command[64];
-    snprintf(attach_command, sizeof(attach_command), "vAttach;%" PRIx64, pid);
-    
-    DebugserverCommandHandle *attach_cmd = debugserver_command_new(attach_command, NULL, 0);
-    if (attach_cmd == NULL) {
-        logger("Failed to create attach command");
-        debug_proxy_free(debug_proxy);
-        xpc_service_free(debug_service);
-        process_control_free(process_control);
-        remote_server_free(remote_server);
-        xpc_service_free(pc_service);
-        return 1;
-    }
-    
-    char *attach_response = NULL;
-    err = debug_proxy_send_command(debug_proxy, attach_cmd, &attach_response);
-    debugserver_command_free(attach_cmd);
-    
-    if (err != IdeviceSuccess) {
-        logger("Failed to attach to process: %d", err);
-    } else if (attach_response != NULL) {
-        logger("Attach response: %s", attach_response);
-        idevice_string_free(attach_response);
-    }
-    
-    // Send detach command
-    DebugserverCommandHandle *detach_cmd = debugserver_command_new("D", NULL, 0);
-    if (detach_cmd == NULL) {
-        logger("Failed to create detach command");
-    } else {
-        char *detach_response = NULL;
-        err = debug_proxy_send_command(debug_proxy, detach_cmd, &detach_response);
-        err = debug_proxy_send_command(debug_proxy, detach_cmd, &detach_response);
-        err = debug_proxy_send_command(debug_proxy, detach_cmd, &detach_response);
-        debugserver_command_free(detach_cmd);
-        
-        if (err != IdeviceSuccess) {
-            logger("Failed to detach from process: %d", err);
-        } else if (detach_response != NULL) {
-            logger("Detach response: %s", detach_response);
-            idevice_string_free(detach_response);
-        }
-    }
+    runDebugServerCommand(pid, debug_proxy, logger, callback);
     
     /*****************************************************************
      * Cleanup

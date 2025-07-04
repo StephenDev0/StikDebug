@@ -21,7 +21,6 @@ struct HomeView: View {
 
     @AppStorage("username") private var username = "User"
     @AppStorage("customAccentColor") private var customAccentColorHex: String = ""
-    @AppStorage("autoQuitAfterEnablingJIT") private var doAutoQuitAfterEnablingJIT = false
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accentColor) private var environmentAccentColor
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -44,6 +43,11 @@ struct HomeView: View {
     @State private var viewDidAppeared = false
     @State private var pendingBundleIdToEnableJIT : String? = nil
     @State private var pendingPIDToEnableJIT : Int? = nil
+    
+    @AppStorage("useDefaultScript") private var useDefaultScript = false
+    @State var scriptViewShow = false
+    @AppStorage("DefaultScriptName") var selectedScript = "attachDetach.js"
+    @State var jsModel: RunJSViewModel?
     
     private var accentColor: Color {
         if customAccentColorHex.isEmpty {
@@ -314,6 +318,30 @@ struct HomeView: View {
                 startJITInBackground(with: selectedBundle)
             }
         }
+        .sheet(isPresented: $scriptViewShow) {
+            NavigationView {
+                if let jsModel {
+                    RunJSView(model: jsModel)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("Done") {
+                                    scriptViewShow = false
+                                }
+                            }
+                        }
+                        .navigationTitle(selectedScript)
+                        .navigationBarTitleDisplayMode(.inline)
+                }
+                
+
+            }
+            
+        }
+        .onChange(of: scriptViewShow) { oldValue, newValue in
+            if !newValue, let jsModel {
+                jsModel.semaphore?.signal()
+            }
+        }
         .textFieldAlert(
             isPresented: $pidTextAlertShow,
             title: "Please enter the PID of the process you want to connect to",
@@ -391,6 +419,27 @@ struct HomeView: View {
         // but we'll keep it empty to avoid breaking anything
     }
     
+    private func getJsCallback() -> DebugAppCallback? {
+        let selectedScript = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("scripts").appendingPathComponent(selectedScript)
+        
+        if !FileManager.default.fileExists(atPath: selectedScript.path()) {
+            return nil
+        }
+        
+        return { pid, debugProxyHandle, semaphore in
+            jsModel = RunJSViewModel(pid: Int(pid), debugProxy: debugProxyHandle, semaphore: semaphore)
+            scriptViewShow = true
+            DispatchQueue.global(qos: .background).async {
+                do {
+                    try jsModel?.runScript(path: selectedScript)
+                } catch {
+                    showAlert(title: "Error Occurred While Executing the Default Script.", message: error.localizedDescription, showOk: true, )
+                }
+            }
+        }
+    }
+    
     private func startJITInBackground(with bundleID: String) {
         isProcessing = true
         
@@ -398,22 +447,17 @@ struct HomeView: View {
         LogManager.shared.addInfoLog("Starting Debug for \(bundleID)")
         
         DispatchQueue.global(qos: .background).async {
-
             let success = JITEnableContext.shared.debugApp(withBundleID: bundleID, logger: { message in
 
                 if let message = message {
                     // Log messages from the JIT process
                     LogManager.shared.addInfoLog(message)
                 }
-            })
+            }, jsCallback: useDefaultScript ? getJsCallback() : nil)
             
             DispatchQueue.main.async {
                 LogManager.shared.addInfoLog("Debug process completed for \(bundleID)")
                 isProcessing = false
-                
-                if success && doAutoQuitAfterEnablingJIT {
-                    exit(0)
-                }
             }
         }
     }
@@ -427,21 +471,17 @@ struct HomeView: View {
         DispatchQueue.global(qos: .background).async {
 
             let success = JITEnableContext.shared.debugApp(withPID: Int32(pid), logger: { message in
-
+                
                 if let message = message {
                     // Log messages from the JIT process
                     LogManager.shared.addInfoLog(message)
                 }
-            })
+            }, jsCallback: useDefaultScript ? getJsCallback() : nil)
             
             DispatchQueue.main.async {
                 LogManager.shared.addInfoLog("JIT process completed for \(pid)")
-                showAlert(title: "Success", message: "JIT has been enabled for pid \(pid).", showOk: true, messageType: .success, completion: { _ in })
+                showAlert(title: "Success", message: "JIT has been enabled for pid \(pid).", showOk: true, messageType: .success)
                 isProcessing = false
-                
-                if success && doAutoQuitAfterEnablingJIT {
-                    exit(0)
-                }
             }
         }
     }

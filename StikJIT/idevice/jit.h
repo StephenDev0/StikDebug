@@ -11,7 +11,9 @@
 #include "idevice.h"
 
 typedef void (^LogFuncC)(const char* message, ...);
-int debug_app(TcpProviderHandle* provider, const char *bundle_id, LogFuncC logger);
-int debug_app_pid(TcpProviderHandle* provider, int pid, LogFuncC logger);
+typedef void (^DebugAppCallback)(int pid, struct DebugProxyAdapterHandle* debug_proxy, dispatch_semaphore_t semaphore);
+int debug_app(TcpProviderHandle* tcp_provider, const char *bundle_id, LogFuncC logger, DebugAppCallback callback);
+IdeviceErrorCode debug_proxy_send_command2(struct DebugProxyAdapterHandle *handle, struct DebugserverCommandHandle *command, char **response);
+int debug_app_pid(TcpProviderHandle* tcp_provider, int pid, LogFuncC logger, DebugAppCallback callback);
 
 #endif /* JIT_H */
