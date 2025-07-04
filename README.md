@@ -1,5 +1,7 @@
 <div align="center">
+   <a href="https://apps.apple.com/us/app/stikdebug/id6744045754" target="_blank" rel="noopener noreferrer">
    <img width="217" height="217" src="/assets/StikJIT_Rounded_Corners.png" alt="Logo">
+   </a>
 </div>
    
 
@@ -27,6 +29,13 @@
   <br />
 </h6>
 
+## Download
+<div>
+  <a href="https://apps.apple.com/us/app/stikdebug/id6744045754" target="_blank" rel="noopener noreferrer">
+    <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" style="width: 200px; height: auto;">
+  </a>
+</div>
+
 ## Features  
 - On-device debugging/Just-In-Time (JIT) compilation for supported apps via [`idevice`](https://github.com/jkcoxson/idevice).  
 - Seamless integration with our custom built loopback vpn.  
@@ -35,3 +44,4 @@
 
 ## License  
 StikDebug is licensed under **AGPL-3.0**. See [`LICENSE`](LICENSE) for details.  
+
