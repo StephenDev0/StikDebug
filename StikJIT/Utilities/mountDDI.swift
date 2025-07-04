@@ -203,8 +203,7 @@ func mountPersonalDDI(deviceIP: String = "10.7.0.1", imagePath: String, trustcac
                     manifestPtr.baseAddress?.assumingMemoryBound(to: UInt8.self),
                     buildManifest.count,
                     nil,
-                    uniqueChipID,
-
+                    uniqueChipID
                 )
             }
         }
