@@ -14,52 +14,22 @@
 
 #define LOCKDOWN_PORT 62078
 
+typedef enum AfcFopenMode {
+  AfcRdOnly = 1,
+  AfcRw = 2,
+  AfcWrOnly = 3,
+  AfcWr = 4,
+  AfcAppend = 5,
+  AfcRdAppend = 6,
+} AfcFopenMode;
 
-typedef enum IdeviceErrorCode {
-  IdeviceSuccess = 0,
-  Socket = -1,
-  Ssl = -2,
-  SslSetup = -3,
-  Plist = -4,
-  Utf8 = -5,
-  UnexpectedResponse = -6,
-  GetProhibited = -7,
-  SessionInactive = -8,
-  InvalidHostID = -9,
-  NoEstablishedConnection = -10,
-  HeartbeatSleepyTime = -11,
-  HeartbeatTimeout = -12,
-  NotFound = -13,
-  CdtunnelPacketTooShort = -14,
-  CdtunnelPacketInvalidMagic = -15,
-  PacketSizeMismatch = -16,
-  Json = -17,
-  DeviceNotFound = -18,
-  DeviceLocked = -19,
-  UsbConnectionRefused = -20,
-  UsbBadCommand = -21,
-  UsbBadDevice = -22,
-  UsbBadVersion = -23,
-  BadBuildManifest = -24,
-  ImageNotMounted = -25,
-  Reqwest = -26,
-  InternalError = -27,
-  Xpc = -28,
-  NsKeyedArchiveError = -29,
-  UnknownAuxValueType = -30,
-  UnknownChannel = -31,
-  AddrParseError = -32,
-  DisableMemoryLimitFailed = -33,
-  NotEnoughBytes = -34,
-  Utf8Error = -35,
-  InvalidArgument = -36,
-  UnknownErrorType = -37,
-  AdapterIOFailed = -996,
-  ServiceNotFound = -997,
-  BufferTooSmall = -998,
-  InvalidString = -999,
-  InvalidArg = -1000,
-} IdeviceErrorCode;
+/**
+ * Link type for creating hard or symbolic links
+ */
+typedef enum AfcLinkType {
+  Hard = 1,
+  Symbolic = 2,
+} AfcLinkType;
 
 typedef enum IdeviceLogLevel {
   Disabled = 0,
@@ -79,12 +49,23 @@ typedef enum IdeviceLoggerError {
 
 typedef struct AdapterHandle AdapterHandle;
 
+typedef struct AdapterStreamHandle AdapterStreamHandle;
+
+typedef struct AfcClientHandle AfcClientHandle;
+
+/**
+ * Handle for an open file on the device
+ */
+typedef struct AfcFileHandle AfcFileHandle;
+
+typedef struct AmfiClientHandle AmfiClientHandle;
+
 typedef struct CoreDeviceProxyHandle CoreDeviceProxyHandle;
 
 /**
  * Opaque handle to a DebugProxyClient
  */
-typedef struct DebugProxyAdapterHandle DebugProxyAdapterHandle;
+typedef struct DebugProxyHandle DebugProxyHandle;
 
 typedef struct HeartbeatClientHandle HeartbeatClientHandle;
 
@@ -98,40 +79,83 @@ typedef struct IdeviceHandle IdeviceHandle;
  */
 typedef struct IdevicePairingFile IdevicePairingFile;
 
+typedef struct IdeviceProviderHandle IdeviceProviderHandle;
+
 typedef struct IdeviceSocketHandle IdeviceSocketHandle;
 
 typedef struct ImageMounterHandle ImageMounterHandle;
 
 typedef struct InstallationProxyClientHandle InstallationProxyClientHandle;
 
+/**
+ * Opaque handle to a ProcessControlClient
+ */
+typedef struct LocationSimulationHandle LocationSimulationHandle;
+
 typedef struct LockdowndClientHandle LockdowndClientHandle;
+
+typedef struct MisagentClientHandle MisagentClientHandle;
+
+typedef struct OsTraceRelayClientHandle OsTraceRelayClientHandle;
+
+typedef struct OsTraceRelayReceiverHandle OsTraceRelayReceiverHandle;
 
 /**
  * Opaque handle to a ProcessControlClient
  */
-typedef struct ProcessControlAdapterHandle ProcessControlAdapterHandle;
+typedef struct ProcessControlHandle ProcessControlHandle;
+
+typedef struct ReadWriteOpaque ReadWriteOpaque;
 
 /**
  * Opaque handle to a RemoteServerClient
  */
-typedef struct RemoteServerAdapterHandle RemoteServerAdapterHandle;
+typedef struct RemoteServerHandle RemoteServerHandle;
+
+/**
+ * Opaque handle to an RsdHandshake
+ */
+typedef struct RsdHandshakeHandle RsdHandshakeHandle;
 
 typedef struct SpringBoardServicesClientHandle SpringBoardServicesClientHandle;
 
-typedef struct TcpProviderHandle TcpProviderHandle;
+typedef struct SyslogRelayClientHandle SyslogRelayClientHandle;
 
 typedef struct UsbmuxdAddrHandle UsbmuxdAddrHandle;
 
 typedef struct UsbmuxdConnectionHandle UsbmuxdConnectionHandle;
 
-typedef struct UsbmuxdProviderHandle UsbmuxdProviderHandle;
-
-/**
- * Opaque handle to an XPCDevice
- */
-typedef struct XPCDeviceAdapterHandle XPCDeviceAdapterHandle;
+typedef struct Vec_u64 Vec_u64;
 
 typedef struct sockaddr sockaddr;
+
+typedef struct IdeviceFfiError {
+  int32_t code;
+  const char *message;
+} IdeviceFfiError;
+
+/**
+ * File information structure for C bindings
+ */
+typedef struct AfcFileInfo {
+  size_t size;
+  size_t blocks;
+  int64_t creation;
+  int64_t modified;
+  char *st_nlink;
+  char *st_ifmt;
+  char *st_link_target;
+} AfcFileInfo;
+
+/**
+ * Device information structure for C bindings
+ */
+typedef struct AfcDeviceInfo {
+  char *model;
+  size_t total_bytes;
+  size_t free_bytes;
+  size_t block_size;
+} AfcDeviceInfo;
 
 /**
  * Represents a debugserver command
@@ -142,17 +166,68 @@ typedef struct DebugserverCommandHandle {
   uintptr_t argv_count;
 } DebugserverCommandHandle;
 
+typedef struct SyslogLabel {
+  const char *subsystem;
+  const char *category;
+} SyslogLabel;
+
+typedef struct OsTraceLog {
+  uint32_t pid;
+  int64_t timestamp;
+  uint8_t level;
+  const char *image_name;
+  const char *filename;
+  const char *message;
+  const struct SyslogLabel *label;
+} OsTraceLog;
+
 /**
- * Opaque handle to an XPCService
+ * C-compatible representation of an RSD service
  */
-typedef struct XPCServiceHandle {
+typedef struct CRsdService {
+  /**
+   * Service name (null-terminated string)
+   */
+  char *name;
+  /**
+   * Required entitlement (null-terminated string)
+   */
   char *entitlement;
+  /**
+   * Port number
+   */
   uint16_t port;
+  /**
+   * Whether service uses remote XPC
+   */
   bool uses_remote_xpc;
+  /**
+   * Number of features
+   */
+  size_t features_count;
+  /**
+   * Array of feature strings
+   */
   char **features;
-  uintptr_t features_count;
+  /**
+   * Service version (-1 if not present)
+   */
   int64_t service_version;
-} XPCServiceHandle;
+} CRsdService;
+
+/**
+ * Array of RSD services returned by rsd_get_services
+ */
+typedef struct CRsdServiceArray {
+  /**
+   * Array of services
+   */
+  struct CRsdService *services;
+  /**
+   * Number of services in array
+   */
+  size_t count;
+} CRsdServiceArray;
 
 /**
  * Creates a new Idevice connection
@@ -163,15 +238,15 @@ typedef struct XPCServiceHandle {
  * * [`idevice`] - On success, will be set to point to a newly allocated Idevice handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `label` must be a valid null-terminated C string
  * `idevice` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode idevice_new(struct IdeviceSocketHandle *socket,
-                                  const char *label,
-                                  struct IdeviceHandle **idevice);
+struct IdeviceFfiError *idevice_new(struct IdeviceSocketHandle *socket,
+                                    const char *label,
+                                    struct IdeviceHandle **idevice);
 
 /**
  * Creates a new Idevice connection
@@ -183,17 +258,17 @@ enum IdeviceErrorCode idevice_new(struct IdeviceSocketHandle *socket,
  * * [`idevice`] - On success, will be set to point to a newly allocated Idevice handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `addr` must be a valid sockaddr
  * `label` must be a valid null-terminated C string
  * `idevice` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode idevice_new_tcp_socket(const struct sockaddr *addr,
-                                             socklen_t addr_len,
-                                             const char *label,
-                                             struct IdeviceHandle **idevice);
+struct IdeviceFfiError *idevice_new_tcp_socket(const struct sockaddr *addr,
+                                               socklen_t addr_len,
+                                               const char *label,
+                                               struct IdeviceHandle **idevice);
 
 /**
  * Gets the device type
@@ -203,14 +278,14 @@ enum IdeviceErrorCode idevice_new_tcp_socket(const struct sockaddr *addr,
  * * [`device_type`] - On success, will be set to point to a newly allocated string containing the device type
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `idevice` must be a valid, non-null pointer to an Idevice handle
  * `device_type` must be a valid, non-null pointer to a location where the string pointer will be stored
  */
-enum IdeviceErrorCode idevice_get_type(struct IdeviceHandle *idevice,
-                                       char **device_type);
+struct IdeviceFfiError *idevice_get_type(struct IdeviceHandle *idevice,
+                                         char **device_type);
 
 /**
  * Performs RSD checkin
@@ -219,12 +294,12 @@ enum IdeviceErrorCode idevice_get_type(struct IdeviceHandle *idevice,
  * * [`idevice`] - The Idevice handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `idevice` must be a valid, non-null pointer to an Idevice handle
  */
-enum IdeviceErrorCode idevice_rsd_checkin(struct IdeviceHandle *idevice);
+struct IdeviceFfiError *idevice_rsd_checkin(struct IdeviceHandle *idevice);
 
 /**
  * Starts a TLS session
@@ -234,14 +309,14 @@ enum IdeviceErrorCode idevice_rsd_checkin(struct IdeviceHandle *idevice);
  * * [`pairing_file`] - The pairing file to use for TLS
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `idevice` must be a valid, non-null pointer to an Idevice handle
  * `pairing_file` must be a valid, non-null pointer to a pairing file handle
  */
-enum IdeviceErrorCode idevice_start_session(struct IdeviceHandle *idevice,
-                                            const struct IdevicePairingFile *pairing_file);
+struct IdeviceFfiError *idevice_start_session(struct IdeviceHandle *idevice,
+                                              const struct IdevicePairingFile *pairing_file);
 
 /**
  * Frees an Idevice handle
@@ -271,16 +346,21 @@ void idevice_string_free(char *string);
  * Connects the adapter to a specific port
  *
  * # Arguments
- * * [`handle`] - The adapter handle
+ * * [`adapter_handle`] - The adapter handle
  * * [`port`] - The port to connect to
+ * * [`stream_handle`] - A pointer to allocate the new stream to
  *
  * # Returns
- * An error code indicating success or failure
+ * Null on success, an IdeviceFfiError otherwise
  *
  * # Safety
- * `handle` must be a valid pointer to a handle allocated by this library
+ * `handle` must be a valid pointer to a handle allocated by this library.
+ * Any stream allocated must be used in the same thread as the adapter. The handles are NOT thread
+ * safe.
  */
-enum IdeviceErrorCode adapter_connect(struct AdapterHandle *handle, uint16_t port);
+struct IdeviceFfiError *adapter_connect(struct AdapterHandle *adapter_handle,
+                                        uint16_t port,
+                                        struct ReadWriteOpaque **stream_handle);
 
 /**
  * Enables PCAP logging for the adapter
@@ -290,27 +370,27 @@ enum IdeviceErrorCode adapter_connect(struct AdapterHandle *handle, uint16_t por
  * * [`path`] - The path to save the PCAP file (null-terminated string)
  *
  * # Returns
- * An error code indicating success or failure
+ * Null on success, an IdeviceFfiError otherwise
  *
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library
  * `path` must be a valid null-terminated string
  */
-enum IdeviceErrorCode adapter_pcap(struct AdapterHandle *handle, const char *path);
+struct IdeviceFfiError *adapter_pcap(struct AdapterHandle *handle, const char *path);
 
 /**
  * Closes the adapter connection
  *
  * # Arguments
- * * [`handle`] - The adapter handle
+ * * [`handle`] - The adapter stream handle
  *
  * # Returns
- * An error code indicating success or failure
+ * Null on success, an IdeviceFfiError otherwise
  *
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library
  */
-enum IdeviceErrorCode adapter_close(struct AdapterHandle *handle);
+struct IdeviceFfiError *adapter_close(struct AdapterStreamHandle *handle);
 
 /**
  * Sends data through the adapter
@@ -321,15 +401,15 @@ enum IdeviceErrorCode adapter_close(struct AdapterHandle *handle);
  * * [`length`] - The length of the data
  *
  * # Returns
- * An error code indicating success or failure
+ * Null on success, an IdeviceFfiError otherwise
  *
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library
  * `data` must be a valid pointer to at least `length` bytes
  */
-enum IdeviceErrorCode adapter_send(struct AdapterHandle *handle,
-                                   const uint8_t *data,
-                                   uintptr_t length);
+struct IdeviceFfiError *adapter_send(struct AdapterStreamHandle *handle,
+                                     const uint8_t *data,
+                                     uintptr_t length);
 
 /**
  * Receives data from the adapter
@@ -341,51 +421,419 @@ enum IdeviceErrorCode adapter_send(struct AdapterHandle *handle,
  * * [`max_length`] - Maximum number of bytes that can be stored in `data`
  *
  * # Returns
- * An error code indicating success or failure
+ * Null on success, an IdeviceFfiError otherwise
  *
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library
  * `data` must be a valid pointer to at least `max_length` bytes
  * `length` must be a valid pointer to a usize
  */
-enum IdeviceErrorCode adapter_recv(struct AdapterHandle *handle,
-                                   uint8_t *data,
-                                   uintptr_t *length,
-                                   uintptr_t max_length);
+struct IdeviceFfiError *adapter_recv(struct AdapterStreamHandle *handle,
+                                     uint8_t *data,
+                                     uintptr_t *length,
+                                     uintptr_t max_length);
 
 /**
- * Automatically creates and connects to Core Device Proxy, returning a client handle
+ * Connects to the AFC service using a TCP provider
  *
  * # Arguments
- * * [`provider`] - A TcpProvider
- * * [`client`] - On success, will be set to point to a newly allocated CoreDeviceProxy handle
+ * * [`provider`] - An IdeviceProvider
+ * * [`client`] - On success, will be set to point to a newly allocated AfcClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `provider` must be a valid pointer to a handle allocated by this library
  * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode core_device_proxy_connect_tcp(struct TcpProviderHandle *provider,
-                                                    struct CoreDeviceProxyHandle **client);
+struct IdeviceFfiError *afc_client_connect(struct IdeviceProviderHandle *provider,
+                                           struct AfcClientHandle **client);
 
 /**
- * Automatically creates and connects to Core Device Proxy, returning a client handle
+ * Creates a new AfcClient from an existing Idevice connection
  *
  * # Arguments
- * * [`provider`] - A UsbmuxdProvider
- * * [`client`] - On success, will be set to point to a newly allocated CoreDeviceProxy handle
+ * * [`socket`] - An IdeviceSocket handle
+ * * [`client`] - On success, will be set to point to a newly allocated AfcClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `socket` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *afc_client_new(struct IdeviceHandle *socket,
+                                       struct AfcClientHandle **client);
+
+/**
+ * Frees an AfcClient handle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to the handle that was allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void afc_client_free(struct AfcClientHandle *handle);
+
+/**
+ * Lists the contents of a directory on the device
+ *
+ * # Arguments
+ * * [`client`] - A valid AfcClient handle
+ * * [`path`] - Path to the directory to list (UTF-8 null-terminated)
+ * * [`entries`] - Will be set to point to an array of directory entries
+ * * [`count`] - Will be set to the number of entries
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * All pointers must be valid and non-null
+ * `path` must be a valid null-terminated C string
+ */
+struct IdeviceFfiError *afc_list_directory(struct AfcClientHandle *client,
+                                           const char *path,
+                                           char ***entries,
+                                           size_t *count);
+
+/**
+ * Creates a new directory on the device
+ *
+ * # Arguments
+ * * [`client`] - A valid AfcClient handle
+ * * [`path`] - Path of the directory to create (UTF-8 null-terminated)
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `path` must be a valid null-terminated C string
+ */
+struct IdeviceFfiError *afc_make_directory(struct AfcClientHandle *client, const char *path);
+
+/**
+ * Retrieves information about a file or directory
+ *
+ * # Arguments
+ * * [`client`] - A valid AfcClient handle
+ * * [`path`] - Path to the file or directory (UTF-8 null-terminated)
+ * * [`info`] - Will be populated with file information
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` and `path` must be valid pointers
+ * `info` must be a valid pointer to an AfcFileInfo struct
+ */
+struct IdeviceFfiError *afc_get_file_info(struct AfcClientHandle *client,
+                                          const char *path,
+                                          struct AfcFileInfo *info);
+
+/**
+ * Frees memory allocated by afc_get_file_info
+ *
+ * # Arguments
+ * * [`info`] - Pointer to AfcFileInfo struct to free
+ *
+ * # Safety
+ * `info` must be a valid pointer to an AfcFileInfo struct previously returned by afc_get_file_info
+ */
+void afc_file_info_free(struct AfcFileInfo *info);
+
+/**
+ * Retrieves information about the device's filesystem
+ *
+ * # Arguments
+ * * [`client`] - A valid AfcClient handle
+ * * [`info`] - Will be populated with device information
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` and `info` must be valid pointers
+ */
+struct IdeviceFfiError *afc_get_device_info(struct AfcClientHandle *client,
+                                            struct AfcDeviceInfo *info);
+
+/**
+ * Frees memory allocated by afc_get_device_info
+ *
+ * # Arguments
+ * * [`info`] - Pointer to AfcDeviceInfo struct to free
+ *
+ * # Safety
+ * `info` must be a valid pointer to an AfcDeviceInfo struct previously returned by afc_get_device_info
+ */
+void afc_device_info_free(struct AfcDeviceInfo *info);
+
+/**
+ * Removes a file or directory
+ *
+ * # Arguments
+ * * [`client`] - A valid AfcClient handle
+ * * [`path`] - Path to the file or directory to remove (UTF-8 null-terminated)
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `path` must be a valid null-terminated C string
+ */
+struct IdeviceFfiError *afc_remove_path(struct AfcClientHandle *client, const char *path);
+
+/**
+ * Recursively removes a directory and all its contents
+ *
+ * # Arguments
+ * * [`client`] - A valid AfcClient handle
+ * * [`path`] - Path to the directory to remove (UTF-8 null-terminated)
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `path` must be a valid null-terminated C string
+ */
+struct IdeviceFfiError *afc_remove_path_and_contents(struct AfcClientHandle *client,
+                                                     const char *path);
+
+/**
+ * Opens a file on the device
+ *
+ * # Arguments
+ * * [`client`] - A valid AfcClient handle
+ * * [`path`] - Path to the file to open (UTF-8 null-terminated)
+ * * [`mode`] - File open mode
+ * * [`handle`] - Will be set to a new file handle on success
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * All pointers must be valid and non-null
+ * `path` must be a valid null-terminated C string.
+ * The file handle MAY NOT be used from another thread, and is
+ * dependant upon the client it was created by.
+ */
+struct IdeviceFfiError *afc_file_open(struct AfcClientHandle *client,
+                                      const char *path,
+                                      enum AfcFopenMode mode,
+                                      struct AfcFileHandle **handle);
+
+/**
+ * Closes a file handle
+ *
+ * # Arguments
+ * * [`handle`] - File handle to close
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `handle` must be a valid pointer to a handle allocated by this library
+ */
+struct IdeviceFfiError *afc_file_close(struct AfcFileHandle *handle);
+
+/**
+ * Reads data from an open file
+ *
+ * # Arguments
+ * * [`handle`] - File handle to read from
+ * * [`data`] - Will be set to point to the read data
+ * * [`length`] - Will be set to the length of the read data
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * All pointers must be valid and non-null
+ */
+struct IdeviceFfiError *afc_file_read(struct AfcFileHandle *handle, uint8_t **data, size_t *length);
+
+/**
+ * Writes data to an open file
+ *
+ * # Arguments
+ * * [`handle`] - File handle to write to
+ * * [`data`] - Data to write
+ * * [`length`] - Length of data to write
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * All pointers must be valid and non-null
+ * `data` must point to at least `length` bytes
+ */
+struct IdeviceFfiError *afc_file_write(struct AfcFileHandle *handle,
+                                       const uint8_t *data,
+                                       size_t length);
+
+/**
+ * Creates a hard or symbolic link
+ *
+ * # Arguments
+ * * [`client`] - A valid AfcClient handle
+ * * [`target`] - Target path of the link (UTF-8 null-terminated)
+ * * [`source`] - Path where the link should be created (UTF-8 null-terminated)
+ * * [`link_type`] - Type of link to create
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * All pointers must be valid and non-null
+ * `target` and `source` must be valid null-terminated C strings
+ */
+struct IdeviceFfiError *afc_make_link(struct AfcClientHandle *client,
+                                      const char *target,
+                                      const char *source,
+                                      enum AfcLinkType link_type);
+
+/**
+ * Renames a file or directory
+ *
+ * # Arguments
+ * * [`client`] - A valid AfcClient handle
+ * * [`source`] - Current path of the file/directory (UTF-8 null-terminated)
+ * * [`target`] - New path for the file/directory (UTF-8 null-terminated)
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * All pointers must be valid and non-null
+ * `source` and `target` must be valid null-terminated C strings
+ */
+struct IdeviceFfiError *afc_rename_path(struct AfcClientHandle *client,
+                                        const char *source,
+                                        const char *target);
+
+/**
+ * Frees memory allocated by a file read function allocated by this library
+ *
+ * # Arguments
+ * * [`info`] - Pointer to AfcDeviceInfo struct to free
+ *
+ * # Safety
+ * `info` must be a valid pointer to an AfcDeviceInfo struct previously returned by afc_get_device_info
+ */
+void afc_file_read_data_free(uint8_t *data,
+                             size_t length);
+
+/**
+ * Automatically creates and connects to AMFI service, returning a client handle
+ *
+ * # Arguments
+ * * [`provider`] - An IdeviceProvider
+ * * [`client`] - On success, will be set to point to a newly allocated AmfiClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `provider` must be a valid pointer to a handle allocated by this library
  * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode core_device_proxy_connect_usbmuxd(struct UsbmuxdProviderHandle *provider,
-                                                        struct CoreDeviceProxyHandle **client);
+struct IdeviceFfiError *amfi_connect(struct IdeviceProviderHandle *provider,
+                                     struct AmfiClientHandle **client);
+
+/**
+ * Automatically creates and connects to AMFI service, returning a client handle
+ *
+ * # Arguments
+ * * [`socket`] - An IdeviceSocket handle
+ * * [`client`] - On success, will be set to point to a newly allocated AmfiClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `socket` must be a valid pointer to a handle allocated by this library. It is consumed, and
+ * should not be used again.
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *amfi_new(struct IdeviceHandle *socket, struct AmfiClientHandle **client);
+
+/**
+ * Shows the option in the settings UI
+ *
+ * # Arguments
+ * * `client` - A valid AmfiClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ */
+struct IdeviceFfiError *amfi_reveal_developer_mode_option_in_ui(struct AmfiClientHandle *client);
+
+/**
+ * Enables developer mode on the device
+ *
+ * # Arguments
+ * * `client` - A valid AmfiClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ */
+struct IdeviceFfiError *amfi_enable_developer_mode(struct AmfiClientHandle *client);
+
+/**
+ * Accepts developer mode on the device
+ *
+ * # Arguments
+ * * `client` - A valid AmfiClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ */
+struct IdeviceFfiError *amfi_accept_developer_mode(struct AmfiClientHandle *client);
+
+/**
+ * Frees a handle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to the handle that was allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void amfi_client_free(struct AmfiClientHandle *handle);
+
+/**
+ * Automatically creates and connects to Core Device Proxy, returning a client handle
+ *
+ * # Arguments
+ * * [`provider`] - An IdeviceProvider
+ * * [`client`] - On success, will be set to point to a newly allocated CoreDeviceProxy handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *core_device_proxy_connect(struct IdeviceProviderHandle *provider,
+                                                  struct CoreDeviceProxyHandle **client);
 
 /**
  * Automatically creates and connects to Core Device Proxy, returning a client handle
@@ -395,14 +843,15 @@ enum IdeviceErrorCode core_device_proxy_connect_usbmuxd(struct UsbmuxdProviderHa
  * * [`client`] - On success, will be set to point to a newly allocated CoreDeviceProxy handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
- * `socket` must be a valid pointer to a handle allocated by this library
+ * `socket` must be a valid pointer to a handle allocated by this library. It is consumed and
+ * may not be used again.
  * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode core_device_proxy_new(struct IdeviceHandle *socket,
-                                            struct CoreDeviceProxyHandle **client);
+struct IdeviceFfiError *core_device_proxy_new(struct IdeviceHandle *socket,
+                                              struct CoreDeviceProxyHandle **client);
 
 /**
  * Sends data through the CoreDeviceProxy tunnel
@@ -413,15 +862,15 @@ enum IdeviceErrorCode core_device_proxy_new(struct IdeviceHandle *socket,
  * * [`length`] - The length of the data
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library
  * `data` must be a valid pointer to at least `length` bytes
  */
-enum IdeviceErrorCode core_device_proxy_send(struct CoreDeviceProxyHandle *handle,
-                                             const uint8_t *data,
-                                             uintptr_t length);
+struct IdeviceFfiError *core_device_proxy_send(struct CoreDeviceProxyHandle *handle,
+                                               const uint8_t *data,
+                                               uintptr_t length);
 
 /**
  * Receives data from the CoreDeviceProxy tunnel
@@ -433,17 +882,17 @@ enum IdeviceErrorCode core_device_proxy_send(struct CoreDeviceProxyHandle *handl
  * * [`max_length`] - Maximum number of bytes that can be stored in `data`
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library
  * `data` must be a valid pointer to at least `max_length` bytes
  * `length` must be a valid pointer to a usize
  */
-enum IdeviceErrorCode core_device_proxy_recv(struct CoreDeviceProxyHandle *handle,
-                                             uint8_t *data,
-                                             uintptr_t *length,
-                                             uintptr_t max_length);
+struct IdeviceFfiError *core_device_proxy_recv(struct CoreDeviceProxyHandle *handle,
+                                               uint8_t *data,
+                                               uintptr_t *length,
+                                               uintptr_t max_length);
 
 /**
  * Gets the client parameters from the handshake
@@ -451,38 +900,38 @@ enum IdeviceErrorCode core_device_proxy_recv(struct CoreDeviceProxyHandle *handl
  * # Arguments
  * * [`handle`] - The CoreDeviceProxy handle
  * * [`mtu`] - Pointer to store the MTU value
- * * [`address`] - Pointer to store the IP address string (must be at least 16 bytes)
- * * [`netmask`] - Pointer to store the netmask string (must be at least 16 bytes)
+ * * [`address`] - Pointer to store the IP address string
+ * * [`netmask`] - Pointer to store the netmask string
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library
  * `mtu` must be a valid pointer to a u16
  * `address` and `netmask` must be valid pointers to buffers of at least 16 bytes
  */
-enum IdeviceErrorCode core_device_proxy_get_client_parameters(struct CoreDeviceProxyHandle *handle,
-                                                              uint16_t *mtu,
-                                                              char **address,
-                                                              char **netmask);
+struct IdeviceFfiError *core_device_proxy_get_client_parameters(struct CoreDeviceProxyHandle *handle,
+                                                                uint16_t *mtu,
+                                                                char **address,
+                                                                char **netmask);
 
 /**
  * Gets the server address from the handshake
  *
  * # Arguments
  * * [`handle`] - The CoreDeviceProxy handle
- * * [`address`] - Pointer to store the server address string (must be at least 16 bytes)
+ * * [`address`] - Pointer to store the server address string
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library
  * `address` must be a valid pointer to a buffer of at least 16 bytes
  */
-enum IdeviceErrorCode core_device_proxy_get_server_address(struct CoreDeviceProxyHandle *handle,
-                                                           char **address);
+struct IdeviceFfiError *core_device_proxy_get_server_address(struct CoreDeviceProxyHandle *handle,
+                                                             char **address);
 
 /**
  * Gets the server RSD port from the handshake
@@ -492,14 +941,14 @@ enum IdeviceErrorCode core_device_proxy_get_server_address(struct CoreDeviceProx
  * * [`port`] - Pointer to store the port number
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library
  * `port` must be a valid pointer to a u16
  */
-enum IdeviceErrorCode core_device_proxy_get_server_rsd_port(struct CoreDeviceProxyHandle *handle,
-                                                            uint16_t *port);
+struct IdeviceFfiError *core_device_proxy_get_server_rsd_port(struct CoreDeviceProxyHandle *handle,
+                                                              uint16_t *port);
 
 /**
  * Creates a software TCP tunnel adapter
@@ -509,14 +958,14 @@ enum IdeviceErrorCode core_device_proxy_get_server_rsd_port(struct CoreDevicePro
  * * [`adapter`] - Pointer to store the newly created adapter handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library, and never used again
  * `adapter` must be a valid pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode core_device_proxy_create_tcp_adapter(struct CoreDeviceProxyHandle *handle,
-                                                           struct AdapterHandle **adapter);
+struct IdeviceFfiError *core_device_proxy_create_tcp_adapter(struct CoreDeviceProxyHandle *handle,
+                                                             struct AdapterHandle **adapter);
 
 /**
  * Frees a handle
@@ -564,18 +1013,19 @@ void debugserver_command_free(struct DebugserverCommandHandle *command);
  * Creates a new DebugProxyClient
  *
  * # Arguments
- * * [`socket`] - The socket to use for communication
- * * [`handle`] - Pointer to store the newly created DebugProxyClient handle
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
- * `socket` must be a valid pointer to a handle allocated by this library
- * `handle` must be a valid pointer to a location where the handle will be stored
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode debug_proxy_adapter_new(struct AdapterHandle *socket,
-                                              struct DebugProxyAdapterHandle **handle);
+struct IdeviceFfiError *debug_proxy_connect_rsd(struct AdapterHandle *provider,
+                                                struct RsdHandshakeHandle *handshake,
+                                                struct DebugProxyHandle **handle);
 
 /**
  * Frees a DebugProxyClient handle
@@ -586,7 +1036,7 @@ enum IdeviceErrorCode debug_proxy_adapter_new(struct AdapterHandle *socket,
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library or NULL
  */
-void debug_proxy_free(struct DebugProxyAdapterHandle *handle);
+void debug_proxy_free(struct DebugProxyHandle *handle);
 
 /**
  * Sends a command to the debug proxy
@@ -597,15 +1047,15 @@ void debug_proxy_free(struct DebugProxyAdapterHandle *handle);
  * * [`response`] - Pointer to store the response (caller must free)
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` and `command` must be valid pointers
  * `response` must be a valid pointer to a location where the string will be stored
  */
-enum IdeviceErrorCode debug_proxy_send_command(struct DebugProxyAdapterHandle *handle,
-                                               struct DebugserverCommandHandle *command,
-                                               char **response);
+struct IdeviceFfiError *debug_proxy_send_command(struct DebugProxyHandle *handle,
+                                                 struct DebugserverCommandHandle *command,
+                                                 char **response);
 
 /**
  * Reads a response from the debug proxy
@@ -615,14 +1065,13 @@ enum IdeviceErrorCode debug_proxy_send_command(struct DebugProxyAdapterHandle *h
  * * [`response`] - Pointer to store the response (caller must free)
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer
  * `response` must be a valid pointer to a location where the string will be stored
  */
-enum IdeviceErrorCode debug_proxy_read_response(struct DebugProxyAdapterHandle *handle,
-                                                char **response);
+struct IdeviceFfiError *debug_proxy_read_response(struct DebugProxyHandle *handle, char **response);
 
 /**
  * Sends raw data to the debug proxy
@@ -633,15 +1082,15 @@ enum IdeviceErrorCode debug_proxy_read_response(struct DebugProxyAdapterHandle *
  * * [`len`] - Length of the data
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer
  * `data` must be a valid pointer to `len` bytes
  */
-enum IdeviceErrorCode debug_proxy_send_raw(struct DebugProxyAdapterHandle *handle,
-                                           const uint8_t *data,
-                                           uintptr_t len);
+struct IdeviceFfiError *debug_proxy_send_raw(struct DebugProxyHandle *handle,
+                                             const uint8_t *data,
+                                             uintptr_t len);
 
 /**
  * Reads data from the debug proxy
@@ -652,15 +1101,15 @@ enum IdeviceErrorCode debug_proxy_send_raw(struct DebugProxyAdapterHandle *handl
  * * [`response`] - Pointer to store the response (caller must free)
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer
  * `response` must be a valid pointer to a location where the string will be stored
  */
-enum IdeviceErrorCode debug_proxy_read(struct DebugProxyAdapterHandle *handle,
-                                       uintptr_t len,
-                                       char **response);
+struct IdeviceFfiError *debug_proxy_read(struct DebugProxyHandle *handle,
+                                         uintptr_t len,
+                                         char **response);
 
 /**
  * Sets the argv for the debug proxy
@@ -672,17 +1121,17 @@ enum IdeviceErrorCode debug_proxy_read(struct DebugProxyAdapterHandle *handle,
  * * [`response`] - Pointer to store the response (caller must free)
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer
  * `argv` must be a valid pointer to `argv_count` C strings or NULL
  * `response` must be a valid pointer to a location where the string will be stored
  */
-enum IdeviceErrorCode debug_proxy_set_argv(struct DebugProxyAdapterHandle *handle,
-                                           const char *const *argv,
-                                           uintptr_t argv_count,
-                                           char **response);
+struct IdeviceFfiError *debug_proxy_set_argv(struct DebugProxyHandle *handle,
+                                             const char *const *argv,
+                                             uintptr_t argv_count,
+                                             char **response);
 
 /**
  * Sends an ACK to the debug proxy
@@ -691,12 +1140,12 @@ enum IdeviceErrorCode debug_proxy_set_argv(struct DebugProxyAdapterHandle *handl
  * * [`handle`] - The DebugProxyClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer
  */
-enum IdeviceErrorCode debug_proxy_send_ack(struct DebugProxyAdapterHandle *handle);
+struct IdeviceFfiError *debug_proxy_send_ack(struct DebugProxyHandle *handle);
 
 /**
  * Sends a NACK to the debug proxy
@@ -705,12 +1154,12 @@ enum IdeviceErrorCode debug_proxy_send_ack(struct DebugProxyAdapterHandle *handl
  * * [`handle`] - The DebugProxyClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer
  */
-enum IdeviceErrorCode debug_proxy_send_nack(struct DebugProxyAdapterHandle *handle);
+struct IdeviceFfiError *debug_proxy_send_nack(struct DebugProxyHandle *handle);
 
 /**
  * Sets the ACK mode for the debug proxy
@@ -722,57 +1171,32 @@ enum IdeviceErrorCode debug_proxy_send_nack(struct DebugProxyAdapterHandle *hand
  * # Safety
  * `handle` must be a valid pointer
  */
-void debug_proxy_set_ack_mode(struct DebugProxyAdapterHandle *handle, int enabled);
+void debug_proxy_set_ack_mode(struct DebugProxyHandle *handle, int enabled);
 
 /**
- * Returns the underlying socket from a DebugProxyClient
- *
- * # Arguments
- * * [`handle`] - The handle to get the socket from
- * * [`adapter`] - The newly allocated ConnectionHandle
- *
- * # Returns
- * An error code indicating success or failure
+ * Frees the IdeviceFfiError
  *
  * # Safety
- * `handle` must be a valid pointer to a handle allocated by this library or NULL, and never used again
+ * `err` must be a struct allocated by this library
  */
-enum IdeviceErrorCode debug_proxy_adapter_into_inner(struct DebugProxyAdapterHandle *handle,
-                                                     struct AdapterHandle **adapter);
+void idevice_error_free(struct IdeviceFfiError *err);
 
 /**
  * Automatically creates and connects to Installation Proxy, returning a client handle
  *
  * # Arguments
- * * [`provider`] - A TcpProvider
+ * * [`provider`] - An IdeviceProvider
  * * [`client`] - On success, will be set to point to a newly allocated InstallationProxyClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `provider` must be a valid pointer to a handle allocated by this library
  * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode heartbeat_connect_tcp(struct TcpProviderHandle *provider,
-                                            struct HeartbeatClientHandle **client);
-
-/**
- * Automatically creates and connects to Installation Proxy, returning a client handle
- *
- * # Arguments
- * * [`provider`] - A UsbmuxdProvider
- * * [`client`] - On success, will be set to point to a newly allocated InstallationProxyClient handle
- *
- * # Returns
- * An error code indicating success or failure
- *
- * # Safety
- * `provider` must be a valid pointer to a handle allocated by this library
- * `client` must be a valid, non-null pointer to a location where the handle will be stored
- */
-enum IdeviceErrorCode heartbeat_connect_usbmuxd(struct UsbmuxdProviderHandle *provider,
-                                                struct HeartbeatClientHandle **client);
+struct IdeviceFfiError *heartbeat_connect(struct IdeviceProviderHandle *provider,
+                                          struct HeartbeatClientHandle **client);
 
 /**
  * Automatically creates and connects to Installation Proxy, returning a client handle
@@ -782,14 +1206,15 @@ enum IdeviceErrorCode heartbeat_connect_usbmuxd(struct UsbmuxdProviderHandle *pr
  * * [`client`] - On success, will be set to point to a newly allocated InstallationProxyClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
- * `socket` must be a valid pointer to a handle allocated by this library
+ * `socket` must be a valid pointer to a handle allocated by this library. The socket is consumed,
+ * and may not be used again.
  * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode heartbeat_new(struct IdeviceHandle *socket,
-                                    struct HeartbeatClientHandle **client);
+struct IdeviceFfiError *heartbeat_new(struct IdeviceHandle *socket,
+                                      struct HeartbeatClientHandle **client);
 
 /**
  * Sends a polo to the device
@@ -798,12 +1223,12 @@ enum IdeviceErrorCode heartbeat_new(struct IdeviceHandle *socket,
  * * `client` - A valid HeartbeatClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client` must be a valid pointer to a handle allocated by this library
  */
-enum IdeviceErrorCode heartbeat_send_polo(struct HeartbeatClientHandle *client);
+struct IdeviceFfiError *heartbeat_send_polo(struct HeartbeatClientHandle *client);
 
 /**
  * Sends a polo to the device
@@ -814,14 +1239,14 @@ enum IdeviceErrorCode heartbeat_send_polo(struct HeartbeatClientHandle *client);
  * * `new_interval` - A pointer to set the requested marco
  *
  * # Returns
- * An error code indicating success or failure.
+ * An IdeviceFfiError on error, null on success.
  *
  * # Safety
  * `client` must be a valid pointer to a handle allocated by this library
  */
-enum IdeviceErrorCode heartbeat_get_marco(struct HeartbeatClientHandle *client,
-                                          uint64_t interval,
-                                          uint64_t *new_interval);
+struct IdeviceFfiError *heartbeat_get_marco(struct HeartbeatClientHandle *client,
+                                            uint64_t interval,
+                                            uint64_t *new_interval);
 
 /**
  * Frees a handle
@@ -839,35 +1264,18 @@ void heartbeat_client_free(struct HeartbeatClientHandle *handle);
  * Automatically creates and connects to Installation Proxy, returning a client handle
  *
  * # Arguments
- * * [`provider`] - A TcpProvider
+ * * [`provider`] - An IdeviceProvider
  * * [`client`] - On success, will be set to point to a newly allocated InstallationProxyClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `provider` must be a valid pointer to a handle allocated by this library
  * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode installation_proxy_connect_tcp(struct TcpProviderHandle *provider,
-                                                     struct InstallationProxyClientHandle **client);
-
-/**
- * Automatically creates and connects to Installation Proxy, returning a client handle
- *
- * # Arguments
- * * [`provider`] - A UsbmuxdProvider
- * * [`client`] - On success, will be set to point to a newly allocated InstallationProxyClient handle
- *
- * # Returns
- * An error code indicating success or failure
- *
- * # Safety
- * `provider` must be a valid pointer to a handle allocated by this library
- * `client` must be a valid, non-null pointer to a location where the handle will be stored
- */
-enum IdeviceErrorCode installation_proxy_connect_usbmuxd(struct UsbmuxdProviderHandle *provider,
-                                                         struct InstallationProxyClientHandle **client);
+struct IdeviceFfiError *installation_proxy_connect_tcp(struct IdeviceProviderHandle *provider,
+                                                       struct InstallationProxyClientHandle **client);
 
 /**
  * Automatically creates and connects to Installation Proxy, returning a client handle
@@ -877,37 +1285,38 @@ enum IdeviceErrorCode installation_proxy_connect_usbmuxd(struct UsbmuxdProviderH
  * * [`client`] - On success, will be set to point to a newly allocated InstallationProxyClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
- * `socket` must be a valid pointer to a handle allocated by this library
+ * `socket` must be a valid pointer to a handle allocated by this library. The socket is consumed,
+ * and may not be used again.
  * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode installation_proxy_new(struct IdeviceHandle *socket,
-                                             struct InstallationProxyClientHandle **client);
+struct IdeviceFfiError *installation_proxy_new(struct IdeviceHandle *socket,
+                                               struct InstallationProxyClientHandle **client);
 
 /**
  * Gets installed apps on the device
  *
  * # Arguments
- * * `client` - A valid InstallationProxyClient handle
- * * `application_type` - The application type to filter by (optional, NULL for "Any")
- * * `bundle_identifiers` - The identifiers to filter by (optional, NULL for all apps)
- * * `out_result` - On success, will be set to point to a newly allocated array of PlistRef
+ * * [`client`] - A valid InstallationProxyClient handle
+ * * [`application_type`] - The application type to filter by (optional, NULL for "Any")
+ * * [`bundle_identifiers`] - The identifiers to filter by (optional, NULL for all apps)
+ * * [`out_result`] - On success, will be set to point to a newly allocated array of PlistRef
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client` must be a valid pointer to a handle allocated by this library
  * `out_result` must be a valid, non-null pointer to a location where the result will be stored
  */
-enum IdeviceErrorCode installation_proxy_get_apps(struct InstallationProxyClientHandle *client,
-                                                  const char *application_type,
-                                                  const char *const *bundle_identifiers,
-                                                  size_t bundle_identifiers_len,
-                                                  void **out_result,
-                                                  size_t *out_result_len);
+struct IdeviceFfiError *installation_proxy_get_apps(struct InstallationProxyClientHandle *client,
+                                                    const char *application_type,
+                                                    const char *const *bundle_identifiers,
+                                                    size_t bundle_identifiers_len,
+                                                    void **out_result,
+                                                    size_t *out_result_len);
 
 /**
  * Frees a handle
@@ -922,55 +1331,282 @@ enum IdeviceErrorCode installation_proxy_get_apps(struct InstallationProxyClient
 void installation_proxy_client_free(struct InstallationProxyClientHandle *handle);
 
 /**
+ * Installs an application package on the device
+ *
+ * # Arguments
+ * * [`client`] - A valid InstallationProxyClient handle
+ * * [`package_path`] - Path to the .ipa package in the AFC jail
+ * * [`options`] - Optional installation options as a plist dictionary (can be NULL)
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `package_path` must be a valid C string
+ * `options` must be a valid plist dictionary or NULL
+ */
+struct IdeviceFfiError *installation_proxy_install(struct InstallationProxyClientHandle *client,
+                                                   const char *package_path,
+                                                   void *options);
+
+/**
+ * Installs an application package on the device
+ *
+ * # Arguments
+ * * [`client`] - A valid InstallationProxyClient handle
+ * * [`package_path`] - Path to the .ipa package in the AFC jail
+ * * [`options`] - Optional installation options as a plist dictionary (can be NULL)
+ * * [`callback`] - Progress callback function
+ * * [`context`] - User context to pass to callback
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `package_path` must be a valid C string
+ * `options` must be a valid plist dictionary or NULL
+ */
+struct IdeviceFfiError *installation_proxy_install_with_callback(struct InstallationProxyClientHandle *client,
+                                                                 const char *package_path,
+                                                                 void *options,
+                                                                 void (*callback)(uint64_t progress,
+                                                                                  void *context),
+                                                                 void *context);
+
+/**
+ * Upgrades an existing application on the device
+ *
+ * # Arguments
+ * * [`client`] - A valid InstallationProxyClient handle
+ * * [`package_path`] - Path to the .ipa package in the AFC jail
+ * * [`options`] - Optional upgrade options as a plist dictionary (can be NULL)
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `package_path` must be a valid C string
+ * `options` must be a valid plist dictionary or NULL
+ */
+struct IdeviceFfiError *installation_proxy_upgrade(struct InstallationProxyClientHandle *client,
+                                                   const char *package_path,
+                                                   void *options);
+
+/**
+ * Upgrades an existing application on the device
+ *
+ * # Arguments
+ * * [`client`] - A valid InstallationProxyClient handle
+ * * [`package_path`] - Path to the .ipa package in the AFC jail
+ * * [`options`] - Optional upgrade options as a plist dictionary (can be NULL)
+ * * [`callback`] - Progress callback function
+ * * [`context`] - User context to pass to callback
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `package_path` must be a valid C string
+ * `options` must be a valid plist dictionary or NULL
+ */
+struct IdeviceFfiError *installation_proxy_upgrade_with_callback(struct InstallationProxyClientHandle *client,
+                                                                 const char *package_path,
+                                                                 void *options,
+                                                                 void (*callback)(uint64_t progress,
+                                                                                  void *context),
+                                                                 void *context);
+
+/**
+ * Uninstalls an application from the device
+ *
+ * # Arguments
+ * * [`client`] - A valid InstallationProxyClient handle
+ * * [`bundle_id`] - Bundle identifier of the application to uninstall
+ * * [`options`] - Optional uninstall options as a plist dictionary (can be NULL)
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `bundle_id` must be a valid C string
+ * `options` must be a valid plist dictionary or NULL
+ */
+struct IdeviceFfiError *installation_proxy_uninstall(struct InstallationProxyClientHandle *client,
+                                                     const char *bundle_id,
+                                                     void *options);
+
+/**
+ * Uninstalls an application from the device
+ *
+ * # Arguments
+ * * [`client`] - A valid InstallationProxyClient handle
+ * * [`bundle_id`] - Bundle identifier of the application to uninstall
+ * * [`options`] - Optional uninstall options as a plist dictionary (can be NULL)
+ * * [`callback`] - Progress callback function
+ * * [`context`] - User context to pass to callback
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `bundle_id` must be a valid C string
+ * `options` must be a valid plist dictionary or NULL
+ */
+struct IdeviceFfiError *installation_proxy_uninstall_with_callback(struct InstallationProxyClientHandle *client,
+                                                                   const char *bundle_id,
+                                                                   void *options,
+                                                                   void (*callback)(uint64_t progress,
+                                                                                    void *context),
+                                                                   void *context);
+
+/**
+ * Checks if the device capabilities match the required capabilities
+ *
+ * # Arguments
+ * * [`client`] - A valid InstallationProxyClient handle
+ * * [`capabilities`] - Array of plist values representing required capabilities
+ * * [`capabilities_len`] - Length of the capabilities array
+ * * [`options`] - Optional check options as a plist dictionary (can be NULL)
+ * * [`out_result`] - Will be set to true if all capabilities are supported, false otherwise
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `capabilities` must be a valid array of plist values or NULL
+ * `options` must be a valid plist dictionary or NULL
+ * `out_result` must be a valid pointer to a bool
+ */
+struct IdeviceFfiError *installation_proxy_check_capabilities_match(struct InstallationProxyClientHandle *client,
+                                                                    void *const *capabilities,
+                                                                    size_t capabilities_len,
+                                                                    void *options,
+                                                                    bool *out_result);
+
+/**
+ * Browses installed applications on the device
+ *
+ * # Arguments
+ * * [`client`] - A valid InstallationProxyClient handle
+ * * [`options`] - Optional browse options as a plist dictionary (can be NULL)
+ * * [`out_result`] - On success, will be set to point to a newly allocated array of PlistRef
+ * * [`out_result_len`] - Will be set to the length of the result array
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `options` must be a valid plist dictionary or NULL
+ * `out_result` must be a valid, non-null pointer to a location where the result will be stored
+ * `out_result_len` must be a valid, non-null pointer to a location where the length will be stored
+ */
+struct IdeviceFfiError *installation_proxy_browse(struct InstallationProxyClientHandle *client,
+                                                  void *options,
+                                                  void **out_result,
+                                                  size_t *out_result_len);
+
+/**
+ * Creates a new ProcessControlClient from a RemoteServerClient
+ *
+ * # Arguments
+ * * [`server`] - The RemoteServerClient to use
+ * * [`handle`] - Pointer to store the newly created ProcessControlClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `server` must be a valid pointer to a handle allocated by this library
+ * `handle` must be a valid pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *location_simulation_new(struct RemoteServerHandle *server,
+                                                struct LocationSimulationHandle **handle);
+
+/**
+ * Frees a ProcessControlClient handle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to a handle allocated by this library or NULL
+ */
+void location_simulation_free(struct LocationSimulationHandle *handle);
+
+/**
+ * Clears the location set
+ *
+ * # Arguments
+ * * [`handle`] - The LocationSimulation handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * All pointers must be valid or NULL where appropriate
+ */
+struct IdeviceFfiError *location_simulation_clear(struct LocationSimulationHandle *handle);
+
+/**
+ * Sets the location
+ *
+ * # Arguments
+ * * [`handle`] - The LocationSimulation handle
+ * * [`latitude`] - The latitude to set
+ * * [`longitude`] - The longitude to set
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * All pointers must be valid or NULL where appropriate
+ */
+struct IdeviceFfiError *location_simulation_set(struct LocationSimulationHandle *handle,
+                                                double latitude,
+                                                double longitude);
+
+/**
  * Connects to lockdownd service using TCP provider
  *
  * # Arguments
- * * [`provider`] - A TcpProvider
+ * * [`provider`] - An IdeviceProvider
  * * [`client`] - On success, will be set to point to a newly allocated LockdowndClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `provider` must be a valid pointer to a handle allocated by this library
  * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode lockdownd_connect_tcp(struct TcpProviderHandle *provider,
-                                            struct LockdowndClientHandle **client);
-
-/**
- * Connects to lockdownd service using Usbmuxd provider
- *
- * # Arguments
- * * [`provider`] - A UsbmuxdProvider
- * * [`client`] - On success, will be set to point to a newly allocated LockdowndClient handle
- *
- * # Returns
- * An error code indicating success or failure
- *
- * # Safety
- * `provider` must be a valid pointer to a handle allocated by this library
- * `client` must be a valid, non-null pointer to a location where the handle will be stored
- */
-enum IdeviceErrorCode lockdownd_connect_usbmuxd(struct UsbmuxdProviderHandle *provider,
-                                                struct LockdowndClientHandle **client);
+struct IdeviceFfiError *lockdownd_connect(struct IdeviceProviderHandle *provider,
+                                          struct LockdowndClientHandle **client);
 
 /**
  * Creates a new LockdowndClient from an existing Idevice connection
  *
  * # Arguments
- * * [`socket`] - An IdeviceSocket handle
+ * * [`socket`] - An IdeviceSocket handle.
  * * [`client`] - On success, will be set to point to a newly allocated LockdowndClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
- * `socket` must be a valid pointer to a handle allocated by this library
+ * `socket` must be a valid pointer to a handle allocated by this library. The socket is consumed,
+ * and maybe not be used again.
  * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode lockdownd_new(struct IdeviceHandle *socket,
-                                    struct LockdowndClientHandle **client);
+struct IdeviceFfiError *lockdownd_new(struct IdeviceHandle *socket,
+                                      struct LockdowndClientHandle **client);
 
 /**
  * Starts a session with lockdownd
@@ -980,14 +1616,14 @@ enum IdeviceErrorCode lockdownd_new(struct IdeviceHandle *socket,
  * * `pairing_file` - An IdevicePairingFile alocated by this library
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client` must be a valid pointer to a handle allocated by this library
  * `pairing_file` must be a valid plist_t containing a pairing file
  */
-enum IdeviceErrorCode lockdownd_start_session(struct LockdowndClientHandle *client,
-                                              struct IdevicePairingFile *pairing_file);
+struct IdeviceFfiError *lockdownd_start_session(struct LockdowndClientHandle *client,
+                                                struct IdevicePairingFile *pairing_file);
 
 /**
  * Starts a service through lockdownd
@@ -999,37 +1635,39 @@ enum IdeviceErrorCode lockdownd_start_session(struct LockdowndClientHandle *clie
  * * `ssl` - Pointer to store whether SSL should be enabled
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client` must be a valid pointer to a handle allocated by this library
  * `identifier` must be a valid null-terminated string
  * `port` and `ssl` must be valid pointers
  */
-enum IdeviceErrorCode lockdownd_start_service(struct LockdowndClientHandle *client,
-                                              const char *identifier,
-                                              uint16_t *port,
-                                              bool *ssl);
+struct IdeviceFfiError *lockdownd_start_service(struct LockdowndClientHandle *client,
+                                                const char *identifier,
+                                                uint16_t *port,
+                                                bool *ssl);
 
 /**
  * Gets a value from lockdownd
  *
  * # Arguments
  * * `client` - A valid LockdowndClient handle
- * * `value` - The value to get (null-terminated string)
+ * * `key` - The value to get (null-terminated string)
+ * * `domain` - The value to get (null-terminated string)
  * * `out_plist` - Pointer to store the returned plist value
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client` must be a valid pointer to a handle allocated by this library
  * `value` must be a valid null-terminated string
  * `out_plist` must be a valid pointer to store the plist
  */
-enum IdeviceErrorCode lockdownd_get_value(struct LockdowndClientHandle *client,
-                                          const char *value,
-                                          void **out_plist);
+struct IdeviceFfiError *lockdownd_get_value(struct LockdowndClientHandle *client,
+                                            const char *key,
+                                            const char *domain,
+                                            void **out_plist);
 
 /**
  * Gets all values from lockdownd
@@ -1039,14 +1677,15 @@ enum IdeviceErrorCode lockdownd_get_value(struct LockdowndClientHandle *client,
  * * `out_plist` - Pointer to store the returned plist dictionary
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client` must be a valid pointer to a handle allocated by this library
  * `out_plist` must be a valid pointer to store the plist
  */
-enum IdeviceErrorCode lockdownd_get_all_values(struct LockdowndClientHandle *client,
-                                               void **out_plist);
+struct IdeviceFfiError *lockdownd_get_all_values(struct LockdowndClientHandle *client,
+                                                 const char *domain,
+                                                 void **out_plist);
 
 /**
  * Frees a LockdowndClient handle
@@ -1087,38 +1726,120 @@ enum IdeviceLoggerError idevice_init_logger(enum IdeviceLogLevel console_level,
                                             char *file_path);
 
 /**
- * Connects to the Image Mounter service using a TCP provider
+ * Automatically creates and connects to Misagent, returning a client handle
  *
  * # Arguments
- * * [`provider`] - A TcpProvider
- * * [`client`] - On success, will be set to point to a newly allocated ImageMounter handle
+ * * [`provider`] - An IdeviceProvider
+ * * [`client`] - On success, will be set to point to a newly allocated MisagentClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `provider` must be a valid pointer to a handle allocated by this library
  * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode image_mounter_connect_tcp(struct TcpProviderHandle *provider,
-                                                struct ImageMounterHandle **client);
+struct IdeviceFfiError *misagent_connect(struct IdeviceProviderHandle *provider,
+                                         struct MisagentClientHandle **client);
 
 /**
- * Connects to the Image Mounter service using a Usbmuxd provider
+ * Installs a provisioning profile on the device
  *
  * # Arguments
- * * [`provider`] - A UsbmuxdProvider
+ * * [`client`] - A valid MisagentClient handle
+ * * [`profile_data`] - The provisioning profile data to install
+ * * [`profile_len`] - Length of the profile data
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `profile_data` must be a valid pointer to profile data of length `profile_len`
+ */
+struct IdeviceFfiError *misagent_install(struct MisagentClientHandle *client,
+                                         const uint8_t *profile_data,
+                                         size_t profile_len);
+
+/**
+ * Removes a provisioning profile from the device
+ *
+ * # Arguments
+ * * [`client`] - A valid MisagentClient handle
+ * * [`profile_id`] - The UUID of the profile to remove (C string)
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `profile_id` must be a valid C string
+ */
+struct IdeviceFfiError *misagent_remove(struct MisagentClientHandle *client,
+                                        const char *profile_id);
+
+/**
+ * Retrieves all provisioning profiles from the device
+ *
+ * # Arguments
+ * * [`client`] - A valid MisagentClient handle
+ * * [`out_profiles`] - On success, will be set to point to an array of profile data
+ * * [`out_profiles_len`] - On success, will be set to the number of profiles
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `out_profiles` must be a valid pointer to store the resulting array
+ * `out_profiles_len` must be a valid pointer to store the array length
+ */
+struct IdeviceFfiError *misagent_copy_all(struct MisagentClientHandle *client,
+                                          uint8_t ***out_profiles,
+                                          size_t **out_profiles_len,
+                                          size_t *out_count);
+
+/**
+ * Frees profiles array returned by misagent_copy_all
+ *
+ * # Arguments
+ * * [`profiles`] - Array of profile data pointers
+ * * [`lens`] - Array of profile lengths
+ * * [`count`] - Number of profiles in the array
+ *
+ * # Safety
+ * Must only be called with values returned from misagent_copy_all
+ */
+void misagent_free_profiles(uint8_t **profiles, size_t *lens, size_t count);
+
+/**
+ * Frees a misagent client handle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to a handle allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void misagent_client_free(struct MisagentClientHandle *handle);
+
+/**
+ * Connects to the Image Mounter service using a provider
+ *
+ * # Arguments
+ * * [`provider`] - An IdeviceProvider
  * * [`client`] - On success, will be set to point to a newly allocated ImageMounter handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `provider` must be a valid pointer to a handle allocated by this library
  * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode image_mounter_connect_usbmuxd(struct UsbmuxdProviderHandle *provider,
-                                                    struct ImageMounterHandle **client);
+struct IdeviceFfiError *image_mounter_connect(struct IdeviceProviderHandle *provider,
+                                              struct ImageMounterHandle **client);
 
 /**
  * Creates a new ImageMounter client from an existing Idevice connection
@@ -1128,14 +1849,14 @@ enum IdeviceErrorCode image_mounter_connect_usbmuxd(struct UsbmuxdProviderHandle
  * * [`client`] - On success, will be set to point to a newly allocated ImageMounter handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `socket` must be a valid pointer to a handle allocated by this library
  * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode image_mounter_new(struct IdeviceHandle *socket,
-                                        struct ImageMounterHandle **client);
+struct IdeviceFfiError *image_mounter_new(struct IdeviceHandle *socket,
+                                          struct ImageMounterHandle **client);
 
 /**
  * Frees an ImageMounter handle
@@ -1158,15 +1879,15 @@ void image_mounter_free(struct ImageMounterHandle *handle);
  * * [`devices_len`] - Will be set to the number of devices copied
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client` must be a valid pointer to a handle allocated by this library
  * `devices` must be a valid, non-null pointer to a location where the plist will be stored
  */
-enum IdeviceErrorCode image_mounter_copy_devices(struct ImageMounterHandle *client,
-                                                 void **devices,
-                                                 size_t *devices_len);
+struct IdeviceFfiError *image_mounter_copy_devices(struct ImageMounterHandle *client,
+                                                   void **devices,
+                                                   size_t *devices_len);
 
 /**
  * Looks up an image and returns its signature
@@ -1178,17 +1899,17 @@ enum IdeviceErrorCode image_mounter_copy_devices(struct ImageMounterHandle *clie
  * * [`signature_len`] - Will be set to the length of the signature data
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client` must be a valid pointer to a handle allocated by this library
  * `image_type` must be a valid null-terminated C string
  * `signature` and `signature_len` must be valid pointers
  */
-enum IdeviceErrorCode image_mounter_lookup_image(struct ImageMounterHandle *client,
-                                                 const char *image_type,
-                                                 uint8_t **signature,
-                                                 size_t *signature_len);
+struct IdeviceFfiError *image_mounter_lookup_image(struct ImageMounterHandle *client,
+                                                   const char *image_type,
+                                                   uint8_t **signature,
+                                                   size_t *signature_len);
 
 /**
  * Uploads an image to the device
@@ -1202,18 +1923,18 @@ enum IdeviceErrorCode image_mounter_lookup_image(struct ImageMounterHandle *clie
  * * [`signature_len`] - Length of the signature data
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * All pointers must be valid and non-null
  * `image_type` must be a valid null-terminated C string
  */
-enum IdeviceErrorCode image_mounter_upload_image(struct ImageMounterHandle *client,
-                                                 const char *image_type,
-                                                 const uint8_t *image,
-                                                 size_t image_len,
-                                                 const uint8_t *signature,
-                                                 size_t signature_len);
+struct IdeviceFfiError *image_mounter_upload_image(struct ImageMounterHandle *client,
+                                                   const char *image_type,
+                                                   const uint8_t *image,
+                                                   size_t image_len,
+                                                   const uint8_t *signature,
+                                                   size_t signature_len);
 
 /**
  * Mounts an image on the device
@@ -1228,19 +1949,19 @@ enum IdeviceErrorCode image_mounter_upload_image(struct ImageMounterHandle *clie
  * * [`info_plist`] - Pointer to info plist (optional)
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * All pointers must be valid (except optional ones which can be null)
  * `image_type` must be a valid null-terminated C string
  */
-enum IdeviceErrorCode image_mounter_mount_image(struct ImageMounterHandle *client,
-                                                const char *image_type,
-                                                const uint8_t *signature,
-                                                size_t signature_len,
-                                                const uint8_t *trust_cache,
-                                                size_t trust_cache_len,
-                                                const void *info_plist);
+struct IdeviceFfiError *image_mounter_mount_image(struct ImageMounterHandle *client,
+                                                  const char *image_type,
+                                                  const uint8_t *signature,
+                                                  size_t signature_len,
+                                                  const uint8_t *trust_cache,
+                                                  size_t trust_cache_len,
+                                                  const void *info_plist);
 
 /**
  * Unmounts an image from the device
@@ -1250,14 +1971,14 @@ enum IdeviceErrorCode image_mounter_mount_image(struct ImageMounterHandle *clien
  * * [`mount_path`] - The path where the image is mounted
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client` must be a valid pointer to a handle allocated by this library
  * `mount_path` must be a valid null-terminated C string
  */
-enum IdeviceErrorCode image_mounter_unmount_image(struct ImageMounterHandle *client,
-                                                  const char *mount_path);
+struct IdeviceFfiError *image_mounter_unmount_image(struct ImageMounterHandle *client,
+                                                    const char *mount_path);
 
 /**
  * Queries the developer mode status
@@ -1267,14 +1988,14 @@ enum IdeviceErrorCode image_mounter_unmount_image(struct ImageMounterHandle *cli
  * * [`status`] - Will be set to the developer mode status (1 = enabled, 0 = disabled)
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client` must be a valid pointer to a handle allocated by this library
  * `status` must be a valid pointer
  */
-enum IdeviceErrorCode image_mounter_query_developer_mode_status(struct ImageMounterHandle *client,
-                                                                int *status);
+struct IdeviceFfiError *image_mounter_query_developer_mode_status(struct ImageMounterHandle *client,
+                                                                  int *status);
 
 /**
  * Mounts a developer image
@@ -1287,16 +2008,16 @@ enum IdeviceErrorCode image_mounter_query_developer_mode_status(struct ImageMoun
  * * [`signature_len`] - Length of the signature data
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * All pointers must be valid and non-null
  */
-enum IdeviceErrorCode image_mounter_mount_developer(struct ImageMounterHandle *client,
-                                                    const uint8_t *image,
-                                                    size_t image_len,
-                                                    const uint8_t *signature,
-                                                    size_t signature_len);
+struct IdeviceFfiError *image_mounter_mount_developer(struct ImageMounterHandle *client,
+                                                      const uint8_t *image,
+                                                      size_t image_len,
+                                                      const uint8_t *signature,
+                                                      size_t signature_len);
 
 /**
  * Queries the personalization manifest from the device
@@ -1310,18 +2031,18 @@ enum IdeviceErrorCode image_mounter_mount_developer(struct ImageMounterHandle *c
  * * [`manifest_len`] - Will be set to the length of the manifest data
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * All pointers must be valid and non-null
  * `image_type` must be a valid null-terminated C string
  */
-enum IdeviceErrorCode image_mounter_query_personalization_manifest(struct ImageMounterHandle *client,
-                                                                   const char *image_type,
-                                                                   const uint8_t *signature,
-                                                                   size_t signature_len,
-                                                                   uint8_t **manifest,
-                                                                   size_t *manifest_len);
+struct IdeviceFfiError *image_mounter_query_personalization_manifest(struct ImageMounterHandle *client,
+                                                                     const char *image_type,
+                                                                     const uint8_t *signature,
+                                                                     size_t signature_len,
+                                                                     uint8_t **manifest,
+                                                                     size_t *manifest_len);
 
 /**
  * Queries the nonce from the device
@@ -1333,16 +2054,16 @@ enum IdeviceErrorCode image_mounter_query_personalization_manifest(struct ImageM
  * * [`nonce_len`] - Will be set to the length of the nonce data
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client`, `nonce`, and `nonce_len` must be valid pointers
  * `personalized_image_type` can be NULL
  */
-enum IdeviceErrorCode image_mounter_query_nonce(struct ImageMounterHandle *client,
-                                                const char *personalized_image_type,
-                                                uint8_t **nonce,
-                                                size_t *nonce_len);
+struct IdeviceFfiError *image_mounter_query_nonce(struct ImageMounterHandle *client,
+                                                  const char *personalized_image_type,
+                                                  uint8_t **nonce,
+                                                  size_t *nonce_len);
 
 /**
  * Queries personalization identifiers from the device
@@ -1353,15 +2074,15 @@ enum IdeviceErrorCode image_mounter_query_nonce(struct ImageMounterHandle *clien
  * * [`identifiers`] - Will be set to point to the identifiers plist on success
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client` and `identifiers` must be valid pointers
  * `image_type` can be NULL
  */
-enum IdeviceErrorCode image_mounter_query_personalization_identifiers(struct ImageMounterHandle *client,
-                                                                      const char *image_type,
-                                                                      void **identifiers);
+struct IdeviceFfiError *image_mounter_query_personalization_identifiers(struct ImageMounterHandle *client,
+                                                                        const char *image_type,
+                                                                        void **identifiers);
 
 /**
  * Rolls the personalization nonce
@@ -1370,12 +2091,12 @@ enum IdeviceErrorCode image_mounter_query_personalization_identifiers(struct Ima
  * * [`client`] - A valid ImageMounter handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client` must be a valid pointer to a handle allocated by this library
  */
-enum IdeviceErrorCode image_mounter_roll_personalization_nonce(struct ImageMounterHandle *client);
+struct IdeviceFfiError *image_mounter_roll_personalization_nonce(struct ImageMounterHandle *client);
 
 /**
  * Rolls the cryptex nonce
@@ -1384,12 +2105,12 @@ enum IdeviceErrorCode image_mounter_roll_personalization_nonce(struct ImageMount
  * * [`client`] - A valid ImageMounter handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `client` must be a valid pointer to a handle allocated by this library
  */
-enum IdeviceErrorCode image_mounter_roll_cryptex_nonce(struct ImageMounterHandle *client);
+struct IdeviceFfiError *image_mounter_roll_cryptex_nonce(struct ImageMounterHandle *client);
 
 /**
  * Mounts a personalized developer image
@@ -1407,53 +2128,21 @@ enum IdeviceErrorCode image_mounter_roll_cryptex_nonce(struct ImageMounterHandle
  * * [`unique_chip_id`] - The device's unique chip ID
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * All pointers must be valid (except optional ones which can be null)
  */
-enum IdeviceErrorCode image_mounter_mount_personalized_usbmuxd(struct ImageMounterHandle *client,
-                                                               struct UsbmuxdProviderHandle *provider,
-                                                               const uint8_t *image,
-                                                               size_t image_len,
-                                                               const uint8_t *trust_cache,
-                                                               size_t trust_cache_len,
-                                                               const uint8_t *build_manifest,
-                                                               size_t build_manifest_len,
-                                                               const void *info_plist,
-                                                               uint64_t unique_chip_id);
-
-/**
- * Mounts a personalized developer image
- *
- * # Arguments
- * * [`client`] - A valid ImageMounter handle
- * * [`provider`] - A valid provider handle
- * * [`image`] - Pointer to the image data
- * * [`image_len`] - Length of the image data
- * * [`trust_cache`] - Pointer to the trust cache data
- * * [`trust_cache_len`] - Length of the trust cache data
- * * [`build_manifest`] - Pointer to the build manifest data
- * * [`build_manifest_len`] - Length of the build manifest data
- * * [`info_plist`] - Pointer to info plist (optional)
- * * [`unique_chip_id`] - The device's unique chip ID
- *
- * # Returns
- * An error code indicating success or failure
- *
- * # Safety
- * All pointers must be valid (except optional ones which can be null)
- */
-enum IdeviceErrorCode image_mounter_mount_personalized_tcp(struct ImageMounterHandle *client,
-                                                           struct TcpProviderHandle *provider,
-                                                           const uint8_t *image,
-                                                           size_t image_len,
-                                                           const uint8_t *trust_cache,
-                                                           size_t trust_cache_len,
-                                                           const uint8_t *build_manifest,
-                                                           size_t build_manifest_len,
-                                                           const void *info_plist,
-                                                           uint64_t unique_chip_id);
+struct IdeviceFfiError *image_mounter_mount_personalized(struct ImageMounterHandle *client,
+                                                         struct IdeviceProviderHandle *provider,
+                                                         const uint8_t *image,
+                                                         size_t image_len,
+                                                         const uint8_t *trust_cache,
+                                                         size_t trust_cache_len,
+                                                         const uint8_t *build_manifest,
+                                                         size_t build_manifest_len,
+                                                         const void *info_plist,
+                                                         uint64_t unique_chip_id);
 
 /**
  * Mounts a personalized developer image with progress callback
@@ -1473,63 +2162,127 @@ enum IdeviceErrorCode image_mounter_mount_personalized_tcp(struct ImageMounterHa
  * * [`context`] - User context to pass to callback
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * All pointers must be valid (except optional ones which can be null)
  */
-enum IdeviceErrorCode image_mounter_mount_personalized_usbmuxd_with_callback(struct ImageMounterHandle *client,
-                                                                             struct UsbmuxdProviderHandle *provider,
-                                                                             const uint8_t *image,
-                                                                             size_t image_len,
-                                                                             const uint8_t *trust_cache,
-                                                                             size_t trust_cache_len,
-                                                                             const uint8_t *build_manifest,
-                                                                             size_t build_manifest_len,
-                                                                             const void *info_plist,
-                                                                             uint64_t unique_chip_id,
-                                                                             void (*callback)(size_t progress,
-                                                                                              size_t total,
-                                                                                              void *context),
-                                                                             void *context);
+struct IdeviceFfiError *image_mounter_mount_personalized_with_callback(struct ImageMounterHandle *client,
+                                                                       struct IdeviceProviderHandle *provider,
+                                                                       const uint8_t *image,
+                                                                       size_t image_len,
+                                                                       const uint8_t *trust_cache,
+                                                                       size_t trust_cache_len,
+                                                                       const uint8_t *build_manifest,
+                                                                       size_t build_manifest_len,
+                                                                       const void *info_plist,
+                                                                       uint64_t unique_chip_id,
+                                                                       void (*callback)(size_t progress,
+                                                                                        size_t total,
+                                                                                        void *context),
+                                                                       void *context);
 
 /**
- * Mounts a personalized developer image with progress callback
+ * Connects to the relay with the given provider
  *
  * # Arguments
- * * [`client`] - A valid ImageMounter handle
- * * [`provider`] - A valid provider handle
- * * [`image`] - Pointer to the image data
- * * [`image_len`] - Length of the image data
- * * [`trust_cache`] - Pointer to the trust cache data
- * * [`trust_cache_len`] - Length of the trust cache data
- * * [`build_manifest`] - Pointer to the build manifest data
- * * [`build_manifest_len`] - Length of the build manifest data
- * * [`info_plist`] - Pointer to info plist (optional)
- * * [`unique_chip_id`] - The device's unique chip ID
- * * [`callback`] - Progress callback function
- * * [`context`] - User context to pass to callback
+ * * [`provider`] - A provider created by this library
+ * * [`client`] - A pointer where the handle will be allocated
  *
  * # Returns
- * An error code indicating success or failure
+ * 0 for success, an *mut IdeviceFfiError otherwise
  *
  * # Safety
- * All pointers must be valid (except optional ones which can be null)
+ * None of the arguments can be null. Provider must be allocated by this library.
  */
-enum IdeviceErrorCode image_mounter_mount_personalized_tcp_with_callback(struct ImageMounterHandle *client,
-                                                                         struct TcpProviderHandle *provider,
-                                                                         const uint8_t *image,
-                                                                         size_t image_len,
-                                                                         const uint8_t *trust_cache,
-                                                                         size_t trust_cache_len,
-                                                                         const uint8_t *build_manifest,
-                                                                         size_t build_manifest_len,
-                                                                         const void *info_plist,
-                                                                         uint64_t unique_chip_id,
-                                                                         void (*callback)(size_t progress,
-                                                                                          size_t total,
-                                                                                          void *context),
-                                                                         void *context);
+struct IdeviceFfiError *os_trace_relay_connect(struct IdeviceProviderHandle *provider,
+                                               struct OsTraceRelayClientHandle **client);
+
+/**
+ * Frees the relay client
+ *
+ * # Arguments
+ * * [`handle`] - The relay client handle
+ *
+ * # Safety
+ * The handle must be allocated by this library
+ */
+void os_trace_relay_free(struct OsTraceRelayClientHandle *handle);
+
+/**
+ * Creates a handle and starts receiving logs
+ *
+ * # Arguments
+ * * [`client`] - The relay client handle
+ * * [`receiver`] - A pointer to allocate the new handle to
+ * * [`pid`] - An optional pointer to a PID to get logs for. May be null.
+ *
+ * # Returns
+ * 0 for success, an *mut IdeviceFfiError otherwise
+ *
+ * # Safety
+ * The handle must be allocated by this library. It is consumed, and must never be used again.
+ */
+struct IdeviceFfiError *os_trace_relay_start_trace(struct OsTraceRelayClientHandle *client,
+                                                   struct OsTraceRelayReceiverHandle **receiver,
+                                                   const uint32_t *pid);
+
+/**
+ * Frees the receiver handle
+ *
+ * # Arguments
+ * * [`handle`] - The relay receiver client handle
+ *
+ * # Safety
+ * The handle must be allocated by this library. It is consumed, and must never be used again.
+ */
+void os_trace_relay_receiver_free(struct OsTraceRelayReceiverHandle *handle);
+
+/**
+ * Gets the PID list from the device
+ *
+ * # Arguments
+ * * [`client`] - The relay receiver client handle
+ * * [`list`] - A pointer to allocate a list of PIDs to
+ *
+ * # Returns
+ * 0 for success, an *mut IdeviceFfiError otherwise
+ *
+ * # Safety
+ * The handle must be allocated by this library.
+ */
+struct IdeviceFfiError *os_trace_relay_get_pid_list(struct OsTraceRelayClientHandle *client,
+                                                    struct Vec_u64 **list);
+
+/**
+ * Gets the next log from the relay
+ *
+ * # Arguments
+ * * [`client`] - The relay receiver client handle
+ * * [`log`] - A pointer to allocate the new log
+ *
+ * # Returns
+ * 0 for success, an *mut IdeviceFfiError otherwise
+ *
+ * # Safety
+ * The handle must be allocated by this library.
+ */
+struct IdeviceFfiError *os_trace_relay_next(struct OsTraceRelayReceiverHandle *client,
+                                            struct OsTraceLog **log);
+
+/**
+ * Frees a log received from the relay
+ *
+ * # Arguments
+ * * [`log`] - The log to free
+ *
+ * # Returns
+ * 0 for success, an *mut IdeviceFfiError otherwise
+ *
+ * # Safety
+ * The log must be allocated by this library. It is consumed and must not be used again.
+ */
+void os_trace_relay_free_log(struct OsTraceLog *log);
 
 /**
  * Reads a pairing file from the specified path
@@ -1539,14 +2292,14 @@ enum IdeviceErrorCode image_mounter_mount_personalized_tcp_with_callback(struct 
  * * [`pairing_file`] - On success, will be set to point to a newly allocated pairing file instance
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `path` must be a valid null-terminated C string
  * `pairing_file` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode idevice_pairing_file_read(const char *path,
-                                                struct IdevicePairingFile **pairing_file);
+struct IdeviceFfiError *idevice_pairing_file_read(const char *path,
+                                                  struct IdevicePairingFile **pairing_file);
 
 /**
  * Parses a pairing file from a byte buffer
@@ -1557,15 +2310,15 @@ enum IdeviceErrorCode idevice_pairing_file_read(const char *path,
  * * [`pairing_file`] - On success, will be set to point to a newly allocated pairing file instance
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `data` must be a valid pointer to a buffer of at least `size` bytes
  * `pairing_file` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode idevice_pairing_file_from_bytes(const uint8_t *data,
-                                                      uintptr_t size,
-                                                      struct IdevicePairingFile **pairing_file);
+struct IdeviceFfiError *idevice_pairing_file_from_bytes(const uint8_t *data,
+                                                        uintptr_t size,
+                                                        struct IdevicePairingFile **pairing_file);
 
 /**
  * Serializes a pairing file to XML format
@@ -1576,16 +2329,16 @@ enum IdeviceErrorCode idevice_pairing_file_from_bytes(const uint8_t *data,
  * * [`size`] - On success, will be set to the size of the allocated buffer
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `pairing_file` must be a valid, non-null pointer to a pairing file instance
  * `data` must be a valid, non-null pointer to a location where the buffer pointer will be stored
  * `size` must be a valid, non-null pointer to a location where the buffer size will be stored
  */
-enum IdeviceErrorCode idevice_pairing_file_serialize(const struct IdevicePairingFile *pairing_file,
-                                                     uint8_t **data,
-                                                     uintptr_t *size);
+struct IdeviceFfiError *idevice_pairing_file_serialize(const struct IdevicePairingFile *pairing_file,
+                                                       uint8_t **data,
+                                                       uintptr_t *size);
 
 /**
  * Frees a pairing file instance
@@ -1607,14 +2360,14 @@ void idevice_pairing_file_free(struct IdevicePairingFile *pairing_file);
  * * [`handle`] - Pointer to store the newly created ProcessControlClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `server` must be a valid pointer to a handle allocated by this library
  * `handle` must be a valid pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode process_control_new(struct RemoteServerAdapterHandle *server,
-                                          struct ProcessControlAdapterHandle **handle);
+struct IdeviceFfiError *process_control_new(struct RemoteServerHandle *server,
+                                            struct ProcessControlHandle **handle);
 
 /**
  * Frees a ProcessControlClient handle
@@ -1625,7 +2378,7 @@ enum IdeviceErrorCode process_control_new(struct RemoteServerAdapterHandle *serv
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library or NULL
  */
-void process_control_free(struct ProcessControlAdapterHandle *handle);
+void process_control_free(struct ProcessControlHandle *handle);
 
 /**
  * Launches an application on the device
@@ -1640,20 +2393,20 @@ void process_control_free(struct ProcessControlAdapterHandle *handle);
  * * [`pid`] - Pointer to store the process ID of the launched app
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * All pointers must be valid or NULL where appropriate
  */
-enum IdeviceErrorCode process_control_launch_app(struct ProcessControlAdapterHandle *handle,
-                                                 const char *bundle_id,
-                                                 const char *const *env_vars,
-                                                 uintptr_t env_vars_count,
-                                                 const char *const *arguments,
-                                                 uintptr_t arguments_count,
-                                                 bool start_suspended,
-                                                 bool kill_existing,
-                                                 uint64_t *pid);
+struct IdeviceFfiError *process_control_launch_app(struct ProcessControlHandle *handle,
+                                                   const char *bundle_id,
+                                                   const char *const *env_vars,
+                                                   uintptr_t env_vars_count,
+                                                   const char *const *arguments,
+                                                   uintptr_t arguments_count,
+                                                   bool start_suspended,
+                                                   bool kill_existing,
+                                                   uint64_t *pid);
 
 /**
  * Kills a running process
@@ -1663,13 +2416,12 @@ enum IdeviceErrorCode process_control_launch_app(struct ProcessControlAdapterHan
  * * [`pid`] - The process ID to kill
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library
  */
-enum IdeviceErrorCode process_control_kill_app(struct ProcessControlAdapterHandle *handle,
-                                               uint64_t pid);
+struct IdeviceFfiError *process_control_kill_app(struct ProcessControlHandle *handle, uint64_t pid);
 
 /**
  * Disables memory limits for a process
@@ -1679,13 +2431,13 @@ enum IdeviceErrorCode process_control_kill_app(struct ProcessControlAdapterHandl
  * * [`pid`] - The process ID to modify
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library
  */
-enum IdeviceErrorCode process_control_disable_memory_limit(struct ProcessControlAdapterHandle *handle,
-                                                           uint64_t pid);
+struct IdeviceFfiError *process_control_disable_memory_limit(struct ProcessControlHandle *handle,
+                                                             uint64_t pid);
 
 /**
  * Creates a TCP provider for idevice
@@ -1697,30 +2449,30 @@ enum IdeviceErrorCode process_control_disable_memory_limit(struct ProcessControl
  * * [`provider`] - A pointer to a newly allocated provider
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `ip` must be a valid sockaddr
- * `pairing_file` must never be used again
+ * `pairing_file` is consumed must never be used again
  * `label` must be a valid Cstr
  * `provider` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode idevice_tcp_provider_new(const struct sockaddr *ip,
-                                               struct IdevicePairingFile *pairing_file,
-                                               const char *label,
-                                               struct TcpProviderHandle **provider);
+struct IdeviceFfiError *idevice_tcp_provider_new(const struct sockaddr *ip,
+                                                 struct IdevicePairingFile *pairing_file,
+                                                 const char *label,
+                                                 struct IdeviceProviderHandle **provider);
 
 /**
- * Frees a TcpProvider handle
+ * Frees an IdeviceProvider handle
  *
  * # Arguments
  * * [`provider`] - The provider handle to free
  *
  * # Safety
- * `provider` must be a valid pointer to a TcpProvider handle that was allocated by this library,
- * or NULL (in which case this function does nothing)
+ * `provider` must be a valid pointer to a IdeviceProvider handle that was allocated this library
+ *  or NULL (in which case this function does nothing)
  */
-void tcp_provider_free(struct TcpProviderHandle *provider);
+void idevice_provider_free(struct IdeviceProviderHandle *provider);
 
 /**
  * Creates a usbmuxd provider for idevice
@@ -1730,55 +2482,60 @@ void tcp_provider_free(struct TcpProviderHandle *provider);
  * * [`tag`] - The tag returned in usbmuxd responses
  * * [`udid`] - The UDID of the device to connect to
  * * [`device_id`] - The muxer ID of the device to connect to
- * * [`pairing_file`] - The pairing file handle to use
  * * [`label`] - The label to use with the connection
  * * [`provider`] - A pointer to a newly allocated provider
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `addr` must be a valid pointer to UsbmuxdAddrHandle created by this library, and never used again
  * `udid` must be a valid CStr
- * `pairing_file` must never be used again
  * `label` must be a valid Cstr
  * `provider` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode usbmuxd_provider_new(struct UsbmuxdAddrHandle *addr,
-                                           uint32_t tag,
-                                           const char *udid,
-                                           uint32_t device_id,
-                                           const char *label,
-                                           struct UsbmuxdProviderHandle **provider);
-
-/**
- * Frees a UsbmuxdProvider handle
- *
- * # Arguments
- * * [`provider`] - The provider handle to free
- *
- * # Safety
- * `provider` must be a valid pointer to a UsbmuxdProvider handle that was allocated by this library,
- * or NULL (in which case this function does nothing)
- */
-void usbmuxd_provider_free(struct UsbmuxdProviderHandle *provider);
+struct IdeviceFfiError *usbmuxd_provider_new(struct UsbmuxdAddrHandle *addr,
+                                             uint32_t tag,
+                                             const char *udid,
+                                             uint32_t device_id,
+                                             const char *label,
+                                             struct IdeviceProviderHandle **provider);
 
 /**
  * Creates a new RemoteServerClient from a ReadWrite connection
  *
  * # Arguments
- * * [`connection`] - The connection to use for communication
+ * * [`socket`] - The connection to use for communication, an object that implements ReadWrite
  * * [`handle`] - Pointer to store the newly created RemoteServerClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
- * `connection` must be a valid pointer to a handle allocated by this library
+ * `socket` must be a valid pointer to a handle allocated by this library. It is consumed and may
+ * not be used again.
  * `handle` must be a valid pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode remote_server_adapter_new(struct AdapterHandle *adapter,
-                                                struct RemoteServerAdapterHandle **handle);
+struct IdeviceFfiError *remote_server_new(struct ReadWriteOpaque *socket,
+                                          struct RemoteServerHandle **handle);
+
+/**
+ * Creates a new RemoteServerClient from a handshake and adapter
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *remote_server_connect_rsd(struct AdapterHandle *provider,
+                                                  struct RsdHandshakeHandle *handshake,
+                                                  struct RemoteServerHandle **handle);
 
 /**
  * Frees a RemoteServerClient handle
@@ -1789,127 +2546,269 @@ enum IdeviceErrorCode remote_server_adapter_new(struct AdapterHandle *adapter,
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library or NULL
  */
-void remote_server_free(struct RemoteServerAdapterHandle *handle);
+void remote_server_free(struct RemoteServerHandle *handle);
 
 /**
- * Returns the underlying connection from a RemoteServerClient
+ * Creates a new RSD handshake from a ReadWrite connection
  *
  * # Arguments
- * * [`handle`] - The handle to get the connection from
- * * [`connection`] - The newly allocated ConnectionHandle
+ * * [`socket`] - The connection to use for communication
+ * * [`handle`] - Pointer to store the newly created RsdHandshake handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
- * `handle` must be a valid pointer to a handle allocated by this library or NULL, and never used again
+ * `socket` must be a valid pointer to a ReadWrite handle allocated by this library. It is
+ * consumed and may not be used again.
+ * `handle` must be a valid pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode remote_server_adapter_into_inner(struct RemoteServerAdapterHandle *handle,
-                                                       struct AdapterHandle **connection);
+struct IdeviceFfiError *rsd_handshake_new(struct ReadWriteOpaque *socket,
+                                          struct RsdHandshakeHandle **handle);
 
 /**
- * Creates a new XPCDevice from an adapter
+ * Gets the protocol version from the RSD handshake
  *
  * # Arguments
- * * [`adapter`] - The adapter to use for communication
- * * [`device`] - Pointer to store the newly created XPCDevice handle
+ * * [`handle`] - A valid RsdHandshake handle
+ * * [`version`] - Pointer to store the protocol version
  *
  * # Returns
- * An error code indicating success or failure
- *
- * # Safety
- * `adapter` must be a valid pointer to a handle allocated by this library
- * `device` must be a valid pointer to a location where the handle will be stored
- */
-enum IdeviceErrorCode xpc_device_new(struct AdapterHandle *adapter,
-                                     struct XPCDeviceAdapterHandle **device);
-
-/**
- * Frees an XPCDevice handle
- *
- * # Arguments
- * * [`handle`] - The handle to free
- *
- * # Safety
- * `handle` must be a valid pointer to a handle allocated by this library or NULL
- */
-void xpc_device_free(struct XPCDeviceAdapterHandle *handle);
-
-/**
- * Gets a service by name from the XPCDevice
- *
- * # Arguments
- * * [`handle`] - The XPCDevice handle
- * * [`service_name`] - The name of the service to get
- * * [`service`] - Pointer to store the newly created XPCService handle
- *
- * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `handle` must be a valid pointer to a handle allocated by this library
- * `service_name` must be a valid null-terminated C string
- * `service` must be a valid pointer to a location where the handle will be stored
+ * `version` must be a valid pointer to store the version
  */
-enum IdeviceErrorCode xpc_device_get_service(struct XPCDeviceAdapterHandle *handle,
+struct IdeviceFfiError *rsd_get_protocol_version(struct RsdHandshakeHandle *handle,
+                                                 size_t *version);
+
+/**
+ * Gets the UUID from the RSD handshake
+ *
+ * # Arguments
+ * * [`handle`] - A valid RsdHandshake handle
+ * * [`uuid`] - Pointer to store the UUID string (caller must free with rsd_free_string)
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `handle` must be a valid pointer to a handle allocated by this library
+ * `uuid` must be a valid pointer to store the string pointer
+ */
+struct IdeviceFfiError *rsd_get_uuid(struct RsdHandshakeHandle *handle, char **uuid);
+
+/**
+ * Gets all available services from the RSD handshake
+ *
+ * # Arguments
+ * * [`handle`] - A valid RsdHandshake handle
+ * * [`services`] - Pointer to store the services array
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `handle` must be a valid pointer to a handle allocated by this library
+ * `services` must be a valid pointer to store the services array
+ * Caller must free the returned array with rsd_free_services
+ */
+struct IdeviceFfiError *rsd_get_services(struct RsdHandshakeHandle *handle,
+                                         struct CRsdServiceArray **services);
+
+/**
+ * Checks if a specific service is available
+ *
+ * # Arguments
+ * * [`handle`] - A valid RsdHandshake handle
+ * * [`service_name`] - Name of the service to check for
+ * * [`available`] - Pointer to store the availability result
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `handle` must be a valid pointer to a handle allocated by this library
+ * `service_name` must be a valid C string
+ * `available` must be a valid pointer to store the boolean result
+ */
+struct IdeviceFfiError *rsd_service_available(struct RsdHandshakeHandle *handle,
+                                              const char *service_name,
+                                              bool *available);
+
+/**
+ * Gets information about a specific service
+ *
+ * # Arguments
+ * * [`handle`] - A valid RsdHandshake handle
+ * * [`service_name`] - Name of the service to get info for
+ * * [`service_info`] - Pointer to store the service information
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `handle` must be a valid pointer to a handle allocated by this library
+ * `service_name` must be a valid C string
+ * `service_info` must be a valid pointer to store the service info
+ * Caller must free the returned service with rsd_free_service
+ */
+struct IdeviceFfiError *rsd_get_service_info(struct RsdHandshakeHandle *handle,
                                              const char *service_name,
-                                             struct XPCServiceHandle **service);
+                                             struct CRsdService **service_info);
 
 /**
- * Returns the adapter in the RemoteXPC Device
+ * Frees a string returned by RSD functions
  *
  * # Arguments
- * * [`handle`] - The handle to get the adapter from
- * * [`adapter`] - The newly allocated AdapterHandle
+ * * [`string`] - The string to free
  *
  * # Safety
- * `handle` must be a valid pointer to a handle allocated by this library or NULL, and never used again
+ * Must only be called with strings returned from RSD functions
  */
-enum IdeviceErrorCode xpc_device_adapter_into_inner(struct XPCDeviceAdapterHandle *handle,
-                                                    struct AdapterHandle **adapter);
+void rsd_free_string(char *string);
 
 /**
- * Frees an XPCService handle
+ * Frees a single service returned by rsd_get_service_info
+ *
+ * # Arguments
+ * * [`service`] - The service to free
+ *
+ * # Safety
+ * Must only be called with services returned from rsd_get_service_info
+ */
+void rsd_free_service(struct CRsdService *service);
+
+/**
+ * Frees services array returned by rsd_get_services
+ *
+ * # Arguments
+ * * [`services`] - The services array to free
+ *
+ * # Safety
+ * Must only be called with arrays returned from rsd_get_services
+ */
+void rsd_free_services(struct CRsdServiceArray *services);
+
+/**
+ * Frees an RSD handshake handle
  *
  * # Arguments
  * * [`handle`] - The handle to free
  *
  * # Safety
- * `handle` must be a valid pointer to a handle allocated by this library or NULL
+ * `handle` must be a valid pointer to a handle allocated by this library,
+ * or NULL (in which case this function does nothing)
  */
-void xpc_service_free(struct XPCServiceHandle *handle);
+void rsd_handshake_free(struct RsdHandshakeHandle *handle);
 
 /**
- * Gets the list of available service names
+ * Connects to the Springboard service using a provider
  *
  * # Arguments
- * * [`handle`] - The XPCDevice handle
- * * [`names`] - Pointer to store the array of service names
- * * [`count`] - Pointer to store the number of services
+ * * [`provider`] - An IdeviceProvider
+ * * [`client`] - On success, will be set to point to a newly allocated SpringBoardServicesClient handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
- * `handle` must be a valid pointer to a handle allocated by this library
- * `names` must be a valid pointer to a location where the array will be stored
- * `count` must be a valid pointer to a location where the count will be stored
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode xpc_device_get_service_names(struct XPCDeviceAdapterHandle *handle,
-                                                   char ***names,
-                                                   uintptr_t *count);
+struct IdeviceFfiError *springboard_services_connect(struct IdeviceProviderHandle *provider,
+                                                     struct SpringBoardServicesClientHandle **client);
 
 /**
- * Frees a list of service names
+ * Creates a new SpringBoardServices client from an existing Idevice connection
  *
  * # Arguments
- * * [`names`] - The array of service names to free
- * * [`count`] - The number of services in the array
+ * * [`socket`] - An IdeviceSocket handle
+ * * [`client`] - On success, will be set to point to a newly allocated SpringBoardServicesClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
- * `names` must be a valid pointer to an array of `count` C strings
+ * `socket` must be a valid pointer to a handle allocated by this library. The socket is consumed,
+ * and may not be used again.
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
  */
-void xpc_device_free_service_names(char **names, uintptr_t count);
+struct IdeviceFfiError *springboard_services_new(struct IdeviceHandle *socket,
+                                                 struct SpringBoardServicesClientHandle **client);
+
+/**
+ * Gets the icon of the specified app by bundle identifier
+ *
+ * # Arguments
+ * * `client` - A valid SpringBoardServicesClient handle
+ * * `bundle_identifier` - The identifiers of the app to get icon
+ * * `out_result` - On success, will be set to point to a newly allocated png data
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `out_result` must be a valid, non-null pointer to a location where the result will be stored
+ */
+struct IdeviceFfiError *springboard_services_get_icon(struct SpringBoardServicesClientHandle *client,
+                                                      const char *bundle_identifier,
+                                                      void **out_result,
+                                                      size_t *out_result_len);
+
+/**
+ * Frees an SpringBoardServicesClient handle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to the handle that was allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void springboard_services_free(struct SpringBoardServicesClientHandle *handle);
+
+/**
+ * Automatically creates and connects to syslog relay, returning a client handle
+ *
+ * # Arguments
+ * * [`provider`] - An IdeviceProvider
+ * * [`client`] - On success, will be set to point to a newly allocated SyslogRelayClient handle
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *syslog_relay_connect_tcp(struct IdeviceProviderHandle *provider,
+                                                 struct SyslogRelayClientHandle **client);
+
+/**
+ * Frees a handle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to the handle that was allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void syslog_relay_client_free(struct SyslogRelayClientHandle *handle);
+
+/**
+ * Gets the next log message from the relay
+ *
+ * # Arguments
+ * * [`client`] - The SyslogRelayClient handle
+ * * [`log_message`] - On success a newly allocated cstring will be set to point to the log message
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `log_message` must be a valid, non-null pointer to a location where the log message will be stored
+ */
+struct IdeviceFfiError *syslog_relay_next(struct SyslogRelayClientHandle *client,
+                                          char **log_message);
 
 /**
  * Connects to a usbmuxd instance over TCP
@@ -1921,16 +2820,16 @@ void xpc_device_free_service_names(char **names, uintptr_t count);
  * * [`usbmuxd_connection`] - On success, will be set to point to a newly allocated UsbmuxdConnection handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `addr` must be a valid sockaddr
  * `usbmuxd_connection` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode idevice_usbmuxd_new_tcp_connection(const struct sockaddr *addr,
-                                                         socklen_t addr_len,
-                                                         uint32_t tag,
-                                                         struct UsbmuxdConnectionHandle **usbmuxd_connection);
+struct IdeviceFfiError *idevice_usbmuxd_new_tcp_connection(const struct sockaddr *addr,
+                                                           socklen_t addr_len,
+                                                           uint32_t tag,
+                                                           struct UsbmuxdConnectionHandle **usbmuxd_connection);
 
 /**
  * Connects to a usbmuxd instance over unix socket
@@ -1941,15 +2840,15 @@ enum IdeviceErrorCode idevice_usbmuxd_new_tcp_connection(const struct sockaddr *
  * * [`usbmuxd_connection`] - On success, will be set to point to a newly allocated UsbmuxdConnection handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `addr` must be a valid CStr
  * `usbmuxd_connection` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode idevice_usbmuxd_new_unix_socket_connection(const char *addr,
-                                                                 uint32_t tag,
-                                                                 struct UsbmuxdConnectionHandle **usbmuxd_connection);
+struct IdeviceFfiError *idevice_usbmuxd_new_unix_socket_connection(const char *addr,
+                                                                   uint32_t tag,
+                                                                   struct UsbmuxdConnectionHandle **usbmuxd_connection);
 
 /**
  * Frees a UsbmuxdConnection handle
@@ -1972,15 +2871,15 @@ void idevice_usbmuxd_connection_free(struct UsbmuxdConnectionHandle *usbmuxd_con
  * * [`usbmuxd_addr`] - On success, will be set to point to a newly allocated UsbmuxdAddr handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `addr` must be a valid sockaddr
  * `usbmuxd_Addr` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode idevice_usbmuxd_tcp_addr_new(const struct sockaddr *addr,
-                                                   socklen_t addr_len,
-                                                   struct UsbmuxdAddrHandle **usbmuxd_addr);
+struct IdeviceFfiError *idevice_usbmuxd_tcp_addr_new(const struct sockaddr *addr,
+                                                     socklen_t addr_len,
+                                                     struct UsbmuxdAddrHandle **usbmuxd_addr);
 
 /**
  * Creates a new UsbmuxdAddr struct with a unix socket
@@ -1990,14 +2889,14 @@ enum IdeviceErrorCode idevice_usbmuxd_tcp_addr_new(const struct sockaddr *addr,
  * * [`usbmuxd_addr`] - On success, will be set to point to a newly allocated UsbmuxdAddr handle
  *
  * # Returns
- * An error code indicating success or failure
+ * An IdeviceFfiError on error, null on success
  *
  * # Safety
  * `addr` must be a valid CStr
  * `usbmuxd_addr` must be a valid, non-null pointer to a location where the handle will be stored
  */
-enum IdeviceErrorCode idevice_usbmuxd_unix_addr_new(const char *addr,
-                                                    struct UsbmuxdAddrHandle **usbmuxd_addr);
+struct IdeviceFfiError *idevice_usbmuxd_unix_addr_new(const char *addr,
+                                                      struct UsbmuxdAddrHandle **usbmuxd_addr);
 
 /**
  * Frees a UsbmuxdAddr handle
@@ -2010,36 +2909,5 @@ enum IdeviceErrorCode idevice_usbmuxd_unix_addr_new(const char *addr,
  * or NULL (in which case this function does nothing)
  */
 void idevice_usbmuxd_addr_free(struct UsbmuxdAddrHandle *usbmuxd_addr);
-
-enum IdeviceErrorCode springboard_services_connect_tcp(struct TcpProviderHandle *provider,
-                                                             struct SpringBoardServicesClientHandle **client);
-
-enum IdeviceErrorCode springboard_services_connect_usbmuxd(struct UsbmuxdProviderHandle *provider,
-                                                                 struct SpringBoardServicesClientHandle **client);
-
-enum IdeviceErrorCode springboard_services_new(struct IdeviceHandle *socket,
-                                                     struct SpringBoardServicesClientHandle **client);
-
-/**
- * Gets the icon of the specified app by bundle identifier
- *
- * # Arguments
- * * `client` - A valid SpringBoardServicesClient handle
- * * `bundle_identifier` - The identifiers of the app to get icon
- * * `out_result` - On success, will be set to point to a newly allocated png data
- *
- * # Returns
- * An error code indicating success or failure
- *
- * # Safety
- * `client` must be a valid pointer to a handle allocated by this library
- * `out_result` must be a valid, non-null pointer to a location where the result will be stored
- */
-enum IdeviceErrorCode springboard_services_get_icon(struct SpringBoardServicesClientHandle *client,
-                                                          const char *bundle_identifier,
-                                                          void **out_result,
-                                                          size_t *out_result_len);
-
-void springboard_services_free(struct SpringBoardServicesClientHandle *handle);
 
 #endif

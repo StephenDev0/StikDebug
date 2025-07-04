@@ -11,16 +11,16 @@
 #include <string.h>
 #import "applist.h"
 
-NSDictionary<NSString*, NSString*>* list_installed_apps(TcpProviderHandle* provider, NSString** error) {
+NSDictionary<NSString*, NSString*>* list_installed_apps(IdeviceProviderHandle* provider, NSString** error) {
     InstallationProxyClientHandle *client = NULL;
-    if (installation_proxy_connect_tcp(provider, &client) != IdeviceSuccess) {
+    if (installation_proxy_connect_tcp(provider, &client)) {
         *error = @"Failed to connect to installation proxy";
         return nil;
     }
 
     void *apps = NULL;
     size_t count = 0;
-    if (installation_proxy_get_apps(client, "User", NULL, 0, &apps, &count) != IdeviceSuccess) {
+    if (installation_proxy_get_apps(client, "User", NULL, 0, &apps, &count)) {
         installation_proxy_client_free(client);
         *error = @"Failed to get apps";
         return nil;
@@ -70,16 +70,16 @@ NSDictionary<NSString*, NSString*>* list_installed_apps(TcpProviderHandle* provi
     return result;
 }
 
-UIImage* getAppIcon(TcpProviderHandle* provider, NSString* bundleID, NSString** error) {
+UIImage* getAppIcon(IdeviceProviderHandle* provider, NSString* bundleID, NSString** error) {
     SpringBoardServicesClientHandle *client = NULL;
-    if (springboard_services_connect_tcp(provider, &client) != IdeviceSuccess) {
+    if (springboard_services_connect(provider, &client)) {
         *error = @"Failed to connect to SpringBoard Services";
         return nil;
     }
 
     void *pngData = NULL;
     size_t dataLen = 0;
-    if (springboard_services_get_icon(client, [bundleID UTF8String], &pngData, &dataLen) != IdeviceSuccess) {
+    if (springboard_services_get_icon(client, [bundleID UTF8String], &pngData, &dataLen)) {
         springboard_services_free(client);
         *error = @"Failed to get app icon";
         return nil;

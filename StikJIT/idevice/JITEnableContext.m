@@ -19,7 +19,7 @@ JITEnableContext* sharedJITContext = nil;
 
 @implementation JITEnableContext {
     bool heartbeatRunning;
-    TcpProviderHandle* provider;
+    IdeviceProviderHandle* provider;
 }
 
 + (instancetype)shared {
@@ -80,9 +80,9 @@ JITEnableContext* sharedJITContext = nil;
     }
 
     IdevicePairingFile* pairingFile = NULL;
-    IdeviceErrorCode err = idevice_pairing_file_read(pairingFileURL.fileSystemRepresentation, &pairingFile);
-    if (err != IdeviceSuccess) {
-        *error = [self errorWithStr:@"Failed to read pairing file!" code:err];
+    IdeviceFfiError* err = idevice_pairing_file_read(pairingFileURL.fileSystemRepresentation, &pairingFile);
+    if (err) {
+        *error = [self errorWithStr:@"Failed to read pairing file!" code:err->code];
         return nil;
     }
     return pairingFile;
@@ -197,7 +197,7 @@ JITEnableContext* sharedJITContext = nil;
 
 - (void)dealloc {
     if (provider) {
-        tcp_provider_free(provider);
+        idevice_provider_free(provider);
     }
 }
 

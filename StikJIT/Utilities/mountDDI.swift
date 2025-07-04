@@ -63,7 +63,7 @@ func isMounted() -> Bool {
     // Read pairing file
     var pairingFile: IdevicePairingFile?
     let err = idevice_pairing_file_read(pairingFilePath, &pairingFile)
-    if err != IdeviceSuccess {
+    if let err {
         print("Failed to read pairing file: \(err)")
         return false
     }
@@ -71,26 +71,26 @@ func isMounted() -> Bool {
     // Create TCP provider
     var provider: TcpProviderHandle?
     let providerError = idevice_tcp_provider_new(sockaddrPointer, pairingFile, "ImageMounterTest", &provider)
-    if providerError != IdeviceSuccess {
+    if let providerError {
         print("Failed to create TCP provider: \(providerError)")
         return false
     }
 
     // Connect to image mounter
     var client: ImageMounterHandle?
-    let connectError = image_mounter_connect_tcp(provider, &client)
-    if connectError != IdeviceSuccess {
+    let connectError = image_mounter_connect(provider, &client)
+    if let connectError {
         print("Failed to connect to image mounter: \(connectError)")
         return false
     }
-    tcp_provider_free(provider)
+    idevice_provider_free(provider)
 
     print("wow")
     
     var devices: UnsafeMutableRawPointer?
     var devicesLen: size_t = 0
     let listError = image_mounter_copy_devices(client, &devices, &devicesLen)
-    if listError == IdeviceSuccess {
+    if listError == nil {
         let deviceList = devices?.assumingMemoryBound(to: plist_t.self)
         var devices: [String] = []
         for i in 0..<devicesLen {
@@ -140,15 +140,15 @@ func mountPersonalDDI(deviceIP: String = "10.7.0.1", imagePath: String, trustcac
 
     var pairingFile: IdevicePairingFile?
     let err = idevice_pairing_file_read(pairingFilePath.cString(using: .utf8), &pairingFile)
-    if err != IdeviceSuccess {
-        print("Failed to read pairing file: \(err)")
+    if let err {
+        print("Failed to read pairing file: \(err.pointee.code)")
         return 3 // EC: 3
     }
 
 
     var provider: TcpProviderHandle?
     let providerError = idevice_tcp_provider_new(sockaddrPointer, pairingFile, "ImageMounterTest".cString(using: .utf8), &provider)
-    if providerError != IdeviceSuccess {
+    if let providerError {
         print("Failed to create TCP provider: \(providerError)")
         return 4 // EC: 4
     }
@@ -156,24 +156,24 @@ func mountPersonalDDI(deviceIP: String = "10.7.0.1", imagePath: String, trustcac
     
     var pairingFile2: IdevicePairingFile?
     let P2err = idevice_pairing_file_read(pairingFilePath.cString(using: .utf8), &pairingFile2)
-    if P2err != IdeviceSuccess {
-        print("Failed to read pairing file: \(err)")
+    if let P2err {
+        print("Failed to read pairing file: \(P2err.pointee.code)")
         return 5 // EC: 5
     }
     
     var lockdownClient: LockdowndClientHandle?
-    guard lockdownd_connect_tcp(provider, &lockdownClient) == IdeviceSuccess else {
+    if let err = lockdownd_connect(provider, &lockdownClient) {
         print("Failed to connect to lockdownd")
         return 6 // EC: 6
     }
     
-    guard lockdownd_start_session(lockdownClient, pairingFile2) == IdeviceSuccess else {
+    if let err = lockdownd_start_session(lockdownClient, pairingFile2) {
         print("Failed to start session")
         return 7 // EC: 7
     }
     
     var uniqueChipIDPlist: plist_t?
-    guard lockdownd_get_value(lockdownClient, "UniqueChipID".cString(using: .utf8), &uniqueChipIDPlist) == IdeviceSuccess else {
+    if let err = lockdownd_get_value(lockdownClient, "UniqueChipID".cString(using: .utf8), nil, &uniqueChipIDPlist) {
         print("Failed to get UniqueChipID")
         return 8 // EC: 8
     }
@@ -185,7 +185,7 @@ func mountPersonalDDI(deviceIP: String = "10.7.0.1", imagePath: String, trustcac
     
     
     var mounterClient: ImageMounterHandle?
-    guard image_mounter_connect_tcp(provider, &mounterClient) == IdeviceSuccess else {
+    if let err = image_mounter_connect(provider, &mounterClient) {
         print("Failed to connect to image mounter")
         return 9 // EC: 9
     }
@@ -193,7 +193,7 @@ func mountPersonalDDI(deviceIP: String = "10.7.0.1", imagePath: String, trustcac
     let result = image.withUnsafeBytes { imagePtr in
         trustcache.withUnsafeBytes { trustcachePtr in
             buildManifest.withUnsafeBytes { manifestPtr in
-                image_mounter_mount_personalized_tcp_with_callback(
+                image_mounter_mount_personalized(
                     mounterClient,
                     provider,
                     imagePtr.baseAddress?.assumingMemoryBound(to: UInt8.self),
@@ -204,12 +204,11 @@ func mountPersonalDDI(deviceIP: String = "10.7.0.1", imagePath: String, trustcac
                     buildManifest.count,
                     nil,
                     uniqueChipID,
-                    progressCallback,
-                    nil
+
                 )
             }
         }
     }
     
-    return Int(result.rawValue)
+    return Int(result?.pointee.code ?? -1)
 }

@@ -783,9 +783,9 @@ func isPairing() -> Bool {
     let pairingpath = URL.documentsDirectory.appendingPathComponent("pairingFile.plist").path
     var pairingFile: IdevicePairingFile?
     let err = idevice_pairing_file_read(pairingpath, &pairingFile)
-    if err != IdeviceSuccess {
-        print("Failed to read pairing file: \(err)")
-        if err.rawValue == -9 {  // InvalidHostID is -9
+    if let err {
+        print("Failed to read pairing file: \(err.pointee.code)")
+        if err.pointee.code == -9 {  // InvalidHostID is -9
             return false
         }
         return false

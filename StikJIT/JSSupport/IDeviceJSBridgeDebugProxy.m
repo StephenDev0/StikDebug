@@ -11,16 +11,17 @@
 #import "../idevice/idevice.h"
 #include "../idevice/jit.h"
 
-NSString* handleJSContextSendDebugCommand(JSContext* context, NSString* commandStr, DebugProxyAdapterHandle* debugProxy) {
+NSString* handleJSContextSendDebugCommand(JSContext* context, NSString* commandStr, DebugProxyHandle* debugProxy) {
     DebugserverCommandHandle* command = 0;
 
     command = debugserver_command_new([commandStr UTF8String], NULL, 0);
 
     char* attach_response = 0;
-    IdeviceErrorCode err = debug_proxy_send_command2(debugProxy, command, &attach_response);
+    IdeviceFfiError* err = debug_proxy_send_command2(debugProxy, command, &attach_response);
     debugserver_command_free(command);
-    if (err != IdeviceSuccess) {
-        context.exception = [JSValue valueWithObject:[NSString stringWithFormat:@"error code %d", err] inContext:context];
+    if (err) {
+        context.exception = [JSValue valueWithObject:[NSString stringWithFormat:@"error code %d, msg %s", err->code, err->message] inContext:context];
+        idevice_error_free(err);
         return nil;
     }
     NSString* commandResponse = nil;

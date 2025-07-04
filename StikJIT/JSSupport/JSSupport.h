@@ -8,4 +8,4 @@
 @import JavaScriptCore;
 #include "../idevice/jit.h"
 
-NSString* handleJSContextSendDebugCommand(JSContext* context, NSString* commandStr, DebugProxyAdapterHandle* debugProxy);
+NSString* handleJSContextSendDebugCommand(JSContext* context, NSString* commandStr, DebugProxyHandle* debugProxy);

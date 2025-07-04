@@ -10,7 +10,7 @@
 @import Foundation;
 @import UIKit;
 
-NSDictionary<NSString*, NSString*>* list_installed_apps(TcpProviderHandle* provider, NSString** error);
-UIImage* getAppIcon(TcpProviderHandle* provider, NSString* bundleID, NSString** error);
+NSDictionary<NSString*, NSString*>* list_installed_apps(IdeviceProviderHandle* provider, NSString** error);
+UIImage* getAppIcon(IdeviceProviderHandle* provider, NSString* bundleID, NSString** error);
 
 #endif /* APPLIST_H */
