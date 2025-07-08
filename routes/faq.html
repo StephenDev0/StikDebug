@@ -87,7 +87,7 @@
             </svg>
           </div>
           <div class="faq-accordion-content">
-            <p>Yes, it functions in the same manner.</p>
+            <p>Yes, it is fully compatible. Simply select StikDebug in LiveContainer settings under JIT enablers.</p>
           </div>
         </div>
         
@@ -99,7 +99,7 @@
             </svg>
           </div>
           <div class="faq-accordion-content">
-            <p>The first launch requires Wi-Fi to mount the ddi. After this you can use Wi-Fi or Airplane mode.</p>
+            <p>The first launch requires Wi-Fi to mount the DDI. This must be done every time you restart your iDevice. After this you can use Wi-Fi or Airplane mode.</p>
           </div>
         </div>
         
@@ -111,7 +111,7 @@
             </svg>
           </div>
           <div class="faq-accordion-content">
-            <p>Yes, it has to be used with a developer certificate. Distribution and enterprise certificates will <strong>NOT</strong> work.</p>
+            <p>Yes, though has to be used with a developer certificate with the get-task-allow entitlement. Distribution and enterprise certificates will <strong>NOT</strong> work.</p>
           </div>
         </div>
         
@@ -123,7 +123,7 @@
             </svg>
           </div>
           <div class="faq-accordion-content">
-            <p>Yes, the source code is available on <a href="https://github.com/0-Blu/StikJIT/" target="_blank">GitHub</a>.</p>
+            <p>Yes, the source code is available on <a href="https://github.com/StephenDev0/StikDebug" target="_blank">GitHub</a>.</p>
           </div>
         </div>
         
@@ -135,7 +135,7 @@
             </svg>
           </div>
           <div class="faq-accordion-content">
-            <p>Supported versions range from iOS 17.4 to iOS 18.5 Developer Beta 2 (latest version).</p>
+            <p>Supported versions range from iOS 17.4 to iOS 18.6 Beta 2 (latest version). iOS 26 is currently <strong>NOT</strong> supported, though a fix is in the works...</p>
           </div>
         </div>
         
@@ -165,25 +165,25 @@
         
         <div class="faq-accordion-item">
           <div class="faq-accordion-header">
-            <h3>Will StikDebug be available on the normal App Store?</h3>
+            <h3>Is StikDebug be available on the Apple App Store?</h3>
             <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
           </div>
           <div class="faq-accordion-content">
-            <p>Maybe, it is unclear if Apple will allow it.</p>
+            <p>Yes!</p>
           </div>
         </div>
         
         <div class="faq-accordion-item">
           <div class="faq-accordion-header">
-            <h3>Is WireGuard still an option, or is StosVPN required?</h3>
+            <h3>Is StikJIT still supported?</h3>
             <svg class="faq-chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
             </svg>
           </div>
           <div class="faq-accordion-content">
-            <p>StosVPN is required for StikJIT to work properly. It is not needed for StikDebug because the VPN is built in.</p>
+            <p>No, the only version still supported is StikDebug, distributed on the App Store and AltStore PAL. No other versions, including the StikJIT <code>.ipa</code> and appdb versions are recommended or will recieve support.</p>
           </div>
         </div>
       </div>
@@ -203,9 +203,9 @@
           </div>
           <div class="faq-accordion-content">
             <ul>
-              <li>Make sure you're using the correct file with the <code>.mobiledevicepairing</code> extension</li>
+              <li>Make sure you're using the correct file with the <code>.plist</code> extension</li>
               <li>Ensure your device was connected and unlocked when generating the pairing file</li>
-              <li>Try generating a new pairing file with a fresh connection</li>
+              <li>Try generating a new pairing file with a fresh connection. As a side note, you must regenerate your pairing file every time you update your iDevice</li>
             </ul>
           </div>
         </div>
@@ -220,7 +220,7 @@
           <div class="faq-accordion-content">
             <ul>
               <li>Restart your device</li>
-              <li>Reinstall the app through AltStore PAL</li>
+              <li>Reinstall the app</li>
               <li>Ensure your device meets the minimum requirements (iOS 17.4+)</li>
             </ul>
           </div>
