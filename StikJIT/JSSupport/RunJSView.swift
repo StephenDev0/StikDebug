@@ -54,7 +54,12 @@ class RunJSViewModel: ObservableObject {
             return handleJITPageWrite(self.context, startAddr, regionSize, self.debugProxy) ?? ""
         }
         
+        let hasTXMFunction: @convention(block) () -> Bool = {
+            return ProcessInfo.processInfo.hasTXM
+        }
+        
         context = JSContext()
+        context?.setObject(hasTXMFunction, forKeyedSubscript: "hasTXM" as NSString)
         context?.setObject(getPidFunction, forKeyedSubscript: "get_pid" as NSString)
         context?.setObject(sendCommandFunction, forKeyedSubscript: "send_command" as NSString)
         context?.setObject(prepareMemoryRegionFunction, forKeyedSubscript: "prepare_memory_region" as NSString)
