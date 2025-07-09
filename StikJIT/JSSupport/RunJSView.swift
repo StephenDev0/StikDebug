@@ -50,9 +50,14 @@ class RunJSViewModel: ObservableObject {
             }
         }
         
+        let prepareMemoryRegionFunction: @convention(block) (UInt64, UInt64) -> String = { startAddr, regionSize in
+            return handleJITPageWrite(self.context, startAddr, regionSize, self.debugProxy) ?? ""
+        }
+        
         context = JSContext()
         context?.setObject(getPidFunction, forKeyedSubscript: "get_pid" as NSString)
         context?.setObject(sendCommandFunction, forKeyedSubscript: "send_command" as NSString)
+        context?.setObject(prepareMemoryRegionFunction, forKeyedSubscript: "prepare_memory_region" as NSString)
         context?.setObject(logFunction, forKeyedSubscript: "log" as NSString)
         
         context?.evaluateScript(scriptContent)

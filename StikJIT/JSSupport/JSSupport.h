@@ -9,3 +9,4 @@
 #include "../idevice/jit.h"
 
 NSString* handleJSContextSendDebugCommand(JSContext* context, NSString* commandStr, DebugProxyHandle* debugProxy);
+NSString* handleJITPageWrite(JSContext* context, uint64_t startAddr, uint64_t JITPagesSize, DebugProxyHandle* debugProxy);
