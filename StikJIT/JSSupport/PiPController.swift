@@ -30,10 +30,11 @@ struct VideoPlayerView: UIViewRepresentable {
         let asset = AVAsset(url: videoURL)
         let playerItem = AVPlayerItem(asset: asset)
         let player = AVPlayer(playerItem: playerItem)
-        
+
         playerLayer.player = player
         player.isMuted = true
         player.allowsExternalPlayback = true
+        player.play()
         
         containerView.layer.addSublayer(playerLayer)
         
