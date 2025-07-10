@@ -69,14 +69,39 @@ class RunJSViewModel: ObservableObject {
         if let semaphore {
             semaphore.signal()
         }
+        PiPController.shared.stopPiP()
+        
         DispatchQueue.main.async {
             if let exception = self.context?.exception {
                 self.logs.append(exception.debugDescription)
             }
-            self.logs.append("Script Execution Completed.")
+            
+            self.logs.append("Script Execution Completed, \nYou are safe to close the PIP Window.")
         }
     }
 }
+
+struct RunJSViewPiP: View {
+    @Binding var model: RunJSViewModel?
+    @State var logs: [String] = []
+    let timer = Timer.publish(every: 0.034, on: .main, in: .common).autoconnect()
+    
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(logs.suffix(6).indices, id: \.self) { index in
+                Text(logs.suffix(6)[index])
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white)
+            }
+        }
+        .padding()
+        .onReceive(timer) { _ in
+            self.logs = model?.logs ?? []
+        }
+    }
+}
+
 
 struct RunJSView: View {
     @ObservedObject var model: RunJSViewModel

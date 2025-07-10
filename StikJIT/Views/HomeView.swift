@@ -59,6 +59,19 @@ struct HomeView: View {
             Color(colorScheme == .dark ? .black : .white)
             .edgesIgnoringSafeArea(.all)
             
+            if useDefaultScript {
+                VideoPlayerView(view: RunJSViewPiP(model: $jsModel))
+                    .frame(width: 200, height: 150)
+                    .background(Color.clear)
+                    .cornerRadius(10)
+                    .onAppear() {
+                        Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { _ in
+                            PiPController.shared.startPiP()
+                        }
+                    }
+                    .overlay(colorScheme == .dark ? .black : .white)
+            }
+            
             VStack(spacing: 25) {
                 Spacer()
                 VStack(spacing: 5) {
@@ -224,6 +237,12 @@ struct HomeView: View {
         .onReceive(timer) { _ in
             refreshBackground()
             checkPairingFileExists()
+            
+            if useDefaultScript {
+                PiPController.shared.startPiP()
+            } else {
+                PiPController.shared.stopPiP()
+            }
         }
         .fileImporter(isPresented: $isShowingPairingFilePicker, allowedContentTypes: [UTType(filenameExtension: "mobiledevicepairing", conformingTo: .data)!, .propertyList]) {result in
             switch result {
@@ -315,10 +334,7 @@ struct HomeView: View {
                         .navigationTitle(selectedScript)
                         .navigationBarTitleDisplayMode(.inline)
                 }
-                
-
             }
-            
         }
         .onChange(of: scriptViewShow) { oldValue, newValue in
             if !newValue, let jsModel {
