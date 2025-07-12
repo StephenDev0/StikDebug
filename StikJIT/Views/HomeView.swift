@@ -303,7 +303,10 @@ struct HomeView: View {
                 startJITInBackground(with: selectedBundle)
             }
         }
-        .pipify(isPresented: $isProcessing) {
+        .pipify(isPresented: Binding(
+            get: { useDefaultScript && isProcessing },
+            set: { newValue in isProcessing = newValue }
+        )) {
             RunJSViewPiP(model: $jsModel)
         }
         .sheet(isPresented: $scriptViewShow) {

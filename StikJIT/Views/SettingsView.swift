@@ -272,16 +272,23 @@ struct SettingsView: View {
                                                    .foregroundColor(.primary)
                                                    .padding(.bottom, 4)
                                                
-                                               Toggle("Run Default Script After Connecting", isOn: $useDefaultScript)
-                                                   .foregroundColor(.primary)
-                                                   .padding(.vertical, 6)
-
                                                Toggle("Enable Advanced Options", isOn: $enableAdvancedOptions)
                                                    .foregroundColor(.primary)
                                                    .padding(.vertical, 6)
+
+                                               if enableAdvancedOptions {
+                                                   Toggle("Run Default Script After Connecting", isOn: $useDefaultScript)
+                                                       .foregroundColor(.primary)
+                                                       .padding(.vertical, 6)
+                                               }
                                            }
                                            .padding(.vertical, 20)
                                            .padding(.horizontal, 16)
+                                           .onChange(of: enableAdvancedOptions) { _, newValue in
+                                               if !newValue {
+                                                   useDefaultScript = false
+                                               }
+                                           }
                                        }
                                        
                     // About section
