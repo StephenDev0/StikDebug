@@ -141,6 +141,7 @@ struct AppButton: View {
     let sharedDefaults: UserDefaults
 
     @Environment(\.colorScheme) private var colorScheme
+    @State private var showScriptPicker = false
 
     var body: some View {
         Button(action: selectApp) {
@@ -161,6 +162,17 @@ struct AppButton: View {
             }
             Button { UIPasteboard.general.string = bundleID } label: {
                 Label("Copy Bundle ID", systemImage: "doc.on.doc")
+            }
+            Button {
+                showScriptPicker = true
+            } label: {
+                Label("Assign Script", systemImage: "chevron.left.slash.chevron.right")
+            }
+        }
+        .sheet(isPresented: $showScriptPicker) {
+            ScriptListView { url in
+                assignScript(url)
+                showScriptPicker = false
             }
         }
     }
@@ -221,6 +233,12 @@ struct AppButton: View {
         sharedDefaults.set(recentApps, forKey: "recentApps")
         sharedDefaults.set(favoriteApps, forKey: "favoriteApps")
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    private func assignScript(_ url: URL) {
+        var mapping = UserDefaults.standard.dictionary(forKey: "BundleScriptMap") as? [String: String] ?? [:]
+        mapping[bundleID] = url.lastPathComponent
+        UserDefaults.standard.set(mapping, forKey: "BundleScriptMap")
     }
 
     private func loadAppIcon(for bundleID: String) {

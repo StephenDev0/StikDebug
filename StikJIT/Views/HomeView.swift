@@ -409,9 +409,10 @@ struct HomeView: View {
         // but we'll keep it empty to avoid breaking anything
     }
     
-    private func getJsCallback() -> DebugAppCallback? {
+    private func getJsCallback(for scriptName: String? = nil) -> DebugAppCallback? {
+        let name = scriptName ?? selectedScript
         let selectedScriptURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("scripts").appendingPathComponent(selectedScript)
+            .appendingPathComponent("scripts").appendingPathComponent(name)
         
         if !FileManager.default.fileExists(atPath: selectedScriptURL.path()) {
             return nil
@@ -438,13 +439,16 @@ struct HomeView: View {
         LogManager.shared.addInfoLog("Starting Debug for \(bundleID)")
         
         DispatchQueue.global(qos: .background).async {
+            let mapping = UserDefaults.standard.dictionary(forKey: "BundleScriptMap") as? [String: String]
+            let mappedScript = mapping?[bundleID]
+            let callback = mappedScript != nil ? getJsCallback(for: mappedScript) : (useDefaultScript ? getJsCallback() : nil)
             let success = JITEnableContext.shared.debugApp(withBundleID: bundleID, logger: { message in
 
                 if let message = message {
                     // Log messages from the JIT process
                     LogManager.shared.addInfoLog(message)
                 }
-            }, jsCallback: useDefaultScript ? getJsCallback() : nil)
+            }, jsCallback: callback)
             
             DispatchQueue.main.async {
                 LogManager.shared.addInfoLog("Debug process completed for \(bundleID)")

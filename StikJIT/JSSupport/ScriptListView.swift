@@ -14,36 +14,53 @@ struct ScriptListView: View {
     @State private var newFileName = ""
     @State private var showImporter = false
     @AppStorage("DefaultScriptName") private var defaultScriptName = "attachDetach.js"
+
+    var onSelectScript: ((URL) -> Void)? = nil
     
     var body: some View {
         NavigationStack {
             List {
                 Section {
                     ForEach(scripts, id: \.self) { script in
-                        NavigationLink {
-                            ScriptEditorView(scriptURL: script)
-                        } label: {
-                            HStack {
-                                Text(script.lastPathComponent)
-                                    .font(.headline)
-                                if defaultScriptName == script.lastPathComponent {
-                                    Spacer()
-                                    Image(systemName: "star.fill")
+                        if let onSelectScript {
+                            Button {
+                                onSelectScript(script)
+                            } label: {
+                                HStack {
+                                    Text(script.lastPathComponent)
+                                        .font(.headline)
+                                    if defaultScriptName == script.lastPathComponent {
+                                        Spacer()
+                                        Image(systemName: "star.fill")
+                                    }
                                 }
                             }
-                        }
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                deleteScript(script)
+                        } else {
+                            NavigationLink {
+                                ScriptEditorView(scriptURL: script)
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                HStack {
+                                    Text(script.lastPathComponent)
+                                        .font(.headline)
+                                    if defaultScriptName == script.lastPathComponent {
+                                        Spacer()
+                                        Image(systemName: "star.fill")
+                                    }
+                                }
                             }
-                            Button {
-                                saveDefaultScript(script)
-                            } label: {
-                                Label("Set Default", systemImage: "star")
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    deleteScript(script)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                Button {
+                                    saveDefaultScript(script)
+                                } label: {
+                                    Label("Set Default", systemImage: "star")
+                                }
+                                .tint(.blue)
                             }
-                            .tint(.blue)
                         }
                     }
                 } footer: {
