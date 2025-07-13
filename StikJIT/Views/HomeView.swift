@@ -305,7 +305,7 @@ struct HomeView: View {
             }
         }
         .pipify(isPresented: Binding(
-            get: { useDefaultScript && enablePiP && isProcessing },
+            get: { enablePiP && isProcessing },
             set: { newValue in isProcessing = newValue }
         )) {
             RunJSViewPiP(model: $jsModel)
@@ -356,8 +356,8 @@ struct HomeView: View {
             }
         )
         .onOpenURL { url in
-            print(url.path())
-            if url.host() != "enable-jit" {
+            print(url.path)
+            if url.host != "enable-jit" {
                 return
             }
             
@@ -415,7 +415,7 @@ struct HomeView: View {
         let selectedScriptURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("scripts").appendingPathComponent(name)
         
-        if !FileManager.default.fileExists(atPath: selectedScriptURL.path()) {
+        if !FileManager.default.fileExists(atPath: selectedScriptURL.path) {
             return nil
         }
         
