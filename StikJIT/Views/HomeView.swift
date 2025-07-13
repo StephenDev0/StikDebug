@@ -40,8 +40,9 @@ struct HomeView: View {
     @State private var pendingBundleIdToEnableJIT : String? = nil
     @State private var pendingPIDToEnableJIT : Int? = nil
     @AppStorage("enableAdvancedOptions") private var enableAdvancedOptions = false
-    
+
     @AppStorage("useDefaultScript") private var useDefaultScript = false
+    @AppStorage("enablePiP") private var enablePiP = true
     @State var scriptViewShow = false
     @AppStorage("DefaultScriptName") var selectedScript = "attachDetach.js"
     @State var jsModel: RunJSViewModel?
@@ -304,7 +305,7 @@ struct HomeView: View {
             }
         }
         .pipify(isPresented: Binding(
-            get: { useDefaultScript && isProcessing },
+            get: { useDefaultScript && enablePiP && isProcessing },
             set: { newValue in isProcessing = newValue }
         )) {
             RunJSViewPiP(model: $jsModel)

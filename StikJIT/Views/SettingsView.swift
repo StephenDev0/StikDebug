@@ -13,6 +13,7 @@ struct SettingsView: View {
     @AppStorage("selectedAppIcon") private var selectedAppIcon: String = "AppIcon"
     @AppStorage("useDefaultScript") private var useDefaultScript = false
     @AppStorage("enableAdvancedOptions") private var enableAdvancedOptions = false
+    @AppStorage("enablePiP") private var enablePiP = true
 
     @State private var isShowingPairingFilePicker = false
     @Environment(\.colorScheme) private var colorScheme
@@ -280,6 +281,9 @@ struct SettingsView: View {
                                                    Toggle("Run Default Script After Connecting", isOn: $useDefaultScript)
                                                        .foregroundColor(.primary)
                                                        .padding(.vertical, 6)
+                                                   Toggle("Picture in Picture", isOn: $enablePiP)
+                                                       .foregroundColor(.primary)
+                                                       .padding(.vertical, 6)
                                                }
                                            }
                                            .padding(.vertical, 20)
@@ -287,6 +291,7 @@ struct SettingsView: View {
                                            .onChange(of: enableAdvancedOptions) { _, newValue in
                                                if !newValue {
                                                    useDefaultScript = false
+                                                   enablePiP = false
                                                }
                                            }
                                        }
