@@ -137,6 +137,7 @@ struct AppButton: View {
     @Binding var favoriteApps: [String]
     @Binding var appIcons: [String: UIImage]
     @AppStorage("loadAppIconsOnJIT") private var loadAppIconsOnJIT = true
+    @AppStorage("enableAdvancedOptions") private var enableAdvancedOptions = false
     var onSelectApp: (String) -> Void
     let sharedDefaults: UserDefaults
 
@@ -163,10 +164,12 @@ struct AppButton: View {
             Button { UIPasteboard.general.string = bundleID } label: {
                 Label("Copy Bundle ID", systemImage: "doc.on.doc")
             }
-            Button {
-                showScriptPicker = true
-            } label: {
-                Label("Assign Script", systemImage: "chevron.left.slash.chevron.right")
+            if enableAdvancedOptions {
+                Button {
+                    showScriptPicker = true
+                } label: {
+                    Label("Assign Script", systemImage: "chevron.left.slash.chevron.right")
+                }
             }
         }
         .sheet(isPresented: $showScriptPicker) {
@@ -235,9 +238,13 @@ struct AppButton: View {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    private func assignScript(_ url: URL) {
+    private func assignScript(_ url: URL?) {
         var mapping = UserDefaults.standard.dictionary(forKey: "BundleScriptMap") as? [String: String] ?? [:]
-        mapping[bundleID] = url.lastPathComponent
+        if let url {
+            mapping[bundleID] = url.lastPathComponent
+        } else {
+            mapping.removeValue(forKey: bundleID)
+        }
         UserDefaults.standard.set(mapping, forKey: "BundleScriptMap")
     }
 

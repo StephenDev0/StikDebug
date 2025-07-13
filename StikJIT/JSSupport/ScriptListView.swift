@@ -15,12 +15,17 @@ struct ScriptListView: View {
     @State private var showImporter = false
     @AppStorage("DefaultScriptName") private var defaultScriptName = "attachDetach.js"
 
-    var onSelectScript: ((URL) -> Void)? = nil
+    var onSelectScript: ((URL?) -> Void)? = nil
     
     var body: some View {
         NavigationStack {
             List {
                 Section {
+                    if let onSelectScript {
+                        Button("None") {
+                            onSelectScript(nil)
+                        }
+                    }
                     ForEach(scripts, id: \.self) { script in
                         if let onSelectScript {
                             Button {

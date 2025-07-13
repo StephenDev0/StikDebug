@@ -440,9 +440,15 @@ struct HomeView: View {
         LogManager.shared.addInfoLog("Starting Debug for \(bundleID)")
         
         DispatchQueue.global(qos: .background).async {
-            let mapping = UserDefaults.standard.dictionary(forKey: "BundleScriptMap") as? [String: String]
-            let mappedScript = mapping?[bundleID]
-            let callback = mappedScript != nil ? getJsCallback(for: mappedScript) : (useDefaultScript ? getJsCallback() : nil)
+            var callback: DebugAppCallback? = nil
+            if enableAdvancedOptions {
+                let mapping = UserDefaults.standard.dictionary(forKey: "BundleScriptMap") as? [String: String]
+                if let script = mapping?[bundleID] {
+                    callback = getJsCallback(for: script)
+                } else if useDefaultScript {
+                    callback = getJsCallback()
+                }
+            }
             let success = JITEnableContext.shared.debugApp(withBundleID: bundleID, logger: { message in
 
                 if let message = message {
@@ -466,13 +472,14 @@ struct HomeView: View {
         
         DispatchQueue.global(qos: .background).async {
 
+            let jsCallback: DebugAppCallback? = (enableAdvancedOptions && useDefaultScript) ? getJsCallback() : nil
             let success = JITEnableContext.shared.debugApp(withPID: Int32(pid), logger: { message in
-                
+
                 if let message = message {
                     // Log messages from the JIT process
                     LogManager.shared.addInfoLog(message)
                 }
-            }, jsCallback: useDefaultScript ? getJsCallback() : nil)
+            }, jsCallback: jsCallback)
             
             DispatchQueue.main.async {
                 LogManager.shared.addInfoLog("JIT process completed for \(pid)")
