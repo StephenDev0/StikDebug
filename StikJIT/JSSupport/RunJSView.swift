@@ -23,7 +23,7 @@ class RunJSViewModel: ObservableObject {
         self.semaphore = semaphore
     }
     
-    func runScript(path: URL) throws {
+    func runScript(path: URL, completion: (() -> Void)? = nil) throws {
         let scriptContent = try String(contentsOf: path, encoding: .utf8)
         scriptName = path.lastPathComponent
         
@@ -74,9 +74,10 @@ class RunJSViewModel: ObservableObject {
             if let exception = self.context?.exception {
                 self.logs.append(exception.debugDescription)
             }
-            
+
             self.logs.append("Script Execution Completed")
             self.logs.append("You are safe to close the PIP Window.")
+            completion?()
         }
     }
 }

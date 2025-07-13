@@ -424,8 +424,9 @@ struct HomeView: View {
             scriptViewShow = true
             DispatchQueue.global(qos: .background).async {
                 do {
-                    try jsModel?.runScript(path: selectedScriptURL)
-                    isProcessing = false
+                    try jsModel?.runScript(path: selectedScriptURL) {
+                        isProcessing = false
+                    }
                 } catch {
                     showAlert(title: "Error Occurred While Executing the Default Script.".localized, message: error.localizedDescription, showOk: true)
                 }
