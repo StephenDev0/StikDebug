@@ -14,6 +14,7 @@ struct SettingsView: View {
     @AppStorage("useDefaultScript") private var useDefaultScript = false
     @AppStorage("enableAdvancedOptions") private var enableAdvancedOptions = false
     @AppStorage("enablePiP") private var enablePiP = true
+    @AppStorage("closeAfterScript") private var closeAfterScript = false
 
     @State private var isShowingPairingFilePicker = false
     @Environment(\.colorScheme) private var colorScheme
@@ -284,6 +285,9 @@ struct SettingsView: View {
                                                    Toggle("Picture in Picture", isOn: $enablePiP)
                                                        .foregroundColor(.primary)
                                                        .padding(.vertical, 6)
+                                                   Toggle("Close App After Running Script", isOn: $closeAfterScript)
+                                                       .foregroundColor(.primary)
+                                                       .padding(.vertical, 6)
                                                }
                                            }
                                            .padding(.vertical, 20)
@@ -292,6 +296,7 @@ struct SettingsView: View {
                                                if !newValue {
                                                    useDefaultScript = false
                                                    enablePiP = false
+                                                   closeAfterScript = false
                                                }
                                            }
                                        }

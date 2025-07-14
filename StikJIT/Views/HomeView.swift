@@ -43,6 +43,7 @@ struct HomeView: View {
 
     @AppStorage("useDefaultScript") private var useDefaultScript = false
     @AppStorage("enablePiP") private var enablePiP = true
+    @AppStorage("closeAfterScript") private var closeAfterScript = false
     @State var scriptViewShow = false
     @AppStorage("DefaultScriptName") var selectedScript = "attachDetach.js"
     @State var jsModel: RunJSViewModel?

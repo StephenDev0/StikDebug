@@ -74,9 +74,15 @@ class RunJSViewModel: ObservableObject {
             if let exception = self.context?.exception {
                 self.logs.append(exception.debugDescription)
             }
-            
+
             self.logs.append("Script Execution Completed")
             self.logs.append("You are safe to close the PIP Window.")
+
+            if UserDefaults.standard.bool(forKey: "closeAfterScript") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    exit(0)
+                }
+            }
         }
     }
 }
