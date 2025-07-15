@@ -17,7 +17,6 @@ NSDate* lastHeartbeatDate = nil;
 
 void startHeartbeat(IdevicePairingFile* pairing_file, IdeviceProviderHandle** provider, bool* isHeartbeat, HeartbeatCompletionHandlerC completion, LogFuncC logger) {
     
-    *isHeartbeat = true;
     // Initialize logger
     idevice_init_logger(Debug, Disabled, NULL);
     
@@ -28,8 +27,9 @@ void startHeartbeat(IdevicePairingFile* pairing_file, IdeviceProviderHandle** pr
     addr.sin_port = htons(LOCKDOWN_PORT);
     inet_pton(AF_INET, "10.7.0.2", &addr.sin_addr);
     
+    IdeviceProviderHandle* newProvider = 0;
     IdeviceFfiError* err = idevice_tcp_provider_new((struct sockaddr *)&addr, pairing_file,
-                                                    "ExampleProvider", provider);
+                                                    "ExampleProvider", &newProvider);
     if (err != NULL) {
         fprintf(stderr, "Failed to create TCP provider: [%d] %s", err->code,
                 err->message);
@@ -41,16 +41,23 @@ void startHeartbeat(IdevicePairingFile* pairing_file, IdeviceProviderHandle** pr
     
     // Connect to installation proxy
     HeartbeatClientHandle *client = NULL;
-    err = heartbeat_connect(*provider, &client);
+    err = heartbeat_connect(newProvider, &client);
     if (err != NULL) {
         fprintf(stderr, "Failed to connect to installation proxy: [%d] %s",
                 err->code, err->message);
-        idevice_provider_free(*provider);
+        idevice_provider_free(newProvider);
         idevice_error_free(err);
         *isHeartbeat = false;
         return;
     }
+    if(*isHeartbeat) {
+        idevice_provider_free(newProvider);
+        return;
+    }
     
+    // we mark heartbeat as success and set the default provider
+    *isHeartbeat = true;
+    *provider = newProvider;
     
     completion(0, "Heartbeat Completed");
     

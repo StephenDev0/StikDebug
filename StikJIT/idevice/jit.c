@@ -176,11 +176,6 @@ int debug_app(IdeviceProviderHandle* tcp_provider, const char *bundle_id, LogFun
       return 1;
     }
     printf("Successfully launched app with PID: %llu\n", pid);
-    
-    char* path = malloc(2048);
-    snprintf(path, 2048, "%s/Documents/debugProxy.pcap", getenv("HOME"));
-    adapter_pcap(adapter, path);
-    free(path);
 
     printf("\n=== Setting up Debug Proxy ===\n");
 

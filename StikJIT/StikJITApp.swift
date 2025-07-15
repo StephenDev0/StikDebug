@@ -16,6 +16,7 @@ private func registerAdvancedOptionsDefault() {
     // Enable advanced options by default on iOS 19/26 and above
     let enabled = os.majorVersion >= 19
     UserDefaults.standard.register(defaults: ["enableAdvancedOptions": enabled])
+    UserDefaults.standard.register(defaults: ["enablePiP": enabled])
 }
 
 // MARK: - Welcome Sheet

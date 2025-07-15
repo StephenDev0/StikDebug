@@ -305,7 +305,7 @@ struct HomeView: View {
             }
         }
         .pipify(isPresented: Binding(
-            get: { enablePiP && isProcessing },
+            get: { useDefaultScript && enablePiP && isProcessing },
             set: { newValue in isProcessing = newValue }
         )) {
             RunJSViewPiP(model: $jsModel)

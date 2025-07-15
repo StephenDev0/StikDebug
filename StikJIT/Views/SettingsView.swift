@@ -13,7 +13,7 @@ struct SettingsView: View {
     @AppStorage("selectedAppIcon") private var selectedAppIcon: String = "AppIcon"
     @AppStorage("useDefaultScript") private var useDefaultScript = false
     @AppStorage("enableAdvancedOptions") private var enableAdvancedOptions = false
-    @AppStorage("enablePiP") private var enablePiP = true
+    @AppStorage("enablePiP") private var enablePiP = false
 
     @State private var isShowingPairingFilePicker = false
     @Environment(\.colorScheme) private var colorScheme
