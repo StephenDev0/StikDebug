@@ -1,5 +1,5 @@
 function attach() {
-    log("Welcome to use StikDebug's srcipting feature! Here you can use JavaScript to customize your debug experience!")
+    log("Welcome to use StikDebug's scripting feature! Here you can use JavaScript to customize your debug experience!")
     log("This script is a demo script that attaches to the connected app and detaches from it.")
     
     // get pid of the connected app
