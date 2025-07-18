@@ -7,7 +7,7 @@ struct BlockScriptEditorView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             List {
                 ForEach($script.blocks) { $block in
                     BlockRow(block: $block)
@@ -15,14 +15,21 @@ struct BlockScriptEditorView: View {
                 .onDelete { script.blocks.remove(atOffsets: $0) }
                 .onMove { script.blocks.move(fromOffsets: $0, toOffset: $1) }
             }
+            .listStyle(.plain)
             .toolbar { EditButton() }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Divider()
+
             HStack {
                 Button("Cancel") { dismiss() }
+                    .buttonStyle(.bordered)
                 Spacer()
                 Button("Save") {
                     saveScript()
                     dismiss()
                 }
+                .buttonStyle(.borderedProminent)
             }
             .padding()
         }
@@ -64,7 +71,12 @@ struct BlockRow: View {
                 }
             }
             .pickerStyle(.menu)
-            TextField("Value", text: $block.value)
+            if !block.type.placeholder.isEmpty {
+                TextField(block.type.placeholder, text: $block.value)
+            } else {
+                Text(block.type.rawValue)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }

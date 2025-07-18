@@ -3,8 +3,24 @@ import Foundation
 enum BlockType: String, Codable, CaseIterable, Identifiable {
     case sendCommand
     case log
+    case getPid
+    case hasTXM
+    case prepareMemoryRegion
 
     var id: String { rawValue }
+
+    var placeholder: String {
+        switch self {
+        case .sendCommand:
+            return "Command"
+        case .log:
+            return "Message"
+        case .prepareMemoryRegion:
+            return "startAddr,size"
+        case .getPid, .hasTXM:
+            return ""
+        }
+    }
 }
 
 struct Block: Codable, Identifiable {
@@ -26,6 +42,12 @@ struct BlockScript: Codable {
                 return "send_command(\"\(escaped)\")"
             case .log:
                 return "log(\"\(escaped)\")"
+            case .getPid:
+                return "get_pid()"
+            case .hasTXM:
+                return "hasTXM()"
+            case .prepareMemoryRegion:
+                return "prepare_memory_region(\(block.value))"
             }
         }.joined(separator: "\n")
     }
