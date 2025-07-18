@@ -13,16 +13,22 @@
 
 NSDictionary<NSString*, NSString*>* list_installed_apps(IdeviceProviderHandle* provider, NSString** error) {
     InstallationProxyClientHandle *client = NULL;
-    if (installation_proxy_connect_tcp(provider, &client)) {
-        *error = @"Failed to connect to installation proxy";
+    IdeviceFfiError *err = installation_proxy_connect_tcp(provider, &client);
+    if (err) {
+        *error = [NSString stringWithFormat:@"Failed to connect to installation proxy: (%d) %s",
+                                           err->code, err->message];
+        idevice_error_free(err);
         return nil;
     }
 
     void *apps = NULL;
     size_t count = 0;
-    if (installation_proxy_get_apps(client, "User", NULL, 0, &apps, &count)) {
+    err = installation_proxy_get_apps(client, "User", NULL, 0, &apps, &count);
+    if (err) {
         installation_proxy_client_free(client);
-        *error = @"Failed to get apps";
+        *error = [NSString stringWithFormat:@"Failed to get apps: (%d) %s",
+                                          err->code, err->message];
+        idevice_error_free(err);
         return nil;
     }
 
@@ -72,16 +78,22 @@ NSDictionary<NSString*, NSString*>* list_installed_apps(IdeviceProviderHandle* p
 
 UIImage* getAppIcon(IdeviceProviderHandle* provider, NSString* bundleID, NSString** error) {
     SpringBoardServicesClientHandle *client = NULL;
-    if (springboard_services_connect(provider, &client)) {
-        *error = @"Failed to connect to SpringBoard Services";
+    IdeviceFfiError *err = springboard_services_connect(provider, &client);
+    if (err) {
+        *error = [NSString stringWithFormat:@"Failed to connect to SpringBoard Services: (%d) %s",
+                                           err->code, err->message];
+        idevice_error_free(err);
         return nil;
     }
 
     void *pngData = NULL;
     size_t dataLen = 0;
-    if (springboard_services_get_icon(client, [bundleID UTF8String], &pngData, &dataLen)) {
+    err = springboard_services_get_icon(client, [bundleID UTF8String], &pngData, &dataLen);
+    if (err) {
         springboard_services_free(client);
-        *error = @"Failed to get app icon";
+        *error = [NSString stringWithFormat:@"Failed to get app icon: (%d) %s",
+                                          err->code, err->message];
+        idevice_error_free(err);
         return nil;
     }
 

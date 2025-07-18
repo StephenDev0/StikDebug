@@ -26,7 +26,12 @@ void runDebugServerCommand(int pid, DebugProxyHandle* debug_proxy, LogFuncC logg
     DebugserverCommandHandle *disableAckCommand = debugserver_command_new("QStartNoAckMode", NULL, 0);
     IdeviceFfiError* err = debug_proxy_send_command(debug_proxy, disableAckCommand, &disableResponse);
     debugserver_command_free(disableAckCommand);
-    logger("QStartNoAckMode result = %s, err = %d", disableResponse, err);
+    if (err) {
+        logger("QStartNoAckMode failed: (%d) %s", err->code, err->message);
+        idevice_error_free(err);
+    } else {
+        logger("QStartNoAckMode result = %s", disableResponse);
+    }
     idevice_string_free(disableResponse);
     debug_proxy_set_ack_mode(debug_proxy, false);
     
@@ -35,6 +40,10 @@ void runDebugServerCommand(int pid, DebugProxyHandle* debug_proxy, LogFuncC logg
         callback(pid, debug_proxy, semaphore);
         dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
         err = debug_proxy_send_raw(debug_proxy, "\x03", 1);
+        if (err) {
+            logger("Failed to send break: (%d) %s", err->code, err->message);
+            idevice_error_free(err);
+        }
         usleep(500);
     } else {
         // Send vAttach command with PID in hex
@@ -52,7 +61,8 @@ void runDebugServerCommand(int pid, DebugProxyHandle* debug_proxy, LogFuncC logg
         debugserver_command_free(attach_cmd);
         
         if (err) {
-            logger("Failed to attach to process: %d", err);
+            logger("Failed to attach to process: (%d) %s", err->code, err->message);
+            idevice_error_free(err);
         } else if (attach_response != NULL) {
             logger("Attach response: %s", attach_response);
             idevice_string_free(attach_response);
@@ -70,7 +80,7 @@ void runDebugServerCommand(int pid, DebugProxyHandle* debug_proxy, LogFuncC logg
         debugserver_command_free(detach_cmd);
         
         if (err) {
-            logger("Failed to detach from process: %d", err->code);
+            logger("Failed to detach from process: (%d) %s", err->code, err->message);
             idevice_error_free(err);
         } else if (detach_response != NULL) {
             logger("Detach response: %s", detach_response);

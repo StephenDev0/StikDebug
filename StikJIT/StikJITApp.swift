@@ -794,7 +794,8 @@ func isPairing() -> Bool {
     var pairingFile: IdevicePairingFile?
     let err = idevice_pairing_file_read(pairingpath, &pairingFile)
     if let err {
-        print("Failed to read pairing file: \(err.pointee.code)")
+        print("Failed to read pairing file: \(err.pointee.code) - \(String(cString: err.pointee.message))")
+        idevice_error_free(err)
         if err.pointee.code == -9 {  // InvalidHostID is -9
             return false
         }

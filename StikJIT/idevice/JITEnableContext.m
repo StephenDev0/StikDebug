@@ -83,6 +83,7 @@ JITEnableContext* sharedJITContext = nil;
     IdeviceFfiError* err = idevice_pairing_file_read(pairingFileURL.fileSystemRepresentation, &pairingFile);
     if (err) {
         *error = [self errorWithStr:@"Failed to read pairing file!" code:err->code];
+        idevice_error_free(err);
         return nil;
     }
     return pairingFile;
