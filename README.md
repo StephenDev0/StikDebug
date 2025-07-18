@@ -39,8 +39,9 @@
 ## Features  
 - On-device debugging/Just-In-Time (JIT) compilation for supported apps via [`idevice`](https://github.com/jkcoxson/idevice).  
 - Seamless integration with our custom built loopback vpn.  
-- Native UI for managing debugging/JIT-enabling.  
-- No data collection—ensuring full privacy. 
+- Native UI for managing debugging/JIT-enabling.
+- Optional block-based script editor for building scripts using a Scratch-like interface.
+- No data collection—ensuring full privacy.
 
 ## License  
 StikDebug is licensed under **AGPL-3.0**. See [`LICENSE`](LICENSE) for details.  

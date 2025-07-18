@@ -8,6 +8,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import Pipify
+import Foundation
 
 struct JITEnableConfiguration {
     var bundleID: String? = nil
@@ -454,14 +455,19 @@ struct HomeView: View {
                 if scriptData == nil, let scriptName {
                     let selectedScriptURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
                         .appendingPathComponent("scripts").appendingPathComponent(scriptName)
-                    
+
                     if FileManager.default.fileExists(atPath: selectedScriptURL.path) {
                         do {
-                            scriptData = try Data(contentsOf: selectedScriptURL)
+                            if selectedScriptURL.pathExtension.lowercased() == "jsb" {
+                                let block = BlockScript.load(from: selectedScriptURL)
+                                scriptData = block.generateJS().data(using: .utf8)
+                            } else {
+                                scriptData = try Data(contentsOf: selectedScriptURL)
+                            }
                         } catch {
                             print("failed to load data from script \(error)")
                         }
-                        
+
                     }
                 }
             } else {

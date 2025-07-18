@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
+import Foundation
 
 struct ScriptListView: View {
     @State private var scripts: [URL] = []
@@ -14,6 +15,7 @@ struct ScriptListView: View {
     @State private var newFileName = ""
     @State private var showImporter = false
     @AppStorage("DefaultScriptName") private var defaultScriptName = "attachDetach.js"
+    @AppStorage("useBlockEditor") private var useBlockEditor = false
 
     var onSelectScript: ((URL?) -> Void)? = nil
     
@@ -42,7 +44,11 @@ struct ScriptListView: View {
                             }
                         } else {
                             NavigationLink {
-                                ScriptEditorView(scriptURL: script)
+                                if script.pathExtension.lowercased() == "jsb" {
+                                    BlockScriptEditorView(scriptURL: script)
+                                } else {
+                                    ScriptEditorView(scriptURL: script)
+                                }
                             } label: {
                                 HStack {
                                     Text(script.lastPathComponent)
@@ -97,7 +103,10 @@ struct ScriptListView: View {
             }
             .fileImporter(
                 isPresented: $showImporter,
-                allowedContentTypes: [UTType(filenameExtension: "js") ?? .plainText],
+                allowedContentTypes: [
+                    UTType(filenameExtension: "js") ?? .plainText,
+                    UTType(filenameExtension: "jsb") ?? .plainText
+                ],
                 allowsMultipleSelection: false
             ) { result in
                 switch result {
@@ -158,7 +167,7 @@ struct ScriptListView: View {
         scripts = (try? FileManager
             .default
             .contentsOfDirectory(at: dir, includingPropertiesForKeys: nil))?
-            .filter { $0.pathExtension.lowercased() == "js" } ?? []
+            .filter { ["js", "jsb"].contains($0.pathExtension.lowercased()) } ?? []
     }
     
     private func saveDefaultScript(_ url: URL) {
@@ -168,8 +177,14 @@ struct ScriptListView: View {
     private func createNewScript() {
         guard !newFileName.isEmpty else { return }
         var filename = newFileName
-        if !filename.hasSuffix(".js") {
-            filename += ".js"
+        if useBlockEditor {
+            if !filename.hasSuffix(".jsb") {
+                filename += ".jsb"
+            }
+        } else {
+            if !filename.hasSuffix(".js") {
+                filename += ".js"
+            }
         }
         let newURL = scriptsDirectory().appendingPathComponent(filename)
         
@@ -181,7 +196,14 @@ struct ScriptListView: View {
         }
         
         do {
-            try "".write(to: newURL, atomically: true, encoding: .utf8)
+            if useBlockEditor {
+                let script = BlockScript()
+                script.save(to: newURL)
+                let jsURL = newURL.deletingPathExtension().appendingPathExtension("js")
+                script.saveAsJS(to: jsURL)
+            } else {
+                try "".write(to: newURL, atomically: true, encoding: .utf8)
+            }
             newFileName = ""
             loadScripts()
         } catch {
@@ -192,6 +214,10 @@ struct ScriptListView: View {
     private func deleteScript(_ url: URL) {
         do {
             try FileManager.default.removeItem(at: url)
+            if url.pathExtension.lowercased() == "jsb" {
+                let jsURL = url.deletingPathExtension().appendingPathExtension("js")
+                try? FileManager.default.removeItem(at: jsURL)
+            }
             if url.lastPathComponent == defaultScriptName {
                 UserDefaults.standard.removeObject(forKey: "DefaultScriptName")
             }
