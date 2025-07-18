@@ -41,6 +41,7 @@
 - Seamless integration with our custom built loopback vpn.  
 - Native UI for managing debugging/JIT-enabling.
 - Optional block-based script editor for building scripts using a Scratch-like interface.
+- Block editor provides quick-insert options for common values.
 - No data collection—ensuring full privacy.
 
 ## License  

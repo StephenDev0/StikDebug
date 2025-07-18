@@ -21,6 +21,21 @@ enum BlockType: String, Codable, CaseIterable, Identifiable {
             return ""
         }
     }
+
+    /// Suggested values that can be inserted when editing a block of this type.
+    /// These are just examples to help users build scripts quickly.
+    var options: [String] {
+        switch self {
+        case .sendCommand:
+            return ["vAttach;${pid}", "D", "c"]
+        case .log:
+            return ["Hello", "Done"]
+        case .prepareMemoryRegion:
+            return ["0x0,0x1000", "0x100000000,0x2000"]
+        case .getPid, .hasTXM:
+            return []
+        }
+    }
 }
 
 struct Block: Codable, Identifiable {

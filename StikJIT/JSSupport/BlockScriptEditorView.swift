@@ -73,6 +73,15 @@ struct BlockRow: View {
             .pickerStyle(.menu)
             if !block.type.placeholder.isEmpty {
                 TextField(block.type.placeholder, text: $block.value)
+                if !block.type.options.isEmpty {
+                    Menu {
+                        ForEach(block.type.options, id: \\.self) { option in
+                            Button(option) { block.value = option }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
             } else {
                 Text(block.type.rawValue)
                     .foregroundStyle(.secondary)
