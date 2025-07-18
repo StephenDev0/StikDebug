@@ -16,6 +16,7 @@ struct BlockScriptEditorView: View {
                 .onMove { script.blocks.move(fromOffsets: $0, toOffset: $1) }
             }
             .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             .toolbar { EditButton() }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -64,22 +65,25 @@ struct BlockRow: View {
     @Binding var block: Block
 
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
             Picker("Type", selection: $block.type) {
                 ForEach(BlockType.allCases) { type in
                     Text(type.rawValue).tag(type)
                 }
             }
             .pickerStyle(.menu)
+
             if !block.type.placeholder.isEmpty {
                 TextField(block.type.placeholder, text: $block.value)
+                    .textFieldStyle(.roundedBorder)
+
                 if !block.type.options.isEmpty {
                     Menu {
                         ForEach(block.type.options, id: \.self) { option in
                             Button(option) { block.value = option }
                         }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Image(systemName: "plus.circle")
                     }
                 }
             } else {
@@ -87,5 +91,8 @@ struct BlockRow: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .padding(8)
+        .background(block.type.color.opacity(0.2))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }

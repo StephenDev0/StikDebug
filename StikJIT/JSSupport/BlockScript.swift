@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum BlockType: String, Codable, CaseIterable, Identifiable {
     case sendCommand
@@ -34,6 +35,21 @@ enum BlockType: String, Codable, CaseIterable, Identifiable {
             return ["0x0,0x1000", "0x100000000,0x2000"]
         case .getPid, .hasTXM:
             return []
+        }
+    }
+
+    /// Color used for displaying the block in the editor so it looks
+    /// similar to a Scratch block category.
+    var color: Color {
+        switch self {
+        case .sendCommand:
+            return .blue
+        case .log:
+            return .green
+        case .getPid, .hasTXM:
+            return .orange
+        case .prepareMemoryRegion:
+            return .purple
         }
     }
 }
