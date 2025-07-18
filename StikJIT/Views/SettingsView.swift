@@ -285,9 +285,21 @@ struct SettingsView: View {
                                                    Toggle("Picture in Picture", isOn: $enablePiP)
                                                        .foregroundColor(.primary)
                                                        .padding(.vertical, 6)
-                                                   Toggle("Use Block Script Editor", isOn: $useBlockEditor)
-                                                       .foregroundColor(.primary)
-                                                       .padding(.vertical, 6)
+                                                   Toggle(isOn: $useBlockEditor) {
+                                                       HStack(spacing: 6) {
+                                                           Text("Use Block Script Editor")
+                                                           Text("Beta")
+                                                               .font(.caption2)
+                                                               .fontWeight(.semibold)
+                                                               .padding(.horizontal, 4)
+                                                               .padding(.vertical, 2)
+                                                               .foregroundColor(.orange)
+                                                               .background(Color.orange.opacity(0.2))
+                                                               .cornerRadius(4)
+                                                       }
+                                                   }
+                                                   .foregroundColor(.primary)
+                                                   .padding(.vertical, 6)
                                                }
                                            }
                                            .padding(.vertical, 20)
