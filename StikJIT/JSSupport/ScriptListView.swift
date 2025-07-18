@@ -82,6 +82,7 @@ struct ScriptListView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
+                        newFileName = useBlockEditor ? "script.jsb" : "script.js"
                         showNewFileAlert = true
                     } label: {
                         Label("New Script", systemImage: "plus")
@@ -97,7 +98,7 @@ struct ScriptListView: View {
             }
             .onAppear(perform: loadScripts)
             .alert("New Script", isPresented: $showNewFileAlert) {
-                TextField("Filename", text: $newFileName)
+                TextField(useBlockEditor ? "Filename.jsb" : "Filename.js", text: $newFileName)
                 Button("Create", action: createNewScript)
                 Button("Cancel", role: .cancel) { }
             }
