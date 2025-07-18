@@ -75,7 +75,7 @@ struct BlockRow: View {
                 TextField(block.type.placeholder, text: $block.value)
                 if !block.type.options.isEmpty {
                     Menu {
-                        ForEach(block.type.options, id: \\.self) { option in
+                        ForEach(block.type.options, id: \.self) { option in
                             Button(option) { block.value = option }
                         }
                     } label: {
