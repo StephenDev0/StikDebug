@@ -538,13 +538,10 @@ struct HeartbeatApp: App {
                                                 isLoading2 = false
                                                 timer.invalidate()
                                             } else {
-                                                if let error {
-                                                    if error == -9 {  // InvalidHostID is -9
-                                                        isPairing = true
-                                                    } else {
-                                                        startHeartbeatInBackground()
-                                                    }
-                                                    self.error = nil
+                                                if !isPairing() {
+                                                    isPairing = true
+                                                } else {
+                                                    startHeartbeatInBackground()
                                                 }
                                             }
                                         }
@@ -794,8 +791,9 @@ func isPairing() -> Bool {
     var pairingFile: IdevicePairingFile?
     let err = idevice_pairing_file_read(pairingpath, &pairingFile)
     if let err {
-        print("Failed to read pairing file: \(err.pointee.code)")
-        if err.pointee.code == -9 {  // InvalidHostID is -9
+        let message = err.pointee.message != nil ? String(cString: err.pointee.message) : ""
+        print("Failed to read pairing file: \(message)")
+        if message == "InvalidHostID" {
             return false
         }
         return false
@@ -816,18 +814,18 @@ func startHeartbeatInBackground() {
             } else {
                 print("Error: \(message ?? "") (Code: \(result))")
                 DispatchQueue.main.async {
-                    // Special handling for InvalidHostID error (code -9)
-                    if result == -9 {
+                    // Special handling for InvalidHostID error
+                    if message == "InvalidHostID" {
                         do {
                             try FileManager.default.removeItem(at: URL.documentsDirectory.appendingPathComponent("pairingFile.plist"))
-                            print("Removed invalid pairing file")
+                            print("Removed pairing file with invalid host ID")
                         } catch {
-                            print("Error removing invalid pairing file: \(error)")
+                            print("Error removing invalid host ID pairing file: \(error)")
                         }
-                        
+
                         showAlert(
-                            title: "Invalid Pairing File",
-                            message: "The pairing file is invalid or expired. Please select a new pairing file.",
+                            title: "Invalid Host ID",
+                            message: "The host ID in the pairing file is invalid or expired. Please select a new pairing file.",
                             showOk: true,
                             showTryAgain: false,
                             primaryButtonText: "Select New File"
