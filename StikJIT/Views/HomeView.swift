@@ -404,7 +404,7 @@ struct HomeView: View {
         // If the file exists, check if it's valid
         if fileExists {
             // Check if the pairing file is valid
-            let isValid = isPairing()
+            let isValid = StikDebug.isPairing()
             pairingFileExists = isValid
         } else {
             pairingFileExists = false

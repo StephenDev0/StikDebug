@@ -538,7 +538,7 @@ struct HeartbeatApp: App {
                                                 isLoading2 = false
                                                 timer.invalidate()
                                             } else {
-                                                if !isPairing() {
+                                                if !StikDebug.isPairing() {
                                                     isPairing = true
                                                 } else {
                                                     startHeartbeatInBackground()
@@ -752,7 +752,7 @@ class MountingProgress: ObservableObject {
         self.coolisMounted = isMounted()
         let pairingpath = URL.documentsDirectory.appendingPathComponent("pairingFile.plist").path
         
-        if isPairing(), !isMounted() {
+        if StikDebug.isPairing(), !isMounted() {
             if let mountingThread = mountingThread {
                 mountingThread.cancel()
                 self.mountingThread = nil
