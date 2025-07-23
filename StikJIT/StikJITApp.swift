@@ -454,6 +454,7 @@ struct HeartbeatApp: App {
     @State private var alert_title = ""
     @State private var showTimeoutError = false
     @State private var showLogs = false
+    @State private var timeoutTimer: Timer?
     @StateObject private var mount = MountingProgress.shared
     @StateObject private var dnsChecker = DNSChecker()  // New DNS check state object
     @AppStorage("appTheme") private var appTheme: String = "system"
@@ -532,7 +533,8 @@ struct HeartbeatApp: App {
                     LoadingView(showAlert: $show_alert, alertTitle: $alert_title, alertMessage: $alert_string)
                         .onAppear {
                             dnsChecker.checkDNS()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
+                            timeoutTimer?.invalidate()
+                            timeoutTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: false) { _ in
                                 if isLoading2 {
                                     showTimeoutError = true
                                 }
@@ -683,6 +685,12 @@ struct HeartbeatApp: App {
             if newPhase == .active {
                 print("App became active – restarting heartbeat")
                 startHeartbeatInBackground()
+            }
+        }
+        .onChange(of: isLoading2) { newValue in
+            if !newValue {
+                timeoutTimer?.invalidate()
+                timeoutTimer = nil
             }
         }
         .onChange(of: dnsChecker.dnsError) { newError in
