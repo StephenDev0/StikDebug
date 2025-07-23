@@ -618,7 +618,6 @@ struct HeartbeatApp: App {
                                             isLoading2 = false
                                         },
                                         onSecondaryButtonTap: {
-                                            isLoading2 = false
                                             showLogs = true
                                         },
                                         showSecondaryButton: true
@@ -626,7 +625,9 @@ struct HeartbeatApp: App {
                                 }
                             }
                         )
-                        .sheet(isPresented: $showLogs) {
+                        .sheet(isPresented: $showLogs, onDismiss: {
+                            isLoading2 = false
+                        }) {
                             ConsoleLogsView()
                         }
                 } else {
