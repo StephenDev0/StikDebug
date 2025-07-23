@@ -618,6 +618,7 @@ struct HeartbeatApp: App {
                                             isLoading2 = false
                                         },
                                         onSecondaryButtonTap: {
+                                            isLoading2 = false
                                             showLogs = true
                                         },
                                         showSecondaryButton: true
