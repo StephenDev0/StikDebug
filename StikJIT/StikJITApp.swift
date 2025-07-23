@@ -452,6 +452,8 @@ struct HeartbeatApp: App {
     @State private var show_alert = false
     @State private var alert_string = ""
     @State private var alert_title = ""
+    @State private var showTimeoutError = false
+    @State private var showLogs = false
     @StateObject private var mount = MountingProgress.shared
     @StateObject private var dnsChecker = DNSChecker()  // New DNS check state object
     @AppStorage("appTheme") private var appTheme: String = "system"
@@ -530,6 +532,11 @@ struct HeartbeatApp: App {
                     LoadingView(showAlert: $show_alert, alertTitle: $alert_title, alertMessage: $alert_string)
                         .onAppear {
                             dnsChecker.checkDNS()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
+                                if isLoading2 {
+                                    showTimeoutError = true
+                                }
+                            }
                             checkVPNConnection() { result, vpn_error in
                                 if result {
                                     if FileManager.default.fileExists(atPath: URL.documentsDirectory.appendingPathComponent("pairingFile.plist").path) {
@@ -592,6 +599,32 @@ struct HeartbeatApp: App {
                             case .failure(_):
                                 print("Failed")
                             }
+                        }
+                        .overlay(
+                            ZStack {
+                                if showTimeoutError {
+                                    CustomErrorView(
+                                        title: "Connection Error",
+                                        message: "Check your connection and ensure your pairing file is valid and try again.",
+                                        onDismiss: {
+                                            showTimeoutError = false
+                                        },
+                                        showButton: true,
+                                        primaryButtonText: "Continue Anyway",
+                                        onPrimaryButtonTap: {
+                                            isLoading2 = false
+                                        },
+                                        showSecondaryButton: true,
+                                        secondaryButtonText: "View Logs",
+                                        onSecondaryButtonTap: {
+                                            showLogs = true
+                                        }
+                                    )
+                                }
+                            }
+                        )
+                        .sheet(isPresented: $showLogs) {
+                            LogFileView()
                         }
                 } else {
                     MainTabView()
