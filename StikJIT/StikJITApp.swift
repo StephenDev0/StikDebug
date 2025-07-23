@@ -611,14 +611,14 @@ struct HeartbeatApp: App {
                                         },
                                         showButton: true,
                                         primaryButtonText: "Continue Anyway",
+                                        secondaryButtonText: "View Logs",
                                         onPrimaryButtonTap: {
                                             isLoading2 = false
                                         },
-                                        showSecondaryButton: true,
-                                        secondaryButtonText: "View Logs",
                                         onSecondaryButtonTap: {
                                             showLogs = true
-                                        }
+                                        },
+                                        showSecondaryButton: true
                                     )
                                 }
                             }
