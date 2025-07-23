@@ -627,7 +627,7 @@ struct HeartbeatApp: App {
                             }
                         )
                         .sheet(isPresented: $showLogs) {
-                            LogFileView()
+                            ConsoleLogsView()
                         }
                 } else {
                     MainTabView()
