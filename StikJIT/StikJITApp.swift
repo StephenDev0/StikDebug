@@ -454,6 +454,7 @@ struct HeartbeatApp: App {
     @State private var alert_title = ""
     @State private var showTimeoutError = false
     @State private var showLogs = false
+    @State private var showContinueWarning = false
     @State private var timeoutTimer: Timer?
     @StateObject private var mount = MountingProgress.shared
     @StateObject private var dnsChecker = DNSChecker()  // New DNS check state object
@@ -615,12 +616,28 @@ struct HeartbeatApp: App {
                                         primaryButtonText: "Continue Anyway",
                                         secondaryButtonText: "View Logs",
                                         onPrimaryButtonTap: {
-                                            isLoading2 = false
+                                            showContinueWarning = true
                                         },
                                         onSecondaryButtonTap: {
                                             showLogs = true
                                         },
                                         showSecondaryButton: true
+                                    )
+                                }
+
+                                if showContinueWarning {
+                                    CustomErrorView(
+                                        title: "Proceeding Without Connection",
+                                        message: "StikDebug will not function as expected if you choose to continue.",
+                                        onDismiss: {
+                                            showContinueWarning = false
+                                        },
+                                        showButton: true,
+                                        primaryButtonText: "I Understand",
+                                        onPrimaryButtonTap: {
+                                            showContinueWarning = false
+                                            isLoading2 = false
+                                        }
                                     )
                                 }
                             }
