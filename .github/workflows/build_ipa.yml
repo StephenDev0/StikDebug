@@ -1,4 +1,4 @@
-name: Build Unsigned IPA
+name: Build Unsigned Debug IPA
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    name: Build Unsigned IPA
+    name: Build Debug IPA
     runs-on: macos-14
 
     steps:
@@ -26,12 +26,12 @@ jobs:
           sed -i '' 's/objectVersion = 77/objectVersion = 56/' StikDebug.xcodeproj/project.pbxproj
           sed -i '' 's/preferredProjectObjectVersion = 77/preferredProjectObjectVersion = 56/' StikDebug.xcodeproj/project.pbxproj
 
-      - name: Archive Build (Unsigned)
+      - name: Archive Build (Debug, Unsigned)
         run: |
           xcodebuild clean archive \
             -project StikDebug.xcodeproj \
             -scheme "StikDebug" \
-            -configuration Release \
+            -configuration Debug \
             -archivePath build/StikDebug.xcarchive \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
@@ -53,9 +53,9 @@ jobs:
           zip -r StikDebug.ipa Payload
           rm -rf Payload StikDebug.app
 
-      - name: Upload IPA
+      - name: Upload Debug IPA
         uses: actions/upload-artifact@v4
         with:
-          name: StikDebug.ipa
+          name: StikDebug-Debug.ipa
           path: StikDebug.ipa
-          retention-days: 90 
+          retention-days: 90
