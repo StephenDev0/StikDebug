@@ -30,14 +30,14 @@
 "Cancel" = "Cancel";
 "OK" = "OK";
 
-"Enable Advanced Options" = "Enable Advanced Options";
-"Welcome!" = "Welcome!";
-"Thanks for installing the app. This brief introduction will help you get started." = "Thanks for installing the app. This brief introduction will help you get started.";
-"StikDebug is an on-device debugger designed specifically for self-developed apps. It helps streamline testing and troubleshooting without sending any data to external servers." = "StikDebug is an on-device debugger designed specifically for self-developed apps. It helps streamline testing and troubleshooting without sending any data to external servers.";
-"The next step will prompt you to allow VPN permissions. This is necessary for the app to function properly. The VPN configuration allows your device to securely connect to itself — nothing more. Rest assured, no data is collected or sent externally. Everything stays on your device." = "The next step will prompt you to allow VPN permissions. This is necessary for the app to function properly. The VPN configuration allows your device to securely connect to itself — nothing more. Rest assured, no data is collected or sent externally. Everything stays on your device.";
-"Continue" = "Continue";
-"Disconnected" = "Disconnected";
-"Connecting" = "Connecting";
-"Connected" = "Connected";
-"Disconnecting" = "Disconnecting";
-"Error" = "Error";
+"Enable Advanced Options" = "Erweiterte Optionen aktivieren";
+"Welcome!" = "Willkommen!";
+"Thanks for installing the app. This brief introduction will help you get started." = "Danke, dass du die App installiert hast. Diese kurze Einführung hilft dir beim Einstieg.";
+"StikDebug is an on-device debugger designed specifically for self-developed apps. It helps streamline testing and troubleshooting without sending any data to external servers." = "StikDebug ist ein On-Device-Debugger, der speziell für selbstentwickelte Apps konzipiert wurde. Er vereinfacht Tests und Fehlersuche, ohne Daten an externe Server zu senden.";
+"The next step will prompt you to allow VPN permissions. This is necessary for the app to function properly. The VPN configuration allows your device to securely connect to itself — nothing more. Rest assured, no data is collected or sent externally. Everything stays on your device." = "Im nächsten Schritt wirst du aufgefordert, VPN-Berechtigungen zu erlauben. Dies ist notwendig, damit die App ordnungsgemäß funktioniert. Die VPN-Konfiguration ermöglicht deinem Gerät eine sichere Verbindung zu sich selbst – nicht mehr. Es werden keine Daten erfasst oder extern gesendet. Alles bleibt auf deinem Gerät.";
+"Continue" = "Fortfahren";
+"Disconnected" = "Getrennt";
+"Connecting" = "Verbindung wird hergestellt";
+"Connected" = "Verbunden";
+"Disconnecting" = "Verbindung wird getrennt";
+"Error" = "Fehler";
