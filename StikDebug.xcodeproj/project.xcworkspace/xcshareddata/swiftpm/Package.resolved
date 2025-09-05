@@ -45,15 +45,6 @@
         "revision" : "02b6abe5f6eef7e3cbd5f247c5cc24e246efcfe0",
         "version" : "0.9.19"
       }
-    },
-    {
-      "identity" : "zsign-ios",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/zwsn/zsign-ios",
-      "state" : {
-        "branch" : "main",
-        "revision" : "a7f275fb4830ea48adf536fcddee7d05471970d0"
-      }
     }
   ],
   "version" : 3

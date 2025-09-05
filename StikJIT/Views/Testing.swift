@@ -364,16 +364,6 @@ final class AppSignerManager: ObservableObject {
                     try? FileManager.default.copyItem(at: icon1024URL, to: previewDest)
                 }
                 
-                let pw = KeychainHelper.shared.readPassword(forKey: cert.id.uuidString) ?? ""
-                let rc = zsign(appFolder.path,
-                               cert.p12URL.path,
-                               cert.p12URL.path,
-                               cert.mobURL?.path ?? "",
-                               pw, "", "")
-                guard rc == 0 else {
-                    throw NSError(domain: "zsign", code: Int(rc),
-                                  userInfo: [NSLocalizedDescriptionKey: "zsign returned \(rc)"])
-                }
                 
                 let outDir = docs.appendingPathComponent("SignedApps/\(newName)", isDirectory: true)
                 if FileManager.default.fileExists(atPath: outDir.path) { try FileManager.default.removeItem(at: outDir) }
