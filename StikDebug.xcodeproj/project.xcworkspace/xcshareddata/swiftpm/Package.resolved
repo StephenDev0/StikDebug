@@ -1,5 +1,5 @@
 {
-  "originHash" : "fd6a0b1431f87fb1abbacc56899d6160059dfd4b59e9d381af1131363e73fb23",
+  "originHash" : "01d0d47170e97de76701ab09eade5c2be88cf1d0ab755275f6cb2c56fe6d123c",
   "pins" : [
     {
       "identity" : "codeeditorview",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "aba6c189bb2f6fd9d7b8e9f5739aeb3c8c7e3254",
         "version" : "0.15.4"
+      }
+    },
+    {
+      "identity" : "openssl",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/krzyzanowskim/OpenSSL",
+      "state" : {
+        "revision" : "623c84da314e85363236507ca38a4bde65df21c3",
+        "version" : "3.3.3001"
       }
     },
     {
@@ -44,6 +53,15 @@
       "state" : {
         "revision" : "02b6abe5f6eef7e3cbd5f247c5cc24e246efcfe0",
         "version" : "0.9.19"
+      }
+    },
+    {
+      "identity" : "zsign-package",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/khcrysalis/Zsign-Package/",
+      "state" : {
+        "branch" : "package",
+        "revision" : "6ffe703df73ef9069adacdbb19d571f11a69a801"
       }
     }
   ],

@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		17C744F02E20BED000834F17 /* Pipify in Frameworks */ = {isa = PBXBuildFile; productRef = 17C744EF2E20BED000834F17 /* Pipify */; };
+		68AD80462E6B65DA00DE9112 /* ZsignSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 68AD80452E6B65DA00DE9112 /* ZsignSwift */; };
+		68AD80482E6B65DA00DE9112 /* zsign in Frameworks */ = {isa = PBXBuildFile; productRef = 68AD80472E6B65DA00DE9112 /* zsign */; };
 		68D569BE2E1B415700A5BA36 /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = 68D569BD2E1B415700A5BA36 /* CodeEditorView */; };
 		68D569C02E1B415700A5BA36 /* LanguageSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 68D569BF2E1B415700A5BA36 /* LanguageSupport */; };
 		68E714E62E6AA2B00025610F /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 68E714E52E6AA2B00025610F /* ZIPFoundation */; };
@@ -154,6 +156,8 @@
 			files = (
 				DCBA85862E3897BD00E88C06 /* StikImporter in Frameworks */,
 				17C744F02E20BED000834F17 /* Pipify in Frameworks */,
+				68AD80462E6B65DA00DE9112 /* ZsignSwift in Frameworks */,
+				68AD80482E6B65DA00DE9112 /* zsign in Frameworks */,
 				68D569C02E1B415700A5BA36 /* LanguageSupport in Frameworks */,
 				68D569BE2E1B415700A5BA36 /* CodeEditorView in Frameworks */,
 				68E714E62E6AA2B00025610F /* ZIPFoundation in Frameworks */,
@@ -271,6 +275,8 @@
 				17C744EF2E20BED000834F17 /* Pipify */,
 				DCBA85852E3897BD00E88C06 /* StikImporter */,
 				68E714E52E6AA2B00025610F /* ZIPFoundation */,
+				68AD80452E6B65DA00DE9112 /* ZsignSwift */,
+				68AD80472E6B65DA00DE9112 /* zsign */,
 			);
 			productName = StikJIT;
 			productReference = DC6F1D372D94EADD0071B2B6 /* StikDebug.app */;
@@ -389,6 +395,7 @@
 				17C744EE2E20BED000834F17 /* XCRemoteSwiftPackageReference "swiftui-pipify" */,
 				DCBA85842E3897BD00E88C06 /* XCRemoteSwiftPackageReference "StikImporter" */,
 				68E714E42E6AA2B00025610F /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
+				68AD80442E6B65DA00DE9112 /* XCRemoteSwiftPackageReference "Zsign-Package" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DC6F1D382D94EADD0071B2B6 /* Products */;
@@ -999,6 +1006,14 @@
 				kind = branch;
 			};
 		};
+		68AD80442E6B65DA00DE9112 /* XCRemoteSwiftPackageReference "Zsign-Package" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/khcrysalis/Zsign-Package/";
+			requirement = {
+				branch = package;
+				kind = branch;
+			};
+		};
 		68D569BC2E1B415700A5BA36 /* XCRemoteSwiftPackageReference "CodeEditorView" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/mchakravarty/CodeEditorView";
@@ -1030,6 +1045,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 17C744EE2E20BED000834F17 /* XCRemoteSwiftPackageReference "swiftui-pipify" */;
 			productName = Pipify;
+		};
+		68AD80452E6B65DA00DE9112 /* ZsignSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 68AD80442E6B65DA00DE9112 /* XCRemoteSwiftPackageReference "Zsign-Package" */;
+			productName = ZsignSwift;
+		};
+		68AD80472E6B65DA00DE9112 /* zsign */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 68AD80442E6B65DA00DE9112 /* XCRemoteSwiftPackageReference "Zsign-Package" */;
+			productName = zsign;
 		};
 		68D569BD2E1B415700A5BA36 /* CodeEditorView */ = {
 			isa = XCSwiftPackageProductDependency;
