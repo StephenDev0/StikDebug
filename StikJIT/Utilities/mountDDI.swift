@@ -14,6 +14,12 @@ typealias AdapterHandle = OpaquePointer
 typealias ImageMounterHandle = OpaquePointer
 typealias LockdowndClientHandle = OpaquePointer
 
+enum DeveloperModeQueryResult {
+    case enabled
+    case disabled
+    case unavailable
+}
+
 func progressCallback(progress: size_t, total: size_t, context: UnsafeMutableRawPointer?) {
     MountingProgress.shared.progressCallback(progress: progress, total: total, context: context)
 }
@@ -111,6 +117,74 @@ func isMounted() -> Bool {
         print("Failed to get device list: \(listError)")
         return false
     }
+}
+
+func queryDeveloperModeStatus() -> DeveloperModeQueryResult {
+    let pairingFilePath = URL.documentsDirectory.appendingPathComponent("pairingFile.plist").path
+
+    guard FileManager.default.fileExists(atPath: pairingFilePath) else {
+        return .unavailable
+    }
+
+    var addr = sockaddr_in()
+    memset(&addr, 0, MemoryLayout<sockaddr_in>.size)
+    addr.sin_family = sa_family_t(AF_INET)
+    addr.sin_port = htons(UInt16(LOCKDOWN_PORT))
+
+    guard inet_pton(AF_INET, "10.7.0.1", &addr.sin_addr) == 1 else {
+        print("Invalid IP address")
+        return .unavailable
+    }
+
+    let sockaddrPointer = UnsafeRawPointer(&addr).bindMemory(to: sockaddr.self, capacity: 1)
+
+    var pairingFile: IdevicePairingFile?
+    if let err = idevice_pairing_file_read(pairingFilePath, &pairingFile) {
+        print("Failed to read pairing file: \(err.pointee.code)")
+        idevice_error_free(err)
+        return .unavailable
+    }
+
+    guard let pairingFile else {
+        return .unavailable
+    }
+
+    defer { idevice_pairing_file_free(pairingFile) }
+
+    var provider: TcpProviderHandle?
+    if let providerError = idevice_tcp_provider_new(sockaddrPointer, pairingFile, "DeveloperModeStatus", &provider) {
+        print("Failed to create TCP provider: \(providerError.pointee.code)")
+        idevice_error_free(providerError)
+        return .unavailable
+    }
+
+    guard let provider else {
+        return .unavailable
+    }
+
+    defer { idevice_provider_free(provider) }
+
+    var client: ImageMounterHandle?
+    if let connectError = image_mounter_connect(provider, &client) {
+        print("Failed to connect to image mounter: \(connectError.pointee.code)")
+        idevice_error_free(connectError)
+        return .unavailable
+    }
+
+    guard let client else {
+        return .unavailable
+    }
+
+    defer { image_mounter_free(client) }
+
+    var status: Int32 = 0
+    if let statusError = image_mounter_query_developer_mode_status(client, &status) {
+        print("Failed to query developer mode status: \(statusError.pointee.code)")
+        idevice_error_free(statusError)
+        return .unavailable
+    }
+
+    return status != 0 ? .enabled : .disabled
 }
 
 func mountPersonalDDI(deviceIP: String = "10.7.0.1", imagePath: String, trustcachePath: String, manifestPath: String, pairingFilePath: String) -> Int {

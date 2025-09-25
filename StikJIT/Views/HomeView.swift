@@ -65,6 +65,11 @@ struct HomeView: View {
     @State private var launchingSystemApps: Set<String> = []
     @State private var systemLaunchMessage: String? = nil
 
+    @State private var developerModeStatus: DeveloperModeStatus = .unknown
+    @State private var isCheckingDeveloperMode = false
+    @State private var lastDeveloperModeCheck: Date? = nil
+    @State private var developerModeCheckToken = UUID()
+
     @AppStorage("showiOS26Disclaimer") private var showiOS26Disclaimer: Bool = true
 
     @AppStorage("appTheme") private var appThemeRaw: String = AppTheme.system.rawValue
@@ -159,8 +164,15 @@ struct HomeView: View {
         .onChange(of: pairingFileExists) { _, newValue in
             if newValue {
                 loadAppListIfNeeded(force: cachedAppNames.isEmpty)
+                developerModeStatus = .unknown
+                lastDeveloperModeCheck = nil
+                refreshBackground()
             } else {
                 cachedAppNames = [:]
+                developerModeStatus = .unknown
+                lastDeveloperModeCheck = nil
+                developerModeCheckToken = UUID()
+                isCheckingDeveloperMode = false
             }
         }
         .onChange(of: favoriteApps) { _, _ in
@@ -439,6 +451,31 @@ struct HomeView: View {
                 tint: .orange
             )
         }
+        switch developerModeStatus {
+        case .unknown, .checking:
+            return .init(
+                title: "Checking Developer Mode",
+                subtitle: "Keep your device unlocked while we verify Developer Mode is enabled.",
+                icon: "gearshape",
+                tint: .orange
+            )
+        case .disabled:
+            return .init(
+                title: "Enable Developer Mode",
+                subtitle: "Turn on Developer Mode in Settings > Privacy & Security, then restart if iOS asks you to.",
+                icon: "gearshape.fill",
+                tint: .orange
+            )
+        case .error:
+            return .init(
+                title: "Can’t confirm Developer Mode",
+                subtitle: "Unlock your device and make sure it’s connected. We’ll try again automatically.",
+                icon: "questionmark.app.fill",
+                tint: .yellow
+            )
+        case .enabled:
+            break
+        }
         if !ddiMounted {
             return .init(
                 title: "Mount the Developer Disk Image",
@@ -474,6 +511,16 @@ struct HomeView: View {
     private var primaryActionTitle: String {
         if isValidatingPairingFile { return "Validating…" }
         if !pairingFileExists { return pairingFilePresentOnDisk ? "Re-import Pairing File" : "Import Pairing File" }
+        switch developerModeStatus {
+        case .unknown, .checking:
+            return "Checking Developer Mode…"
+        case .disabled:
+            return "Enable Developer Mode"
+        case .error:
+            return "Retry Developer Mode Check"
+        case .enabled:
+            break
+        }
         if !ddiMounted { return "Mount Developer Disk Image" }
         return "Connect by App"
     }
@@ -481,6 +528,16 @@ struct HomeView: View {
     private var primaryActionIcon: String {
         if isValidatingPairingFile { return "hourglass" }
         if !pairingFileExists { return pairingFilePresentOnDisk ? "arrow.clockwise" : "doc.badge.plus" }
+        switch developerModeStatus {
+        case .unknown, .checking:
+            return "hourglass"
+        case .disabled:
+            return "exclamationmark.triangle"
+        case .error:
+            return "questionmark.app.fill"
+        case .enabled:
+            break
+        }
         if !ddiMounted { return "externaldrive" }
         return "cable.connector.horizontal"
     }
@@ -523,8 +580,55 @@ struct HomeView: View {
             )
         }
 
+        let developerModeItem: ChecklistItem = {
+            if !pairingFileExists {
+                return ChecklistItem(
+                    title: "Developer Mode",
+                    subtitle: "Import your pairing file to check the Developer Mode status.",
+                    status: .waiting,
+                    actionTitle: nil,
+                    action: nil
+                )
+            }
+            switch developerModeStatus {
+            case .unknown, .checking:
+                return ChecklistItem(
+                    title: "Developer Mode",
+                    subtitle: "Checking developer mode status…",
+                    status: .waiting,
+                    actionTitle: nil,
+                    action: nil
+                )
+            case .enabled:
+                return ChecklistItem(
+                    title: "Developer Mode",
+                    subtitle: "Enabled.",
+                    status: .ready,
+                    actionTitle: nil,
+                    action: nil
+                )
+            case .disabled:
+                return ChecklistItem(
+                    title: "Developer Mode",
+                    subtitle: "Turn on Developer Mode in Settings > Privacy & Security.",
+                    status: .actionRequired,
+                    actionTitle: nil,
+                    action: nil
+                )
+            case .error:
+                return ChecklistItem(
+                    title: "Developer Mode",
+                    subtitle: "We couldn’t determine the status. Unlock your device and keep it connected.",
+                    status: .attention,
+                    actionTitle: nil,
+                    action: nil
+                )
+            }
+        }()
+
         return [
             pairingItem,
+            developerModeItem,
             ChecklistItem(
                 title: "Developer Disk Image",
                 subtitle: ddiMounted ? "Mounted successfully." : "",
@@ -911,6 +1015,32 @@ struct HomeView: View {
     private func primaryActionTapped() {
         guard !isValidatingPairingFile else { return }
         if pairingFileExists {
+            switch developerModeStatus {
+            case .unknown, .checking:
+                lastDeveloperModeCheck = nil
+                refreshBackground()
+                return
+            case .disabled:
+                lastDeveloperModeCheck = nil
+                refreshBackground()
+                showAlert(
+                    title: "Developer Mode Required".localized,
+                    message: "Turn on Developer Mode in Settings > Privacy & Security, then restart if prompted.".localized,
+                    showOk: true
+                )
+                return
+            case .error:
+                lastDeveloperModeCheck = nil
+                refreshBackground()
+                showAlert(
+                    title: "Unable to Verify Developer Mode".localized,
+                    message: "Unlock your device and make sure it’s connected to the network, then try again.".localized,
+                    showOk: true
+                )
+                return
+            case .enabled:
+                break
+            }
             if !ddiMounted {
                 showAlert(title: "Device Not Mounted".localized, message: "The Developer Disk Image has not been mounted yet. Check in settings for more information.".localized, showOk: true) { _ in }
                 return
@@ -983,7 +1113,54 @@ struct HomeView: View {
         let sizeValue = (attributes[.size] as? NSNumber)?.uint64Value ?? 0
         return PairingFileSignature(modificationDate: modificationDate, fileSize: sizeValue)
     }
-    private func refreshBackground() { }
+    private func refreshBackground() {
+        guard pairingFileExists else {
+            developerModeStatus = .unknown
+            lastDeveloperModeCheck = nil
+            developerModeCheckToken = UUID()
+            isCheckingDeveloperMode = false
+            return
+        }
+
+        if isCheckingDeveloperMode {
+            return
+        }
+
+        let minimumInterval: TimeInterval = developerModeStatus == .enabled ? 15 : 5
+        if let last = lastDeveloperModeCheck, Date().timeIntervalSince(last) < minimumInterval {
+            return
+        }
+
+        isCheckingDeveloperMode = true
+        let checkToken = UUID()
+        developerModeCheckToken = checkToken
+
+        if developerModeStatus != .enabled {
+            developerModeStatus = .checking
+        }
+
+        DispatchQueue.global(qos: .utility).async {
+            let result = queryDeveloperModeStatus()
+            DispatchQueue.main.async {
+                guard developerModeCheckToken == checkToken else {
+                    isCheckingDeveloperMode = false
+                    return
+                }
+
+                switch result {
+                case .enabled:
+                    developerModeStatus = .enabled
+                case .disabled:
+                    developerModeStatus = .disabled
+                case .unavailable:
+                    developerModeStatus = .error
+                }
+
+                lastDeveloperModeCheck = Date()
+                isCheckingDeveloperMode = false
+            }
+        }
+    }
     
     private func getJsCallback(_ script: Data, name: String? = nil) -> DebugAppCallback {
         return { pid, debugProxyHandle, semaphore in
@@ -1402,6 +1579,14 @@ private struct ReadinessSummary {
 private struct PairingFileSignature: Equatable {
     let modificationDate: Date?
     let fileSize: UInt64
+}
+
+private enum DeveloperModeStatus {
+    case unknown
+    case checking
+    case enabled
+    case disabled
+    case error
 }
 
 private enum ChecklistStatus {
