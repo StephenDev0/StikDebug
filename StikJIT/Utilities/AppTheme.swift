@@ -43,8 +43,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
     var preferredColorScheme: ColorScheme? {
         switch self {
         case .system:
-            // Make the default theme use a dark appearance to match Obsidian.
-            return .dark
+            return nil
         case .sunset, .forest:
             return nil
         case .darkStatic, .neonAnimated, .blobs, .particles, .aurora, .ocean, .midnight, .cyberwave:
@@ -55,8 +54,8 @@ enum AppTheme: String, CaseIterable, Identifiable {
     var backgroundStyle: BackgroundStyle {
         switch self {
         case .system:
-            // Make the default theme render with the Obsidian gradient.
-            return .staticGradient(colors: Palette.obsidianGradient)
+            return .adaptiveGradient(light: Palette.systemLightGradient,
+                                     dark: Palette.systemDarkGradient)
         case .darkStatic:
             return .staticGradient(colors: Palette.obsidianGradient)
         case .neonAnimated:
@@ -89,10 +88,13 @@ enum BackgroundStyle: Equatable {
     case blobs(colors: [Color], background: [Color])
     case particles(particle: Color, background: [Color])
     case customGradient(colors: [Color])
+    case adaptiveGradient(light: [Color], dark: [Color])
 }
 
 private struct Palette {
     static let defaultGradient = hexColors("#1C1F3A", "#3E4C7C", "#1F1C2C")
+    static let systemLightGradient = hexColors("#F6F8FF", "#E3ECFF", "#F0F4FF")
+    static let systemDarkGradient = obsidianGradient
     static let obsidianGradient = hexColors("#000000", "#1C1C1C", "#262626")
     static let neon = hexColors("#00F5A0", "#00D9F5", "#C96BFF")
     static let hazeBlobs = hexColors("#FF8BA7", "#A98BFF", "#70C8FF", "#67FFDA")
@@ -126,7 +128,8 @@ private func staticGradientView(colors: [Color]) -> some View {
 struct ThemedBackground: View {
     let style: BackgroundStyle
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         Group {
             switch style {
@@ -155,6 +158,10 @@ struct ThemedBackground: View {
                     ParticleFieldBackground(particleColor: particle, backgroundColors: background.ensureMinimumCount())
                 }
             case .customGradient(let colors):
+                staticGradientView(colors: colors)
+                    .ignoresSafeArea()
+            case .adaptiveGradient(let light, let dark):
+                let colors = colorScheme == .dark ? dark : light
                 staticGradientView(colors: colors)
                     .ignoresSafeArea()
             }

@@ -1094,6 +1094,7 @@ private struct ThemedRowBackground: View {
     var performanceMode: Bool
     var style: BackgroundStyle
     var cornerRadius: CGFloat
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -1149,6 +1150,17 @@ private struct ThemedRowBackground: View {
                 .opacity(0.40)
         case .particles(let particle, _):
             shape.fill(particle.opacity(0.18))
+        case .adaptiveGradient(let light, let dark):
+            let palette = colorScheme == .dark ? dark : light
+            shape
+                .fill(
+                    LinearGradient(
+                        gradient: Gradient(colors: normalized(palette)),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .opacity(0.32)
         }
     }
 

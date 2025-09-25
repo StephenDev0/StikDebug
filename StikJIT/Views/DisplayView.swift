@@ -740,7 +740,9 @@ private struct ThemePreviewCard: View {
     let selected: Bool
     let action: () -> Void
     var staticPreview: Bool = false
-    
+
+    @Environment(\.colorScheme) private var colorScheme
+
     private func staticized(_ style: BackgroundStyle) -> BackgroundStyle {
         switch style {
         case .staticGradient(let colors):
@@ -755,6 +757,9 @@ private struct ThemePreviewCard: View {
             return .staticGradient(colors: background)
         case .customGradient(let colors):
             return .customGradient(colors: colors)
+        case .adaptiveGradient(let light, let dark):
+            let colors = colorScheme == .dark ? dark : light
+            return .staticGradient(colors: colors)
         }
     }
     

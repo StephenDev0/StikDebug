@@ -38,6 +38,7 @@ struct ScriptListView: View {
     
     @AppStorage("appTheme") private var appThemeRaw: String = AppTheme.system.rawValue
     @Environment(\.themeExpansionManager) private var themeExpansion
+    @Environment(\.colorScheme) private var colorScheme
     private var backgroundStyle: BackgroundStyle { themeExpansion?.backgroundStyle(for: appThemeRaw) ?? AppTheme.system.backgroundStyle }
     private var preferredScheme: ColorScheme? { themeExpansion?.preferredColorScheme(for: appThemeRaw) }
 
@@ -285,6 +286,8 @@ struct ScriptListView: View {
             colors = background.isEmpty ? [particle, particle.opacity(0.4)] : background
         case .customGradient(let palette):
             colors = palette
+        case .adaptiveGradient(let light, let dark):
+            colors = colorScheme == .dark ? dark : light
         }
         if colors.count >= 2 { return colors }
         if let first = colors.first { return [first, first.opacity(0.6)] }
