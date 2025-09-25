@@ -15,6 +15,7 @@ struct SettingsView: View {
     @AppStorage("enableAdvancedBetaOptions") private var enableAdvancedBetaOptions = false
     @AppStorage("enableTesting") private var enableTesting = false
     @AppStorage("enablePiP") private var enablePiP = false
+    @AppStorage(UserDefaults.Keys.txmOverride) private var overrideTXMDetection = false
     @AppStorage("customAccentColor") private var customAccentColorHex: String = ""
     @AppStorage("appTheme") private var appThemeRaw: String = AppTheme.system.rawValue
     @Environment(\.themeExpansionManager) private var themeExpansion
@@ -328,11 +329,22 @@ struct SettingsView: View {
                 Text("Behavior")
                     .font(.headline)
                     .foregroundColor(.primary)
-                
+
                 Toggle("Run Default Script After Connecting", isOn: $useDefaultScript)
                     .tint(accentColor)
                 Toggle("Picture in Picture", isOn: $enablePiP)
                     .tint(accentColor)
+                Toggle(isOn: $overrideTXMDetection) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Always Run Scripts")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary.opacity(0.9))
+                        Text("Treat this device as TXM-capable to bypass hardware checks.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .tint(accentColor)
             }
             .onChange(of: enableAdvancedOptions) { _, newValue in
                 if !newValue {
@@ -356,7 +368,7 @@ struct SettingsView: View {
                 Text("Advanced")
                     .font(.headline)
                     .foregroundColor(.primary)
-                
+
                 Button(action: { openAppFolder() }) {
                     HStack {
                         Image(systemName: "folder")
@@ -425,9 +437,15 @@ struct SettingsView: View {
             }
         }
     }
-    
+
     private var versionInfo: some View {
-        let txmLabel = ProcessInfo.processInfo.hasTXM ? "TXM" : "Non TXM"
+        let processInfo = ProcessInfo.processInfo
+        let txmLabel: String
+        if processInfo.isTXMOverridden {
+            txmLabel = "TXM (Override)"
+        } else {
+            txmLabel = processInfo.hasTXM ? "TXM" : "Non TXM"
+        }
         return HStack {
             Spacer()
             Text("Version \(appVersion) • iOS \(UIDevice.current.systemVersion) • \(txmLabel)")

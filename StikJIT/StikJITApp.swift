@@ -17,6 +17,7 @@ private func registerAdvancedOptionsDefault() {
     let enabled = os.majorVersion >= 19
     UserDefaults.standard.register(defaults: ["enableAdvancedOptions": enabled])
     UserDefaults.standard.register(defaults: ["enablePiP": enabled])
+    UserDefaults.standard.register(defaults: [UserDefaults.Keys.txmOverride: false])
 }
 
 // MARK: - Welcome Sheet

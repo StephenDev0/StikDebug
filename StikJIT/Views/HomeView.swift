@@ -1656,7 +1656,11 @@ private struct ConnectByPIDSheet: View {
 
 public extension ProcessInfo {
     var hasTXM: Bool {
-        {
+        if isTXMOverridden {
+            return true
+        }
+
+        return {
             if let boot = FileManager.default.filePath(atPath: "/System/Volumes/Preboot", withLength: 36),
                let file = FileManager.default.filePath(atPath: "\(boot)/boot", withLength: 96) {
                 return access("\(file)/usr/standalone/firmware/FUD/Ap,TrustedExecutionMonitor.img4", F_OK) == 0
@@ -1666,5 +1670,9 @@ public extension ProcessInfo {
                 }) ?? false
             }
         }()
+    }
+
+    var isTXMOverridden: Bool {
+        UserDefaults.standard.bool(forKey: UserDefaults.Keys.txmOverride)
     }
 }
