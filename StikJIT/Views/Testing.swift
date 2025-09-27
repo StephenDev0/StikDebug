@@ -697,8 +697,17 @@ private struct ManageCertsView: View {
 
 struct IPAAppManagerView: View {
     @AppStorage("customAccentColor") private var customAccentColorHex: String = ""
-    private var accent: Color {
-        customAccentColorHex.isEmpty ? .white : Color(hex: customAccentColorHex) ?? .white
+    @AppStorage("appTheme") private var appThemeRaw: String = AppTheme.system.rawValue
+    @Environment(\.themeExpansionManager) private var themeExpansion
+
+    private var accentColor: Color {
+        themeExpansion?.resolvedAccentColor(from: customAccentColorHex) ?? .blue
+    }
+    private var backgroundStyle: BackgroundStyle {
+        themeExpansion?.backgroundStyle(for: appThemeRaw) ?? AppTheme.system.backgroundStyle
+    }
+    private var preferredScheme: ColorScheme? {
+        themeExpansion?.preferredColorScheme(for: appThemeRaw)
     }
     
     @StateObject private var mgr = AppSignerManager()
@@ -731,16 +740,8 @@ struct IPAAppManagerView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Subtle depth gradient background
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(UIColor.systemBackground),
-                        Color(UIColor.secondarySystemBackground)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                ThemedBackground(style: backgroundStyle)
+                    .ignoresSafeArea()
                 
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -800,7 +801,7 @@ struct IPAAppManagerView: View {
                 }
             }
             .sheet(isPresented: $showAddCert) {
-                AddCertView(accent: accent) { n, p12, mob, pw in
+                AddCertView(accent: accentColor) { n, p12, mob, pw in
                     mgr.addCertificate(name: n, p12: p12, mob: mob, password: pw,
                                        onErr: fail, onOK: notify)
                 }
@@ -810,6 +811,8 @@ struct IPAAppManagerView: View {
                                 selected: $mgr.selectedCertID,
                                 onDelete: { cert in mgr.deleteCert(cert) })
             }
+            .tint(accentColor)
+            .preferredColorScheme(preferredScheme)
             // Photos picker → temp PNG saved → advIconURL
             .onChange(of: photoItem) { newItem in
                 guard let newItem else { return }
@@ -981,12 +984,12 @@ struct IPAAppManagerView: View {
                 
                 Button("Prepare") { mgr.signIPA(onErr: fail, onOK: notify) }
                     .frame(maxWidth: .infinity, minHeight: 48)
-                    .background(accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(accentColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                             .stroke(.white.opacity(0.18), lineWidth: 1)
                     )
-                    .foregroundColor(accent.contrastText())
+                    .foregroundColor(accentColor.contrastText())
                     // Removed glow/shadow from the Prepare button
                     .disabled(mgr.busy || mgr.ipaURL == nil || mgr.selectedCertID == nil)
             }
@@ -1149,6 +1152,7 @@ private struct AddCertView: View {
                 }
             }
         }
+        .tint(accent)
     }
     
     private func importRow(label: String, picked: Bool,
