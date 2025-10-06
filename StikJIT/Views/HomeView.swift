@@ -7,7 +7,6 @@
 
 import SwiftUI
 import UniformTypeIdentifiers
-import Pipify
 import UIKit
 import WidgetKit
 
@@ -50,9 +49,8 @@ struct HomeView: View {
     @AppStorage("enableAdvancedOptions") private var enableAdvancedOptions = false
 
     @AppStorage("useDefaultScript") private var useDefaultScript = false
-    @AppStorage("enablePiP") private var enablePiP = true
+    @AppStorage("enablePiP") private var enableContinuedProcessing = true
     @State var scriptViewShow = false
-    @State var pipRequired = false
     @AppStorage("DefaultScriptName") var selectedScript = "attachDetach.js"
     @State var jsModel: RunJSViewModel?
     
@@ -270,12 +268,6 @@ struct HomeView: View {
                                      scriptName: autoScriptName,
                                      triggeredByURLScheme: false)
             }
-        }
-        .pipify(isPresented: Binding(
-            get: { pipRequired && enablePiP },
-            set: { newValue in pipRequired = newValue }
-        )) {
-            RunJSViewPiP(model: $jsModel)
         }
         .sheet(isPresented: $scriptViewShow) {
             NavigationView {
@@ -1020,16 +1012,30 @@ struct HomeView: View {
             }
             
             var callback: DebugAppCallback? = nil
+            var backgroundToken: BackgroundContinuationToken? = nil
             if ProcessInfo.processInfo.hasTXM, let sd = scriptData {
                 callback = getJsCallback(sd, name: scriptName ?? bundleID ?? "Script")
                 if triggeredByURLScheme { usleep(500000) }
-                pipRequired = true
-            } else {
-                pipRequired = false
+
+                if enableContinuedProcessing && BackgroundContinuation.isAvailable {
+                    let title = scriptName ?? bundleID ?? "Debug Session"
+                    let subtitle: String
+                    if let bundleID {
+                        subtitle = bundleID
+                    } else if let pid {
+                        subtitle = "PID \(pid)"
+                    } else {
+                        subtitle = "Debug Session"
+                    }
+                    backgroundToken = BackgroundContinuation.begin(title: title, subtitle: subtitle)
+                }
             }
-            
+
             let logger: LogFunc = { message in if let message { LogManager.shared.addInfoLog(message) } }
-            var success: Bool
+            var success: Bool = false
+            defer {
+                BackgroundContinuation.end(success: success, token: backgroundToken)
+            }
             if let pid {
                 success = JITEnableContext.shared.debugApp(withPID: Int32(pid), logger: logger, jsCallback: callback)
                 if success { DispatchQueue.main.async { addRecentPID(pid) } }
@@ -1048,7 +1054,6 @@ struct HomeView: View {
                 }
             }
             isProcessing = false
-            pipRequired = false
         }
     }
 

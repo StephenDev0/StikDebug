@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		17C744F02E20BED000834F17 /* Pipify in Frameworks */ = {isa = PBXBuildFile; productRef = 17C744EF2E20BED000834F17 /* Pipify */; };
 		687843662E8765D1002D0813 /* ZSignApple in Frameworks */ = {isa = PBXBuildFile; productRef = 687843652E8765D1002D0813 /* ZSignApple */; };
 		68D1FA402E847E4A0028A0EA /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 68D1FA3F2E847E4A0028A0EA /* StoreKit.framework */; };
 		68D569BE2E1B415700A5BA36 /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = 68D569BD2E1B415700A5BA36 /* CodeEditorView */; };
@@ -156,7 +155,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				DCBA85862E3897BD00E88C06 /* StikImporter in Frameworks */,
-				17C744F02E20BED000834F17 /* Pipify in Frameworks */,
 				68D569C02E1B415700A5BA36 /* LanguageSupport in Frameworks */,
 				68D1FA402E847E4A0028A0EA /* StoreKit.framework in Frameworks */,
 				68D569BE2E1B415700A5BA36 /* CodeEditorView in Frameworks */,
@@ -274,7 +272,6 @@
 			packageProductDependencies = (
 				68D569BD2E1B415700A5BA36 /* CodeEditorView */,
 				68D569BF2E1B415700A5BA36 /* LanguageSupport */,
-				17C744EF2E20BED000834F17 /* Pipify */,
 				DCBA85852E3897BD00E88C06 /* StikImporter */,
 				68E714E52E6AA2B00025610F /* ZIPFoundation */,
 				687843652E8765D1002D0813 /* ZSignApple */,
@@ -393,7 +390,6 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				68D569BC2E1B415700A5BA36 /* XCRemoteSwiftPackageReference "CodeEditorView" */,
-				17C744EE2E20BED000834F17 /* XCRemoteSwiftPackageReference "swiftui-pipify" */,
 				DCBA85842E3897BD00E88C06 /* XCRemoteSwiftPackageReference "StikImporter" */,
 				68E714E42E6AA2B00025610F /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 				687843642E8765D0002D0813 /* XCRemoteSwiftPackageReference "zsign-swift" */,
@@ -999,14 +995,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		17C744EE2E20BED000834F17 /* XCRemoteSwiftPackageReference "swiftui-pipify" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/hugeBlack/swiftui-pipify";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
 		687843642E8765D0002D0813 /* XCRemoteSwiftPackageReference "zsign-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/loyahdev/zsign-swift";
@@ -1042,11 +1030,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		17C744EF2E20BED000834F17 /* Pipify */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 17C744EE2E20BED000834F17 /* XCRemoteSwiftPackageReference "swiftui-pipify" */;
-			productName = Pipify;
-		};
 		687843652E8765D1002D0813 /* ZSignApple */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 687843642E8765D0002D0813 /* XCRemoteSwiftPackageReference "zsign-swift" */;

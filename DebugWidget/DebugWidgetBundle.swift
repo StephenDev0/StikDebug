@@ -11,7 +11,7 @@ import SwiftUI
 @main
 struct StikDebugWidgetBundle: WidgetBundle {
     var body: some Widget {
-        // Both widgets enabled: Favorites uses enable-jit URL scheme (with PiP/script handled in-app),
+        // Both widgets enabled: Favorites uses enable-jit URL scheme (with continued-processing handled in-app),
         // System Apps uses launch-app URL scheme for non-debug launch behavior.
         FavoritesWidget()
         SystemAppsWidget()

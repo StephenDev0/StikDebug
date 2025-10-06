@@ -522,6 +522,7 @@ struct HeartbeatApp: App {
     init() {
         registerAdvancedOptionsDefault()
         newVerCheck()
+        BackgroundContinuation.setup()
         let fixMethod = class_getInstanceMethod(UIDocumentPickerViewController.self, #selector(UIDocumentPickerViewController.fix_init(forOpeningContentTypes:asCopy:)))!
         let origMethod = class_getInstanceMethod(UIDocumentPickerViewController.self, #selector(UIDocumentPickerViewController.init(forOpeningContentTypes:asCopy:)))!
         method_exchangeImplementations(origMethod, fixMethod)

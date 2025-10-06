@@ -78,35 +78,12 @@ class RunJSViewModel: ObservableObject {
             if let exception = self.context?.exception {
                 self.logs.append(exception.debugDescription)
             }
-            
+
             self.logs.append("Script Execution Completed")
-            self.logs.append("You are safe to close the PIP Window.")
+            self.logs.append("You can safely leave StikDebug once this window is closed.")
         }
     }
 }
-
-struct RunJSViewPiP: View {
-    @Binding var model: RunJSViewModel?
-    @State var logs: [String] = []
-    let timer = Timer.publish(every: 0.034, on: .main, in: .common).autoconnect()
-    
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            ForEach(logs.suffix(6).indices, id: \.self) { index in
-                Text(logs.suffix(6)[index])
-                    .font(.system(size: 12))
-                    .foregroundStyle(.white)
-            }
-        }
-        .padding()
-        .onReceive(timer) { _ in
-            self.logs = model?.logs ?? []
-        }
-        .frame(width: 300, height: 150)
-    }
-}
-
 
 struct RunJSView: View {
     @ObservedObject var model: RunJSViewModel
