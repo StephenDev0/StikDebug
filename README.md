@@ -19,11 +19,11 @@
   <a href="https://discord.gg/ZnNcrRT3M8">
     <img src="https://img.shields.io/badge/Discord-join%20us-7289DA?logo=discord&logoColor=white&style=for-the-badge&labelColor=23272A" />
   </a>
-  <a href="https://github.com/0-Blu/StikDebug/blob/main/LICENSE">
+  <a href="https://github.com/StephenDev0/StikDebug/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/0-Blu/StikJIT?label=License&color=5865F2&style=for-the-badge&labelColor=23272A" />
   </a>
   </a>
-  <a href="https://github.com/0-Blu/StikDebug/stargazers">
+  <a href="https://github.com/StephenDev0/StikDebug/stargazers">
     <img src="https://img.shields.io/github/stars/0-Blu/StikJIT?label=Stars&color=FEE75C&style=for-the-badge&labelColor=23272A" />
   </a>
   <br />
