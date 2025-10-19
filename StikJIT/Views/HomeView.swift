@@ -258,7 +258,7 @@ struct HomeView: View {
                             if let url = Bundle.main.url(forResource: "Geode", withExtension: "js"),
                                let data = try? Data(contentsOf: url) {
                                 autoScriptData = data
-                                autoScriptName = "script2.js"
+                                autoScriptName = "Geode.js"
                             }
                         } else if appName == "MeloNX" {
                             if let url = Bundle.main.url(forResource: "melo", withExtension: "js"),
