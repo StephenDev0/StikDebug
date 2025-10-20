@@ -2,7 +2,7 @@
 "Click connect to get started" = "Click connect to get started";
 "Pick pairing file to get started" = "Pick pairing file to get started";
 "Device Not Mounted" = "Device Not Mounted";
-"The Developer Disk Image has not been mounted yet. Check in settings for more information." = "The Developer Disk Image has not been mounted yet. Check in settings for more information.";
+"The Developer Disk Image has not been mounted yet. Check in settings for more information." = "The Developer Disk Image has not been mounted yet. Connect to Wi-Fi and force-restart StikDebug.";
 "Connect by App" = "Connect by App";
 "Select Pairing File" = "Select Pairing File";
 "Connect by PID" = "Connect by PID";
