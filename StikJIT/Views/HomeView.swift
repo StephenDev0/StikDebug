@@ -462,7 +462,7 @@ struct HomeView: View {
         if !ddiMounted {
             return .init(
                 title: "Mount the Developer Disk Image",
-                subtitle: "",
+                subtitle: "Connect to Wi-Fi and force-restart StikDebug.",
                 icon: "externaldrive.badge.exclamationmark",
                 tint: .yellow
             )
@@ -566,7 +566,7 @@ struct HomeView: View {
                     ? "Mounted successfully."
                     : (pairingFileLikelyInvalid
                         ? "The Developer Disk Image can’t mount because the pairing file looks invalid. Create a new pairing file."
-                        : ""),
+                        : "The Developer Disk Image isn't mounted."),
                 status: ddiMounted ? .ready : .attention,
                 actionTitle: pairingFileLikelyInvalid ? "Import New" : nil,
                 action: pairingFileLikelyInvalid ? { isShowingPairingFilePicker = true } : nil
@@ -894,7 +894,7 @@ struct HomeView: View {
                     tipRow(systemImage: "doc.badge.plus", title: "Pairing file required", message: "Import your device’s pairing file to begin.")
                 }
                 if pairingFileExists && !ddiMounted {
-                    tipRow(systemImage: "externaldrive.badge.exclamationmark", title: "Developer Disk Image not mounted", message: "Go to Settings → Developer Disk Image and ensure it’s mounted.")
+                    tipRow(systemImage: "externaldrive.badge.exclamationmark", title: "Developer Disk Image not mounted", message: "Ensure your pairing is imported and valid, connect to Wi-Fi and force-restart StikDebug.")
                 }
                 tipRow(systemImage: "lock.shield", title: "Local only", message: "StikDebug runs entirely on-device. No data leaves your device.")
 
