@@ -2,7 +2,7 @@
 "Click connect to get started" = "Haz clic en conectar para comenzar";
 "Pick pairing file to get started" = "Selecciona el archivo de emparejamiento para comenzar";
 "Device Not Mounted" = "Dispositivo no montado";
-"The Developer Disk Image has not been mounted yet. Check in settings for more information." = "La imagen de desarrollo no se ha montado todav\u00eda. Consulta la configuraci\u00f3n para obtener m\u00e1s informaci\u00f3n.";
+"The Developer Disk Image has not been mounted yet. Check in settings for more information." = "La imagen del disco del desarrollador a\u00fan no se ha montado. Con\u00e9ctese a la red Wi‑Fi y fuerce el reinicio de StikDebug.";
 "Connect by App" = "Conectar por app";
 "Select Pairing File" = "Seleccionar archivo de emparejamiento";
 "Connect by PID" = "Conectar por PID";
