@@ -409,7 +409,7 @@ struct HomeView: View {
                     }
                     .disabled(isProcessing || isValidatingPairingFile)
 
-                    if pairingFileExists && enableAdvancedOptions && !pairingFileLikelyInvalid {
+                    if pairingFileExists && enableAdvancedOptions && !pairingFileLikelyInvalid && primaryActionTitle == "Connect by App" {
                         Button(action: { showPIDSheet = true }) {
                             secondaryButtonLabel(icon: "number.circle", title: "Connect by PID")
                         }
