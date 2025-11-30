@@ -152,7 +152,7 @@ static NSDictionary<NSString*, NSString*> *performAppQuery(IdeviceProviderHandle
                                                            BOOL (^filter)(plist_t app))
 {
     InstallationProxyClientHandle *client = NULL;
-    if (installation_proxy_connect_tcp(provider, &client)) {
+    if (installation_proxy_connect(provider, &client)) {
         *error = @"Failed to connect to installation proxy";
         return nil;
     }

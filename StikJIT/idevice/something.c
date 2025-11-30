@@ -138,7 +138,7 @@ int install_ipa(const char *ip,
     }
 
     InstallationProxyClientHandle *ipc = NULL;
-    err = installation_proxy_connect_tcp(provider, &ipc);
+    err = installation_proxy_connect(provider, &ipc);
     if (err) {
         fprintf(stderr, "installation_proxy connect failed: [%d] %s\n",
                 err->code, err->message);

@@ -89,11 +89,10 @@ func isMounted() -> Bool {
     }
     idevice_provider_free(provider)
     
-    var devices: UnsafeMutableRawPointer?
+    var deviceList: UnsafeMutablePointer<plist_t?>?
     var devicesLen: size_t = 0
-    let listError = image_mounter_copy_devices(client, &devices, &devicesLen)
+    let listError = image_mounter_copy_devices(client, &deviceList, &devicesLen)
     if listError == nil {
-        let deviceList = devices?.assumingMemoryBound(to: plist_t.self)
         var devices: [String] = []
         for i in 0..<devicesLen {
             let device = deviceList?[i]

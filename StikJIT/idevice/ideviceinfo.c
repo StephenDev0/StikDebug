@@ -9,7 +9,6 @@
 #include <arpa/inet.h>
 #include "ideviceinfo.h"
 #include "idevice.h"
-#include "plist.h"
 
 static struct IdeviceProviderHandle *   g_provider = NULL;
 static struct HeartbeatClientHandle *   g_hb       = NULL;
@@ -80,7 +79,7 @@ char *ideviceinfo_c_get_xml(void) {
     }
 
     void *plist_obj = NULL;
-    struct IdeviceFfiError *err = lockdownd_get_all_values(g_client, NULL, &plist_obj);
+    struct IdeviceFfiError *err = lockdownd_get_value(g_client, NULL, NULL, &plist_obj);
     if (err) {
         idevice_error_free(err);
         return NULL;

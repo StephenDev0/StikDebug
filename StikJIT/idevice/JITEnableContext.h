@@ -29,4 +29,7 @@ typedef void (^SyslogErrorHandler)(NSError *error);
 - (void)startSyslogRelayWithHandler:(SyslogLineHandler)lineHandler
                              onError:(SyslogErrorHandler)errorHandler NS_SWIFT_NAME(startSyslogRelay(handler:onError:));
 - (void)stopSyslogRelay;
+- (NSArray<NSData*>*)fetchAllProfiles:(NSError **)error;
+- (BOOL)removeProfileWithUUID:(NSString*)uuid error:(NSError **)error;
+- (BOOL)addProfile:(NSData*)profile error:(NSError **)error;
 @end

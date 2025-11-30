@@ -49,8 +49,8 @@ struct MainTabView: View {
                     .tabItem { Label("Scripts", systemImage: "scroll") }
                     .tag(2)
                 
-                DeviceInfoView()
-                    .tabItem { Label("Device Info", systemImage: "info.circle.fill") }
+                ProfileView()
+                    .tabItem { Label("Profiles", systemImage: "magazine.fill") }
                     .tag(3)
 
                 SettingsView()

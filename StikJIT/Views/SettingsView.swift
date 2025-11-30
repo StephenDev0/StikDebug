@@ -367,6 +367,23 @@ struct SettingsView: View {
                 Text("Advanced")
                     .font(.headline)
                     .foregroundColor(.primary)
+                
+                NavigationLink {
+                    DeviceInfoView()
+                } label: {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 18))
+                            .foregroundColor(.primary.opacity(0.8))
+                        Text("Device Info")
+                            .foregroundColor(.primary.opacity(0.8))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.vertical, 8)
+                }
 
                 Button(action: { openAppFolder() }) {
                     HStack {

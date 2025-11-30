@@ -11,6 +11,7 @@
 #include "heartbeat.h"
 #include "jit.h"
 #include "applist.h"
+#include "profiles.h"
 
 #include "JITEnableContext.h"
 #import "StikDebug-Swift.h"
@@ -362,6 +363,33 @@ JITEnableContext* sharedJITContext = nil;
             errorCopy(error);
         });
     }
+}
+
+- (NSArray<NSData*>*)fetchAllProfiles:(NSError **)error {
+    if (!provider) {
+        NSLog(@"Provider not initialized!");
+        *error = [self errorWithStr:@"Provider not initialized!" code:-1];
+        return nil;
+    }
+    return fetchAppProfiles(provider, error);
+}
+
+- (BOOL)removeProfileWithUUID:(NSString*)uuid error:(NSError **)error {
+    if (!provider) {
+        NSLog(@"Provider not initialized!");
+        *error = [self errorWithStr:@"Provider not initialized!" code:-1];
+        return nil;
+    }
+    return removeProfile(provider, uuid, error);
+}
+
+- (BOOL)addProfile:(NSData*)profile error:(NSError **)error {
+    if (!provider) {
+        NSLog(@"Provider not initialized!");
+        *error = [self errorWithStr:@"Provider not initialized!" code:-1];
+        return nil;
+    }
+    return addProfile(provider, profile, error);
 }
 
 - (void)dealloc {
