@@ -15,6 +15,53 @@ struct DeviceProfileEntry: Identifiable, Codable, Equatable {
     var pairingFilename: String
     var dateAdded: Date
     var lastUpdated: Date
+    var isTXM: Bool
+
+    init(id: UUID,
+         name: String,
+         ipAddress: String,
+         pairingRelativePath: String,
+         pairingFilename: String,
+         dateAdded: Date,
+         lastUpdated: Date,
+         isTXM: Bool = false) {
+        self.id = id
+        self.name = name
+        self.ipAddress = ipAddress
+        self.pairingRelativePath = pairingRelativePath
+        self.pairingFilename = pairingFilename
+        self.dateAdded = dateAdded
+        self.lastUpdated = lastUpdated
+        self.isTXM = isTXM
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, ipAddress, pairingRelativePath, pairingFilename, dateAdded, lastUpdated, isTXM
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        ipAddress = try container.decode(String.self, forKey: .ipAddress)
+        pairingRelativePath = try container.decode(String.self, forKey: .pairingRelativePath)
+        pairingFilename = try container.decode(String.self, forKey: .pairingFilename)
+        dateAdded = try container.decode(Date.self, forKey: .dateAdded)
+        lastUpdated = try container.decode(Date.self, forKey: .lastUpdated)
+        isTXM = try container.decodeIfPresent(Bool.self, forKey: .isTXM) ?? false
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(ipAddress, forKey: .ipAddress)
+        try container.encode(pairingRelativePath, forKey: .pairingRelativePath)
+        try container.encode(pairingFilename, forKey: .pairingFilename)
+        try container.encode(dateAdded, forKey: .dateAdded)
+        try container.encode(lastUpdated, forKey: .lastUpdated)
+        try container.encode(isTXM, forKey: .isTXM)
+    }
 }
 
 enum DeviceLibraryError: LocalizedError {
@@ -95,7 +142,11 @@ final class DeviceLibraryStore: ObservableObject {
         loadFromDisk()
     }
     
-    func addDevice(name: String, ipAddress: String, pairingData: Data?, originalFilename: String?) throws {
+    func addDevice(name: String,
+                   ipAddress: String,
+                   pairingData: Data?,
+                   originalFilename: String?,
+                   isTXM: Bool) throws {
         guard let pairingData else {
             throw DeviceLibraryError.missingPairingData
         }
@@ -110,7 +161,8 @@ final class DeviceLibraryStore: ObservableObject {
             pairingRelativePath: relativePath,
             pairingFilename: originalFilename ?? "pairingFile.plist",
             dateAdded: now,
-            lastUpdated: now
+            lastUpdated: now,
+            isTXM: isTXM
         )
         devices.append(entry)
         persistDevices()
@@ -120,7 +172,8 @@ final class DeviceLibraryStore: ObservableObject {
                 name: String,
                 ipAddress: String,
                 pairingData: Data?,
-                originalFilename: String?) throws {
+                originalFilename: String?,
+                isTXM: Bool) throws {
         guard !isDefaultDevice(device) else { return }
         guard let index = devices.firstIndex(where: { $0.id == device.id }) else {
             throw DeviceLibraryError.deviceNotFound
@@ -129,6 +182,7 @@ final class DeviceLibraryStore: ObservableObject {
         devices[index].name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         devices[index].ipAddress = ipAddress.trimmingCharacters(in: .whitespacesAndNewlines)
         devices[index].lastUpdated = Date()
+        devices[index].isTXM = isTXM
         if activeDeviceID == device.id {
             UserDefaults.standard.set(devices[index].ipAddress, forKey: "TunnelDeviceIP")
         }

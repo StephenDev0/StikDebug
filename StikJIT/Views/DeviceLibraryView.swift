@@ -140,14 +140,19 @@ struct DeviceLibraryView: View {
     private func handleSave(mode: DeviceEditorMode, input: DeviceEditorInput) throws {
         switch mode {
         case .add:
-            try store.addDevice(name: input.name, ipAddress: input.ipAddress, pairingData: input.pairingData, originalFilename: input.pairingFilename)
+            try store.addDevice(name: input.name,
+                                ipAddress: input.ipAddress,
+                                pairingData: input.pairingData,
+                                originalFilename: input.pairingFilename,
+                                isTXM: input.isTXM)
             alert = DeviceAlert(title: "Device Saved", message: "\(input.name) was added to your library.", isError: false)
         case .edit(let device):
             try store.update(device: device,
                              name: input.name,
                              ipAddress: input.ipAddress,
                              pairingData: input.pairingData,
-                             originalFilename: input.pairingFilename ?? device.pairingFilename)
+                             originalFilename: input.pairingFilename ?? device.pairingFilename,
+                             isTXM: input.isTXM)
             alert = DeviceAlert(title: "Device Updated", message: "\(input.name) has been updated.", isError: false)
         }
     }
@@ -304,6 +309,21 @@ private struct DeviceRow: View {
                         Text("Pairing: \(device.pairingFilename)")
                             .font(.footnote)
                             .foregroundColor(.secondary)
+                        if device.isTXM {
+                            Label("TXM Capable", systemImage: "shield.checkerboard")
+                                .font(.caption2.weight(.semibold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(Color.green.opacity(0.15), in: Capsule())
+                                .foregroundColor(.green)
+                        } else {
+                            Label("Non-TXM", systemImage: "xmark.shield")
+                                .font(.caption2.weight(.semibold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(Color.secondary.opacity(0.15), in: Capsule())
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
                 Spacer()
@@ -349,6 +369,7 @@ private struct DeviceEditorInput {
     var ipAddress: String
     var pairingData: Data?
     var pairingFilename: String?
+    var isTXM: Bool
 }
 
 private struct DeviceEditorSheet: View {
@@ -366,6 +387,7 @@ private struct DeviceEditorSheet: View {
     @State private var selectedFilename: String?
     @State private var errorMessage: String?
     @State private var showImporter = false
+    @State private var isTXMDevice: Bool
     
     private var accentColor: Color { themeExpansion?.resolvedAccentColor(from: customAccentColorHex) ?? .blue }
     private var requiresPairing: Bool {
@@ -397,9 +419,11 @@ private struct DeviceEditorSheet: View {
         case .add:
             _name = State(initialValue: "")
             _ipAddress = State(initialValue: "10.7.0.1")
+            _isTXMDevice = State(initialValue: false)
         case .edit(let device):
             _name = State(initialValue: device.name)
             _ipAddress = State(initialValue: device.ipAddress)
+            _isTXMDevice = State(initialValue: device.isTXM)
         }
         _selectedFilename = State(initialValue: nil)
         _pairingData = State(initialValue: nil)
@@ -413,6 +437,13 @@ private struct DeviceEditorSheet: View {
                         .textInputAutocapitalization(.words)
                     TextField("Device IP", text: $ipAddress)
                         .keyboardType(.numbersAndPunctuation)
+                    Toggle(isOn: $isTXMDevice) {
+                        Text("TXM Capable")
+                    }
+                    .tint(accentColor)
+                    Text("Enable if this device includes the Trusted Execution Monitor (TXM).")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
                 
                 Section(header: Text("Pairing File")) {
@@ -493,7 +524,8 @@ private struct DeviceEditorSheet: View {
                 name: name,
                 ipAddress: ipAddress,
                 pairingData: pairingData,
-                pairingFilename: selectedFilename ?? existingFilename
+                pairingFilename: selectedFilename ?? existingFilename,
+                isTXM: isTXMDevice
             ))
             dismiss()
         } catch {
