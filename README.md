@@ -25,7 +25,7 @@
 
 # Download
 <div align="center" style="display: flex; justify-content: center; align-items: center; gap: 16px; flex-wrap: wrap;">
-   <a href="https://celloserenity.github.io/altdirect/?url=https://raw.githubusercontent.com/StephenDev0/Website-Stuff/refs/heads/main/index.json" target="_blank">
+   <a href="https://celloserenity.github.io/altdirect/?url=https://stikdebug.xyz/index.json" target="_blank">
   <img src="https://github.com/CelloSerenity/altdirect/blob/main/assets/png/AltSource_Blue.png?raw=true" alt="Add AltSource" width="200">
    </a>
    <a href="https://github.com/StephenDev0/StikDebug/releases/download/2.3.6/StikDebug-2.3.6.ipa" target="_blank">
