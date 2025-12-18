@@ -58,7 +58,7 @@ struct ScriptEditorView: View {
             }
         }
         .preferredColorScheme(preferredScheme)
-        .tint(Color.white)
+        .tint(colorScheme == .dark ? .white : .black)
         .toolbar(.hidden, for: .tabBar)
     }
 
