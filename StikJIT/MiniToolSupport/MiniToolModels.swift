@@ -1,8 +1,41 @@
 import Foundation
 
-struct MiniToolBundle: Identifiable, Hashable {
-    let url: URL
+struct ToolInfo: Decodable {
+    struct Capabilities: Decodable {
+        let internetAccess: Bool?
 
+        enum CodingKeys: String, CodingKey {
+            case internetAccess = "internet_access"
+        }
+    }
+
+    let author: String
+    let desc: String
+    let capabilities: Capabilities?
+    let requiredIDeviceFunctions: [String]?
+    
+
+
+    enum CodingKeys: String, CodingKey {
+        case author
+        case desc
+        case capabilities
+        case requiredIDeviceFunctions = "required_idevice_functions"
+    }
+}
+
+
+class MiniToolBundle: ObservableObject, Identifiable {
+    static func == (lhs: MiniToolBundle, rhs: MiniToolBundle) -> Bool {
+        return lhs.name == rhs.name
+    }
+    
+    @Published var url: URL
+    
+    init(url: URL) {
+        self.url = url
+    }
+    
     var id: String { url.lastPathComponent }
     var name: String { url.deletingPathExtension().lastPathComponent }
     var indexURL: URL { url.appendingPathComponent("index.html") }

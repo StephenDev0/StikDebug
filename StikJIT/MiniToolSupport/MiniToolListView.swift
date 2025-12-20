@@ -2,6 +2,28 @@ import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
 
+class ToolCombo : Hashable, ObservableObject {
+    static func == (lhs: ToolCombo, rhs: ToolCombo) -> Bool {
+        return lhs === rhs
+    }
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(ObjectIdentifier(self))
+    }
+    
+    init(tool: MiniToolBundle, info: ToolInfo) {
+        self.tool = tool
+        self.info = info
+    }
+    
+    init() {
+        self.tool = nil
+        self.info = nil
+    }
+    
+    @Published var tool: MiniToolBundle?
+    @Published var info: ToolInfo?
+}
+
 struct MiniToolListView: View {
     @StateObject private var store = MiniToolStore()
     @State private var searchText = ""
@@ -11,6 +33,9 @@ struct MiniToolListView: View {
     @State private var alertVisible = false
     @State private var alertTitle = ""
     @State private var alertMessage = ""
+    @State private var showInfoSheet = false
+    @State private var navigationToolCombo: ToolCombo?
+    @StateObject private var pendingToolCombo: ToolCombo = ToolCombo()
     @AppStorage("appTheme") private var appThemeRaw: String = AppTheme.system.rawValue
     @Environment(\.themeExpansionManager) private var themeExpansion
     @Environment(\.colorScheme) private var colorScheme
@@ -102,8 +127,14 @@ struct MiniToolListView: View {
                     presentError(title: "Import Failed", message: error.localizedDescription)
                 }
             }
+            .navigationDestination(item: $navigationToolCombo) { combo in
+                MiniToolRunnerView(tool: combo.tool!, toolInfo: combo.info!)
+            }
         }
         .preferredColorScheme(preferredScheme)
+        .sheet(isPresented: $showInfoSheet) {
+            toolInfoSheet
+        }
     }
 
     // MARK: - Cards
@@ -130,8 +161,8 @@ struct MiniToolListView: View {
 
     private func toolRow(_ tool: MiniToolBundle) -> some View {
         HStack(spacing: 12) {
-            NavigationLink {
-                MiniToolRunnerView(tool: tool)
+            Button {
+                handleRun(tool)
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "shippingbox.fill")
@@ -146,28 +177,27 @@ struct MiniToolListView: View {
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
+                    Spacer()
                 }
-                
-                Spacer()
-
-                NavigationLink {
-                    MiniToolEditorView(tool: tool)
-                } label: {
-                    Image(systemName: "pencil")
-                        .foregroundColor(.primary)
-                }
-                .buttonStyle(.borderless)
-
-                Button(role: .destructive) {
-                    pendingDelete = tool
-                    showDeleteConfirmation = true
-                } label: {
-                    Image(systemName: "trash")
-                        .foregroundColor(.red)
-                }
-                .buttonStyle(.borderless)
             }
             .buttonStyle(.plain)
+
+            NavigationLink {
+                MiniToolEditorView(tool: tool)
+            } label: {
+                Image(systemName: "pencil")
+                    .foregroundColor(.primary)
+            }
+            .buttonStyle(.borderless)
+
+            Button(role: .destructive) {
+                pendingDelete = tool
+                showDeleteConfirmation = true
+            } label: {
+                Image(systemName: "trash")
+                    .foregroundColor(.red)
+            }
+            .buttonStyle(.borderless)
 
         }
         .padding(20)
@@ -253,4 +283,158 @@ struct MiniToolListView: View {
     private func copy(_ text: String) {
         UIPasteboard.general.string = text
     }
+
+    private func handleRun(_ tool: MiniToolBundle) {
+        do {
+            guard let info = try loadToolInfo(for: tool) else {
+                presentError(title: "Mini Tool", message: "toolInfo.json is missing or unreadable for this tool.")
+                return
+            }
+            if try isTrusted(tool) {
+                navigationToolCombo = ToolCombo(tool: tool, info: info)
+                return
+            }
+            
+            pendingToolCombo.info = info
+            pendingToolCombo.tool = tool
+            print("set pendingToolInfo")
+            showInfoSheet = true
+            print("pendingToolInfo = true")
+        } catch {
+            presentError(title: "Mini Tool", message: error.localizedDescription)
+        }
+    }
+    
+    private func loadToolInfo(for tool: MiniToolBundle) throws -> ToolInfo? {
+        let infoURL = tool.url.appendingPathComponent("toolInfo.json")
+        guard FileManager.default.fileExists(atPath: infoURL.path) else { return nil }
+        let data = try Data(contentsOf: infoURL)
+        return try JSONDecoder().decode(ToolInfo.self, from: data)
+    }
+
+    private func isTrusted(_ tool: MiniToolBundle) throws -> Bool {
+        guard let uuid = UIDevice.current.identifierForVendor?.uuidString else { return false }
+        let checkURL = tool.url.appendingPathComponent("check")
+        guard FileManager.default.fileExists(atPath: checkURL.path) else { return false }
+        let contents = try String(contentsOf: checkURL, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+        return contents == uuid
+    }
+
+    private func authorizeAndRun() {
+        guard let tool = pendingToolCombo.tool else {
+            return
+        }
+        
+        do {
+            try writeCheck(for: tool)
+            navigationToolCombo = pendingToolCombo
+        } catch {
+            presentError(title: "Mini Tool", message: error.localizedDescription)
+        }
+        resetPending()
+    }
+
+    private func writeCheck(for tool: MiniToolBundle) throws {
+        guard let uuid = UIDevice.current.identifierForVendor?.uuidString else {
+            throw NSError(domain: "MiniTool", code: -1, userInfo: [NSLocalizedDescriptionKey: "identifierForVendor is unavailable."])
+        }
+        let checkURL = tool.url.appendingPathComponent("check")
+        try uuid.write(to: checkURL, atomically: true, encoding: .utf8)
+    }
+
+    private func resetPending() {
+        showInfoSheet = false
+//        pendingTool = MiniToolBundle()
+    }
+
+    @ViewBuilder
+    private var toolInfoSheet: some View {
+        if let tool = pendingToolCombo.tool, let info = pendingToolCombo.info {
+            ToolInfoSheet(tool: tool, info: info) {
+                authorizeAndRun()
+            } onCancel: {
+                resetPending()
+            }
+        }
+    }
 }
+
+private struct ToolInfoSheet: View {
+    let tool: MiniToolBundle
+    let info: ToolInfo
+    let onAllow: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(tool.name)
+                            .font(.title2.weight(.semibold))
+                        Text(info.desc)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Author", systemImage: "person")
+                            .font(.subheadline.weight(.semibold))
+                        Text(info.author)
+                            .font(.body)
+                    }
+
+                    if let capabilities = info.capabilities {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Capabilities", systemImage: "checkmark.shield")
+                                .font(.subheadline.weight(.semibold))
+                            CapabilityRow(title: "Internet Access", enabled: capabilities.internetAccess ?? false)
+                        }
+                    }
+
+                    if let functions = info.requiredIDeviceFunctions, !functions.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Required iDevice Functions", systemImage: "bolt.horizontal.circle")
+                                .font(.subheadline.weight(.semibold))
+                            ForEach(functions, id: \.self) { function in
+                                HStack(spacing: 8) {
+                                    Image(systemName: "bolt.fill")
+                                        .foregroundColor(.blue)
+                                    Text(function)
+                                        .font(.body)
+                                }
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(20)
+            }
+            .navigationTitle("Allow Tool?")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onCancel() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Allow & Run") { onAllow() }
+                        .bold()
+                }
+            }
+        }
+    }
+}
+
+private struct CapabilityRow: View {
+    let title: String
+    let enabled: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: enabled ? "checkmark.circle.fill" : "xmark.circle")
+                .foregroundColor(enabled ? .green : .red)
+            Text(title)
+                .font(.body)
+        }
+    }
+}
+

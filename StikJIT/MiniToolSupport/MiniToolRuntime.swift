@@ -6,6 +6,7 @@ import JavaScriptCore
 
 final class MiniToolRuntime: NSObject, ObservableObject {
     let tool: MiniToolBundle
+    let toolInfo: ToolInfo
     @Published var logs: [String] = []
     @Published var isReady: Bool = false
 
@@ -18,8 +19,9 @@ final class MiniToolRuntime: NSObject, ObservableObject {
     
     private var ideviceJSBridge : IDeviceJSBridge? = nil
 
-    init(tool: MiniToolBundle) {
+    init(tool: MiniToolBundle, toolInfo: ToolInfo) {
         self.tool = tool
+        self.toolInfo = toolInfo
         super.init()
         let configuration = WKWebViewConfiguration()
         let controller = WKUserContentController()
@@ -64,7 +66,7 @@ final class MiniToolRuntime: NSObject, ObservableObject {
 
     private func loadBackground() {
         context = JSContext()
-        ideviceJSBridge = IDeviceJSBridge(context: context)
+        ideviceJSBridge = IDeviceJSBridge(context: context, allowedFunctions: toolInfo.requiredIDeviceFunctions ?? [])
         context?.exceptionHandler = { [weak self] _, exception in
             if let message = exception?.toString() {
                 self?.appendLog("Background exception: \(message)")
@@ -155,8 +157,18 @@ extension MiniToolRuntime : WKURLSchemeHandler {
         let path = url.path.isEmpty ? "index.html" : url.path
 
         let fileURL = tool.url
-            .appendingPathComponent(path)
-
+            .appendingPathComponent(path).standardizedFileURL
+        
+        if fileURL.path().hasPrefix(tool.url.path()) {
+            urlSchemeTask.didFailWithError(NSError(domain: "Path traversal is not allowed.", code: -1))
+            return
+        }
+        
+        if fileURL.path() == tool.url.appending(path: "check").path() {
+            urlSchemeTask.didFailWithError(NSError(domain: "Reading this file is not allowed.", code: -1))
+            return
+        }
+        
         do {
             let data = try Data(contentsOf: fileURL)
             let mimeType : String
@@ -206,6 +218,20 @@ extension MiniToolRuntime: WKScriptMessageHandler {
 // MARK: - WKNavigationDelegate
 
 extension MiniToolRuntime: WKNavigationDelegate {
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
+        // Don't allow loading other contents
+        guard let url = navigationAction.request.url else {
+            return WKNavigationActionPolicy.cancel
+        }
+        guard let scheme = url.scheme, scheme == "app" else {
+            return WKNavigationActionPolicy.cancel
+        }
+        guard let host = url.host(), host == tool.getHostName() else {
+            return WKNavigationActionPolicy.cancel
+        }
+        return WKNavigationActionPolicy.allow
+    }
+    
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         isReady = true
         deliverToBackground(["type": "ui-ready", "tool": tool.name])
@@ -462,6 +488,11 @@ extension MiniToolRuntime {
 
 private extension MiniToolRuntime {
     func handleAppXHRMessage(_ payload: [String: Any]) {
+        guard let capabilities = toolInfo.capabilities, capabilities.internetAccess ?? false else {
+            appendLog("Internet access is disabled! To enable it, enable internetAccess in toolInfo.json")
+            return
+        }
+        
         guard let id = payload["id"] as? String else {
             appendLog("AppXHR missing id")
             return

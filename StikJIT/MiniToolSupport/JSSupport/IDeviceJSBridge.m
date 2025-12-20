@@ -12,21 +12,34 @@
 @end
 
 
-NSDictionary *dictionaryFromPlistData(NSData *plistData, NSError **error) {
-    if (!plistData) {
+NSDictionary *dictionaryFromPlist(plist_t plist, NSError **error) {
+    if (!plist) {
         if (error) {
             *error = [NSError errorWithDomain:@"PlistConversionErrorDomain"
                                          code:1001
-                                     userInfo:@{NSLocalizedDescriptionKey: @"Input plist data is nil."}];
+                                     userInfo:@{NSLocalizedDescriptionKey: @"Input plist is nil."}];
         }
         return nil;
     }
+    char* buf = 0;
+    uint32_t plistlen = 0;
+    // try bin plist first, if failed, we try xml plist
+    plist_to_bin(plist, &buf, &plistlen);
 
     NSPropertyListFormat format;
-    NSDictionary *result = [NSPropertyListSerialization propertyListWithData:plistData
-                                                                      options:NSPropertyListImmutable
-                                                                       format:&format
-                                                                        error:error];
+    NSDictionary *result = [NSPropertyListSerialization propertyListWithData:[NSData dataWithBytes:buf length:plistlen]
+                                                                      options:NSPropertyListImmutable format:&format error:error];
+    plist_mem_free(buf);
+    if (![result isKindOfClass:[NSDictionary class]]) {
+        plist_to_xml(plist, &buf, &plistlen);
+        if (error) {
+            *error = nil;
+        }
+        result = [NSPropertyListSerialization propertyListWithData:[NSData dataWithBytes:buf length:plistlen]
+                                                                          options:NSPropertyListImmutable format:&format error:error];
+        plist_free(buf);
+    }
+    
     if (![result isKindOfClass:[NSDictionary class]]) {
         if (error && !*error) {
             *error = [NSError errorWithDomain:@"PlistConversionErrorDomain"
@@ -78,11 +91,12 @@ const char** cstrArrFromNSArray(NSArray* arr, int* validCount) {
     int maxDataId;
 }
 
-- (instancetype)initWithContext:(JSContext*)context {
+- (instancetype)initWithContext:(JSContext*)context allowedFunctions:(NSArray<NSString*>*)allowedFunctions {
     maxHandleId = 0;
     maxDataId = 0;
     handles = [[NSMutableDictionary alloc] init];
     dataPool = [[NSMutableDictionary alloc] init];
+    self->allowedFunctions = allowedFunctions;
     self->context = context;
     return self;
 }
@@ -147,6 +161,11 @@ const char** cstrArrFromNSArray(NSArray* arr, int* validCount) {
 - (void)didReceiveScriptMessage:(nonnull NSDictionary *)message resolve:(JSValue*)resolveFunc reject:(JSValue*)rejectFunc {
     if(![message isKindOfClass:NSDictionary.class]) {
         [rejectFunc callWithArguments:@[@"Input is not a dictionary"]];
+        return;
+    }
+    
+    if(![self->allowedFunctions containsObject:message[@"command"]]) {
+        [rejectFunc callWithArguments:@[[NSString stringWithFormat:@"calling %@ is not allowed! Declare it in toolInfo.json", message[@"command"]]]];
         return;
     }
     
