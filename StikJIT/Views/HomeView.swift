@@ -293,13 +293,14 @@ struct HomeView: View {
                     startHeartbeatInBackground(showErrorUI: false)
                     DispatchQueue.global(qos: .userInitiated).async {
                         sleep(1)
-                        var error: NSError?
-                        let success = JITEnableContext.shared.killProcess(withPID: Int32(pid), error: &error)
-                        DispatchQueue.main.async {
-                            if success {
+                        do {
+                            try JITEnableContext.shared.killProcess(withPID: Int32(pid))
+                            DispatchQueue.main.async {
                                 LogManager.shared.addInfoLog("Killed process \(pid) via URL scheme")
-                            } else {
-                                LogManager.shared.addErrorLog("Failed to kill process \(pid): \(error?.localizedDescription ?? "Unknown error")")
+                            }
+                        } catch {
+                            DispatchQueue.main.async {
+                                LogManager.shared.addErrorLog("Failed to kill process \(pid): \(error.localizedDescription)")
                             }
                         }
                     }
