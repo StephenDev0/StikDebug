@@ -1,32 +1,32 @@
-name: Build Unsigned Debug IPA
+name: Build Debug IPA
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "semi-rewrite" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "semi-rewrite" ]
   workflow_dispatch:
 
 permissions:
   contents: write  
 
 jobs:
-  build:
-    name: Build Debug IPA
+  build_and_release:
+    name: Build & Release IPA
     runs-on: macos-latest  
     env:
       UPLOAD_IPA: ${{ vars.UPLOAD_IPA || 'true' }}
 
     steps:
-      - name: Checkout
+      - name: 1. Fetch Source Code
         uses: actions/checkout@v4
 
-      - name: Setup Xcode (latest stable)
+      - name: 2. Configure Xcode Environment
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: '26.0.1' 
           
-      - name: Archive Build (Debug, Unsigned)
+      - name: 3. Compile Project Archive
         run: |
           xcodebuild clean archive \
             -project StikDebug.xcodeproj \
@@ -42,7 +42,7 @@ jobs:
             SWIFT_OPTIMIZATION_LEVEL="-Onone" \
             IPHONEOS_DEPLOYMENT_TARGET=17.4
 
-      - name: Create IPA from Archive
+      - name: 4. Package .app into .ipa
         run: |
           cp -R build/StikDebug.xcarchive/Products/Applications/StikDebug.app .
           mkdir -p Payload
@@ -50,7 +50,7 @@ jobs:
           zip -r StikDebug.ipa Payload
           rm -rf Payload StikDebug.app
 
-      - name: Upload Debug IPA (artifact)
+      - name: 5. Store IPA as Workflow Artifact
         if: env.UPLOAD_IPA == 'true'
         uses: actions/upload-artifact@v4
         with:
@@ -58,20 +58,23 @@ jobs:
           path: StikDebug.ipa
           retention-days: 90
 
-      - name: Read app version
+      - name: 6. Extract Version Information
         id: version
         run: |
           VERSION=$(sed -n 's/.*MARKETING_VERSION = \(.*\);/\1/p' StikDebug.xcodeproj/project.pbxproj | head -1 | xargs)
           echo "app_version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Create or Update GitHub Release (Nightly)
-        if: env.UPLOAD_IPA == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: 7. Deploy to Nightly Release
+        if: |
+          env.UPLOAD_IPA == 'true' && 
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 
+          (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/semi-rewrite')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: Nightly
-          name: "Nightly - v${{ steps.version.outputs.app_version }}"
+          tag_name: "Nightly-v${{ steps.version.outputs.app_version }}"
+          name: "Nightly Build - v${{ steps.version.outputs.app_version }}"
           prerelease: true
-          generate_release_notes: false
+          generate_release_notes: true
           target_commitish: ${{ github.sha }}
           files: |
             StikDebug.ipa

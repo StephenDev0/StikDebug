@@ -57,7 +57,7 @@
 | 17.4 – 18.x              | Fully supported      | Stable                                                                |
 | 26.0 – 26.3              | Supported            | Limited App Availability (Developers need to update their apps to work.)                                        |
 | 26.4 Developer Beta 1    | Critical issues   | lockdownd drops connections → JIT broken; do not update               |
-| iOS 26.4+ betas / future | Untested / partial   | Check Discord, releases, or [@StephenDev0 on X](https://x.com/stephendev0) for updates                                 |
+| iOS 26.4+ betas / future | Untested / partial   | Check [Discord](https://discord.gg/ZnNcrRT3M8), [releases](https://github.com/StephenDev0/StikDebug/releases), or [@StephenDev0 on X](https://x.com/stephendev0) for updates                                 |
 
 ## How to Enable JIT
 
@@ -65,7 +65,7 @@ StikDebug enables **JIT** for sideloaded apps on iOS 17.4+ without needing a com
 
 ### Requirements
 - StikDebug installed (via AltSource, direct .ipa, or self-built)
-- A valid **pairing file** (.mobiledevicepairing / lockdown pair) for your device
+- A valid **pairing file** (.plist / .mobiledevicepairing) for your device
 - SideStore / AltStore / similar sideload tool (for app refreshing)
 - A loopback vpn such as [LocalDevVPN](https://apps.apple.com/us/app/localdevvpn/id6755608044)
 
@@ -151,7 +151,7 @@ To propose a new feature, open a feature request issue and provide:
 - The problem it solves or the use case it addresses
 - Any relevant examples or implementation ideas
 
-### Code Contributions
+### Code Contributions (Best Practices)
 - Follow normal Swift and SwiftUI style.
 - Write clear and easy to understand code.
 - Keep your changes consistent with how the project is already set up.
