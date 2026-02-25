@@ -287,6 +287,23 @@ struct HomeView: View {
                 } else {
                     pendingJITEnableConfiguration = config
                 }
+            case "kill-process":
+                if let pidStr = components?.queryItems?.first(where: { $0.name == "pid" })?.value, let pid = Int(pidStr) {
+                    pubHeartBeat = false
+                    startHeartbeatInBackground(showErrorUI: false)
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        sleep(1)
+                        var error: NSError?
+                        let success = JITEnableContext.shared.killProcess(withPID: Int32(pid), error: &error)
+                        DispatchQueue.main.async {
+                            if success {
+                                LogManager.shared.addInfoLog("Killed process \(pid) via URL scheme")
+                            } else {
+                                LogManager.shared.addErrorLog("Failed to kill process \(pid): \(error?.localizedDescription ?? "Unknown error")")
+                            }
+                        }
+                    }
+                }
             case "launch-app":
                 if let bundleId = components?.queryItems?.first(where: { $0.name == "bundle-id" })?.value {
                     HapticFeedbackHelper.trigger()
