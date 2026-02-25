@@ -176,6 +176,14 @@ struct HomeView: View {
             startHeartbeatInBackground()
             MountingProgress.shared.checkforMounted()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .intentJSScriptReady)) { notification in
+            guard let model = notification.userInfo?["model"] as? RunJSViewModel else { return }
+            jsModel = model
+            if let name = notification.userInfo?["scriptName"] as? String {
+                selectedScript = name
+            }
+            scriptViewShow = true
+        }
         .onReceive(timer) { _ in
             checkPairingFileExists()
             if mounting.mountingThread == nil && !mounting.coolisMounted {
