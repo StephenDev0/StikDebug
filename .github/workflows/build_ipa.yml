@@ -65,13 +65,10 @@ jobs:
           echo "app_version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: 7. Deploy to Nightly Release
-        if: |
-          env.UPLOAD_IPA == 'true' && 
-          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 
-          (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/semi-rewrite')
+        if: env.UPLOAD_IPA == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "Nightly-v${{ steps.version.outputs.app_version }}"
+          tag_name: Nightly
           name: "Nightly Build - v${{ steps.version.outputs.app_version }}"
           prerelease: true
           generate_release_notes: true
