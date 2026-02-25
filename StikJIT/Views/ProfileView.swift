@@ -20,7 +20,8 @@ class Profile: ObservableObject {
     @Published var uuid: String
     @Published var expirationDate: Date? = nil
     @Published var plistDict: [String:Any]? = nil
-    
+    var decodeError: String? = nil
+
     init(data: Data) {
         self.data = data
         do {
@@ -38,8 +39,7 @@ class Profile: ObservableObject {
                 self.uuid = UUID().uuidString
             }
         } catch {
-            appName = "Failed to decode this profile."
-            appId = error.localizedDescription
+            self.decodeError = error.localizedDescription
             uuid = UUID().uuidString
         }
     }
@@ -372,7 +372,21 @@ struct ProfileView: View {
                 }
                 return (parsedProfiles, parsedApps)
             }.value
-            let groupedProfiles = Dictionary(grouping: profiles) { profileIdentifier(from: $0) }
+
+            let failedProfiles = profiles.filter { $0.decodeError != nil }
+            let validProfiles = profiles.filter { $0.decodeError == nil }
+
+            if !failedProfiles.isEmpty {
+                let errors = failedProfiles.map { $0.decodeError ?? "Unknown error" }
+                let uniqueErrors = Array(Set(errors))
+                await MainActor.run {
+                    alertTitle = "Failed to Decode \(failedProfiles.count) Profile\(failedProfiles.count == 1 ? "" : "s")"
+                    alertMsg = uniqueErrors.joined(separator: "\n")
+                    alert = true
+                }
+            }
+
+            let groupedProfiles = Dictionary(grouping: validProfiles) { profileIdentifier(from: $0) }
                 .mapValues { profiles in
                     profiles.sorted { lhs, rhs in
                         let leftDate = lhs.expirationDate ?? .distantPast

@@ -245,15 +245,15 @@ class MountingProgress: ObservableObject {
             
             let thread = Thread { [weak self] in
                 guard let self = self else { return }
-                let mountResult = mountPersonalDDI(
+                let mountError = mountPersonalDDI(
                     imagePath: URL.documentsDirectory.appendingPathComponent("DDI/Image.dmg").path,
                     trustcachePath: URL.documentsDirectory.appendingPathComponent("DDI/Image.dmg.trustcache").path,
                     manifestPath: URL.documentsDirectory.appendingPathComponent("DDI/BuildManifest.plist").path,
                 )
 
                 DispatchQueue.main.async {
-                    if mountResult != 0 {
-                        showAlert(title: "Error", message: "An Error Occurred when Mounting the DDI\nError Code: \(mountResult)", showOk: true, showTryAgain: true) { shouldTryAgain in
+                    if let mountError {
+                        showAlert(title: "DDI Mount Failed", message: mountError, showOk: true, showTryAgain: true) { shouldTryAgain in
                             if shouldTryAgain { self.mount() }
                         }
                     } else {
@@ -342,7 +342,7 @@ func startHeartbeatInBackground(showErrorUI: Bool = true) {
                 } else {
                     showAlert(
                         title: "Heartbeat Error",
-                        message: "Failed to connect to Heartbeat (\(code)). Make sure Wi‑Fi and LocalDevVPN are connected and that the device is reachable. Launch the app at least once while online before trying again.",
+                        message: "\(error.localizedDescription)\n\nMake sure Wi‑Fi and LocalDevVPN are connected and that the device is reachable.",
                         showOk: false,
                         showTryAgain: true
                     ) { shouldTryAgain in

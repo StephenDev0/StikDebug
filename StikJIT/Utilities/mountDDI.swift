@@ -37,12 +37,12 @@ func checkMountStatus() -> MountCheckResult {
     }
 }
 
-func mountPersonalDDI(imagePath: String, trustcachePath: String, manifestPath: String) -> Int {
+func mountPersonalDDI(imagePath: String, trustcachePath: String, manifestPath: String) -> String? {
     do {
         try JITEnableContext.shared.mountPersonalDDI(withImagePath: imagePath, trustcachePath: trustcachePath, manifestPath: manifestPath)
     } catch {
         LogManager.shared.addErrorLog("Failed to mount DDI: \(error.localizedDescription)")
-        return (error as NSError).code
+        return error.localizedDescription
     }
-    return 0
+    return nil
 }

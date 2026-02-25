@@ -33,13 +33,14 @@ final class DeviceInfoManager: ObservableObject {
                 try JITEnableContext.shared.ensureHeartbeat()
             } catch {
                 await MainActor.run {
-                    self.error = ("Initialization Failed", self.initErrorMessage(Int32((error as NSError).code)))
+                    self.error = ("Initialization Failed", error.localizedDescription)
                     self.busy = false
                 }
+                return
             }
             do {
                 let lockdownHandle = LockdownClientSendable(raw: try JITEnableContext.shared.ideviceInfoInit())
-                
+
                 await MainActor.run {
                     self.lockdownHandle = lockdownHandle
                     self.initialized = true
@@ -47,7 +48,7 @@ final class DeviceInfoManager: ObservableObject {
                 }
             } catch {
                 await MainActor.run {
-                    self.error = ("Initialization Failed", self.initErrorMessage(Int32((error as NSError).code)))
+                    self.error = ("Initialization Failed", error.localizedDescription)
                     self.busy = false
                 }
             }
@@ -105,16 +106,6 @@ final class DeviceInfoManager: ObservableObject {
         }
 
         initialized = false
-    }
-
-    private func initErrorMessage(_ code: Int32) -> String {
-        switch code {
-        case 1: return "Couldn’t read pairingFile.plist"
-        case 2: return "Unable to create device provider"
-        case 3: return "Cannot connect to lockdown service"
-        case 4: return "Unable to start lockdown session"
-        default: return "Unknown init error (\(code))"
-        }
     }
 
     nonisolated private static func convertToString(_ raw: Any) -> String {
@@ -297,6 +288,12 @@ struct DeviceInfoView: View {
             }
             .onAppear { if isPaired { mgr.initAndLoad() } }
             .onDisappear { mgr.cleanup() }
+            .onChange(of: mgr.error?.message) { _ in
+                if let err = mgr.error {
+                    fail(err.title, err.message)
+                    mgr.error = nil
+                }
+            }
         }
             }
 

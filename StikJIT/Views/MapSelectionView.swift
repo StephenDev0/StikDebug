@@ -27,6 +27,9 @@ struct LocationSimulationView: View {
     @State private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
     @State private var resendTimer: Timer?
     @State private var isBusy = false
+    @State private var showAlert = false
+    @State private var alertTitle = ""
+    @State private var alertMessage = ""
 
     private var pairingFilePath: String {
         URL.documentsDirectory.appendingPathComponent("pairingFile.plist").path()
@@ -93,6 +96,11 @@ struct LocationSimulationView: View {
             .padding(.horizontal, 16)
         }
         .navigationBarTitleDisplayMode(.inline)
+        .alert(alertTitle, isPresented: $showAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(alertMessage)
+        }
         .onDisappear {
             stopResendLoop()
             endBackgroundTask()
@@ -113,6 +121,10 @@ struct LocationSimulationView: View {
                 if code == 0 {
                     beginBackgroundTask()
                     startResendLoop()
+                } else {
+                    alertTitle = "Simulation Failed"
+                    alertMessage = "Could not simulate location (error \(code)). Make sure the device is connected and the DDI is mounted."
+                    showAlert = true
                 }
             }
         }
@@ -123,11 +135,17 @@ struct LocationSimulationView: View {
         isBusy = true
         stopResendLoop()
         Self.locationQueue.async {
-            _ = clear_simulated_location()
+            let code = clear_simulated_location()
             DispatchQueue.main.async {
                 isBusy = false
-                coordinate = nil
-                endBackgroundTask()
+                if code == 0 {
+                    coordinate = nil
+                    endBackgroundTask()
+                } else {
+                    alertTitle = "Clear Failed"
+                    alertMessage = "Could not clear simulated location (error \(code))."
+                    showAlert = true
+                }
             }
         }
     }

@@ -111,6 +111,15 @@ struct ConsoleLogsView: View {
                 .onDisappear {
             systemLogStream.stop()
         }
+        .onChange(of: systemLogStream.lastError) { newError in
+            if let error = newError {
+                alertTitle = "Syslog Error"
+                alertMessage = error
+                isError = true
+                showingCustomAlert = true
+                systemLogStream.lastError = nil
+            }
+        }
     }
     
     private var jitLogsPane: some View {
