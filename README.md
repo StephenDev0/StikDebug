@@ -44,7 +44,7 @@
    <a href="https://stikstore.app/altdirect/?url=https://stikdebug.xyz/index.json" target="_blank">
      <img src="https://github.com/stikstore/altdirect/blob/main/assets/png/AltSource_Blue.png" alt="Add AltSource" width="200">
    </a>
-   <a href="https://github.com/StephenDev0/StikDebug/releases/download/3.0.0/StikDebug-3.0.0.ipa" target="_blank">
+   <a href="https://github.com/StephenDev0/StikDebug/releases/download/3.0.1/StikDebug-3.0.1.ipa" target="_blank">
      <img src="https://github.com/stikstore/altdirect/blob/main/assets/png/Download_Blue.png" alt="Download .ipa" width="200">
    </a>
 </div>
