@@ -66,6 +66,7 @@ struct LocationSimulationView: View {
 
     @State private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
     @State private var resendTimer: Timer?
+    @State private var routeProgressTimer: Timer?
     @State private var isBusy = false
     @State private var showAlert = false
     @State private var alertTitle = ""
@@ -79,6 +80,11 @@ struct LocationSimulationView: View {
     @State private var showBookmarks = false
     @State private var showSaveBookmark = false
     @State private var newBookmarkName = ""
+    @State private var isDrawingPath = false
+    @State private var routeCoordinates: [CLLocationCoordinate2D] = []
+    @State private var routeDurationMinutes: Double = 5
+
+    private let routeUpdateInterval: TimeInterval = 2
 
     private var pairingFilePath: String {
         URL.documentsDirectory.appendingPathComponent("pairingFile.plist").path()
@@ -101,11 +107,21 @@ struct LocationSimulationView: View {
                         Marker("Pin", coordinate: coordinate)
                             .tint(.red)
                     }
+
+                    if routeCoordinates.count > 1 {
+                        MapPolyline(coordinates: routeCoordinates)
+                            .stroke(.blue, lineWidth: 4)
+                    }
                 }
                 .mapStyle(.standard(elevation: .realistic))
                 .onTapGesture { point in
                     if let loc = proxy.convert(point, from: .local) {
-                        coordinate = loc
+                        if isDrawingPath {
+                            routeCoordinates.append(loc)
+                            coordinate = loc
+                        } else {
+                            coordinate = loc
+                        }
                     }
                 }
                 .mapControls {
@@ -176,6 +192,18 @@ struct LocationSimulationView: View {
                             .font(.footnote.monospaced())
                             .foregroundStyle(.secondary)
 
+                        if routeCoordinates.count > 1 {
+                            HStack(spacing: 8) {
+                                Text("Route duration")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Stepper(value: $routeDurationMinutes, in: 1...180, step: 1) {
+                                    Text("\(Int(routeDurationMinutes)) min")
+                                        .font(.caption.monospaced())
+                                }
+                            }
+                        }
+
                         HStack(spacing: 12) {
                             Button("Stop", action: clear)
                                 .buttonStyle(.bordered)
@@ -187,12 +215,48 @@ struct LocationSimulationView: View {
                                 .disabled(!pairingExists || isBusy)
 
                             Button {
+                                isDrawingPath.toggle()
+                                if !isDrawingPath {
+                                    if let coord = coordinate, routeCoordinates.isEmpty {
+                                        routeCoordinates = [coord]
+                                    }
+                                } else {
+                                    stopRouteLoop()
+                                }
+                            } label: {
+                                Image(systemName: isDrawingPath ? "pencil.circle.fill" : "pencil.circle")
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(.orange)
+
+                            if routeCoordinates.count > 1 {
+                                Button("Run Path", action: simulateRoute)
+                                    .buttonStyle(.borderedProminent)
+                                    .tint(.green)
+                                    .disabled(!pairingExists || isBusy)
+                            }
+
+                            Button {
                                 showSaveBookmark = true
                             } label: {
                                 Image(systemName: "bookmark")
                             }
                             .buttonStyle(.bordered)
                             .tint(.blue)
+
+                            if !routeCoordinates.isEmpty {
+                                Button {
+                                    stopRouteLoop()
+                                    routeCoordinates.removeAll()
+                                    if isDrawingPath {
+                                        isDrawingPath = false
+                                    }
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(.red)
+                            }
                         }
                     } else {
                         Text("Tap map to drop pin")
@@ -248,6 +312,7 @@ struct LocationSimulationView: View {
         }
         .onDisappear {
             stopResendLoop()
+            stopRouteLoop()
             if backgroundTaskID != .invalid {
                 BackgroundLocationManager.shared.requestStop()
             }
@@ -298,13 +363,16 @@ struct LocationSimulationView: View {
 
     private func simulate() {
         guard pairingExists, let coord = coordinate, !isBusy else { return }
+        stopRouteLoop()
+        routeCoordinates.removeAll()
+        isDrawingPath = false
         isBusy = true
         let ip = deviceIP
         let path = pairingFilePath
         let lat = coord.latitude
         let lon = coord.longitude
         Self.locationQueue.async {
-            let code = simulate_location(ip, lat, lon, path)
+            let code = Self.sendSimulatedLocation(ip: ip, latitude: lat, longitude: lon, pairingPath: path)
             DispatchQueue.main.async {
                 isBusy = false
                 if code == 0 {
@@ -324,6 +392,7 @@ struct LocationSimulationView: View {
         guard pairingExists, !isBusy else { return }
         isBusy = true
         stopResendLoop()
+        stopRouteLoop()
         Self.locationQueue.async {
             let code = clear_simulated_location()
             DispatchQueue.main.async {
@@ -339,6 +408,103 @@ struct LocationSimulationView: View {
                 }
             }
         }
+    }
+
+    private func simulateRoute() {
+        guard pairingExists, !isBusy, routeCoordinates.count > 1 else { return }
+        stopResendLoop()
+        stopRouteLoop()
+        isDrawingPath = false
+        isBusy = true
+
+        let totalDuration = routeDurationMinutes * 60
+        let pathCoordinates = routeCoordinates
+        let ip = deviceIP
+        let path = pairingFilePath
+        let start = pathCoordinates[0]
+
+        Self.locationQueue.async {
+            let code = Self.sendSimulatedLocation(ip: ip, latitude: start.latitude, longitude: start.longitude, pairingPath: path)
+            DispatchQueue.main.async {
+                isBusy = false
+                if code == 0 {
+                    coordinate = start
+                    beginBackgroundTask()
+                    BackgroundLocationManager.shared.requestStart()
+                    startRouteLoop(pathCoordinates: pathCoordinates, totalDuration: totalDuration)
+                } else {
+                    alertTitle = "Simulation Failed"
+                    alertMessage = "Could not start path simulation (error \(code)). Make sure the device is connected and the DDI is mounted."
+                    showAlert = true
+                }
+            }
+        }
+    }
+
+    private func startRouteLoop(pathCoordinates: [CLLocationCoordinate2D], totalDuration: TimeInterval) {
+        let duration = max(totalDuration, routeUpdateInterval)
+        let startDate = Date()
+        routeProgressTimer?.invalidate()
+        routeProgressTimer = Timer.scheduledTimer(withTimeInterval: routeUpdateInterval, repeats: true) { timer in
+            let elapsed = Date().timeIntervalSince(startDate)
+            let progress = min(elapsed / duration, 1)
+            let next = interpolatePathCoordinate(pathCoordinates, progress: progress)
+            coordinate = next
+
+            let ip = deviceIP
+            let path = pairingFilePath
+            Self.locationQueue.async {
+                _ = Self.sendSimulatedLocation(ip: ip,
+                                               latitude: next.latitude,
+                                               longitude: next.longitude,
+                                               pairingPath: path)
+            }
+
+            if progress >= 1 {
+                timer.invalidate()
+                routeProgressTimer = nil
+                startResendLoop()
+            }
+        }
+    }
+
+    private func stopRouteLoop() {
+        routeProgressTimer?.invalidate()
+        routeProgressTimer = nil
+    }
+
+    private func interpolatePathCoordinate(_ points: [CLLocationCoordinate2D], progress: Double) -> CLLocationCoordinate2D {
+        guard points.count > 1 else { return points.first ?? CLLocationCoordinate2D(latitude: 0, longitude: 0) }
+
+        let totalDistance = zip(points, points.dropFirst())
+            .map { CLLocation(latitude: $0.0.latitude, longitude: $0.0.longitude)
+                .distance(from: CLLocation(latitude: $0.1.latitude, longitude: $0.1.longitude)) }
+            .reduce(0, +)
+
+        if totalDistance <= 0 {
+            return points.last!
+        }
+
+        let targetDistance = totalDistance * progress
+        var traveled: CLLocationDistance = 0
+
+        for (start, end) in zip(points, points.dropFirst()) {
+            let segmentDistance = CLLocation(latitude: start.latitude, longitude: start.longitude)
+                .distance(from: CLLocation(latitude: end.latitude, longitude: end.longitude))
+            if traveled + segmentDistance >= targetDistance {
+                let segmentProgress = segmentDistance > 0 ? (targetDistance - traveled) / segmentDistance : 0
+                let lat = start.latitude + (end.latitude - start.latitude) * segmentProgress
+                let lon = start.longitude + (end.longitude - start.longitude) * segmentProgress
+                return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            }
+            traveled += segmentDistance
+        }
+
+        return points.last!
+    }
+
+    private static func sendSimulatedLocation(ip: String, latitude: Double, longitude: Double, pairingPath: String) -> Int32 {
+        simulate_location(ip, latitude, longitude, pairingPath)
     }
 
     private func beginBackgroundTask() {
@@ -361,7 +527,7 @@ struct LocationSimulationView: View {
             let lat = coord.latitude
             let lon = coord.longitude
             Self.locationQueue.async {
-                _ = simulate_location(ip, lat, lon, path)
+                _ = Self.sendSimulatedLocation(ip: ip, latitude: lat, longitude: lon, pairingPath: path)
             }
         }
     }
