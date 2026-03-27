@@ -12,20 +12,17 @@
 // MARK: - Shared AppService session
 
 typedef struct {
-    AdapterHandle      *adapter;
-    RsdHandshakeHandle *handshake;
     AppServiceHandle   *appService;
 } AppServiceSession;
 
 static void app_service_session_free(AppServiceSession *s) {
     if (s->appService) { app_service_free(s->appService);      s->appService = NULL; }
-    if (s->handshake)  { rsd_handshake_free(s->handshake);     s->handshake  = NULL; }
-    if (s->adapter)    { adapter_free(s->adapter);              s->adapter    = NULL; }
 }
 
-// Connects to the device via CoreDeviceProxy → Adapter → RSD → AppService.
+// Connects to the device via the existing adapter+handshake → AppService.
 // Returns 0 on success; cleans up any partial state and returns 1 on failure.
-static int connect_app_service(IdeviceProviderHandle *provider,
+static int connect_app_service(AdapterHandle *adapter,
+                                RsdHandshakeHandle *handshake,
                                 AppServiceSession *out,
                                 JITEnableContext *ctx,
                                 NSError **outError)
@@ -33,62 +30,11 @@ static int connect_app_service(IdeviceProviderHandle *provider,
     memset(out, 0, sizeof(*out));
     IdeviceFfiError *ffiError = NULL;
 
-    CoreDeviceProxyHandle *coreProxy = NULL;
-    ffiError = core_device_proxy_connect(provider, &coreProxy);
-    if (ffiError) {
-        *outError = [ctx errorWithStr:[NSString stringWithUTF8String:ffiError->message ?: "Failed to connect CoreDeviceProxy"]
-                                 code:ffiError->code];
-        idevice_error_free(ffiError);
-        return 1;
-    }
-
-    uint16_t rsdPort = 0;
-    ffiError = core_device_proxy_get_server_rsd_port(coreProxy, &rsdPort);
-    if (ffiError) {
-        *outError = [ctx errorWithStr:[NSString stringWithUTF8String:ffiError->message ?: "Unable to resolve RSD port"]
-                                 code:ffiError->code];
-        idevice_error_free(ffiError);
-        core_device_proxy_free(coreProxy);
-        return 1;
-    }
-
-    ffiError = core_device_proxy_create_tcp_adapter(coreProxy, &out->adapter);
-    if (ffiError) {
-        *outError = [ctx errorWithStr:[NSString stringWithUTF8String:ffiError->message ?: "Failed to create adapter"]
-                                 code:ffiError->code];
-        idevice_error_free(ffiError);
-        core_device_proxy_free(coreProxy);
-        return 1;
-    }
-    coreProxy = NULL; // ownership transferred to adapter
-
-    AdapterStreamHandle *stream = NULL;
-    ffiError = adapter_connect(out->adapter, rsdPort, (ReadWriteOpaque **)&stream);
-    if (ffiError) {
-        *outError = [ctx errorWithStr:[NSString stringWithUTF8String:ffiError->message ?: "Adapter connect failed"]
-                                 code:ffiError->code];
-        idevice_error_free(ffiError);
-        app_service_session_free(out);
-        return 1;
-    }
-
-    ffiError = rsd_handshake_new((ReadWriteOpaque *)stream, &out->handshake);
-    if (ffiError) {
-        *outError = [ctx errorWithStr:[NSString stringWithUTF8String:ffiError->message ?: "RSD handshake failed"]
-                                 code:ffiError->code];
-        idevice_error_free(ffiError);
-        adapter_stream_close(stream);
-        app_service_session_free(out);
-        return 1;
-    }
-    stream = NULL; // consumed by handshake
-
-    ffiError = app_service_connect_rsd(out->adapter, out->handshake, &out->appService);
+    ffiError = app_service_connect_rsd(adapter, handshake, &out->appService);
     if (ffiError) {
         *outError = [ctx errorWithStr:[NSString stringWithUTF8String:ffiError->message ?: "Unable to open AppService"]
                                  code:ffiError->code];
         idevice_error_free(ffiError);
-        app_service_session_free(out);
         return 1;
     }
 
@@ -100,11 +46,11 @@ static int connect_app_service(IdeviceProviderHandle *provider,
 @implementation JITEnableContext(Process)
 
 - (NSArray<NSDictionary*>*)fetchProcessesViaAppServiceWithError:(NSError **)error {
-    [self ensureHeartbeatWithError:error];
+    [self ensureTunnelWithError:error];
     if (*error) { return nil; }
 
     AppServiceSession session;
-    if (connect_app_service(provider, &session, self, error) != 0) { return nil; }
+    if (connect_app_service(adapter, handshake, &session, self, error) != 0) { return nil; }
 
     ProcessTokenC *processes = NULL;
     uintptr_t count = 0;
@@ -138,7 +84,7 @@ static int connect_app_service(IdeviceProviderHandle *provider,
 }
 
 - (NSArray<NSDictionary*>*)_fetchProcessListLocked:(NSError**)error {
-    [self ensureHeartbeatWithError:error];
+    [self ensureTunnelWithError:error];
     if (*error) { return nil; }
     return [self fetchProcessesViaAppServiceWithError:error];
 }
@@ -156,11 +102,11 @@ static int connect_app_service(IdeviceProviderHandle *provider,
 }
 
 - (BOOL)killProcessWithPID:(int)pid error:(NSError **)error {
-    [self ensureHeartbeatWithError:error];
+    [self ensureTunnelWithError:error];
     if (*error) { return NO; }
 
     AppServiceSession session;
-    if (connect_app_service(provider, &session, self, error) != 0) { return NO; }
+    if (connect_app_service(adapter, handshake, &session, self, error) != 0) { return NO; }
 
     SignalResponseC *signalResponse = NULL;
     IdeviceFfiError *ffiError = app_service_send_signal(session.appService, (uint32_t)pid, SIGKILL, &signalResponse);

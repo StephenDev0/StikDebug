@@ -30,7 +30,7 @@ final class DeviceInfoManager: ObservableObject {
         busy = true
         Task.detached {
             do {
-                try JITEnableContext.shared.ensureHeartbeat()
+                try JITEnableContext.shared.ensureTunnel()
             } catch {
                 await MainActor.run {
                     self.error = ("Initialization Failed", error.localizedDescription)

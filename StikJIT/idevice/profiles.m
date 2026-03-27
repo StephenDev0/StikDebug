@@ -14,9 +14,9 @@ NSError* makeError(int code, NSString* msg) {
 }
 
 
-NSArray<NSData*>* fetchAppProfiles(IdeviceProviderHandle* provider, NSError** error) {
+NSArray<NSData*>* fetchAppProfiles(AdapterHandle* adapter, RsdHandshakeHandle* handshake, NSError** error) {
     MisagentClientHandle *misagentHandle = NULL;
-    IdeviceFfiError *err = misagent_connect(provider, &misagentHandle);
+    IdeviceFfiError *err = misagent_connect_rsd(adapter, handshake, &misagentHandle);
     if (err) {
         *error = makeError(err->code, @(err->message));
         idevice_error_free(err);
@@ -50,9 +50,9 @@ NSArray<NSData*>* fetchAppProfiles(IdeviceProviderHandle* provider, NSError** er
     return ans;
 }
 
-bool removeProfile(IdeviceProviderHandle* provider, NSString* uuid, NSError** error) {
+bool removeProfile(AdapterHandle* adapter, RsdHandshakeHandle* handshake, NSString* uuid, NSError** error) {
     MisagentClientHandle *misagentHandle = NULL;
-    IdeviceFfiError * err = misagent_connect(provider, &misagentHandle);
+    IdeviceFfiError * err = misagent_connect_rsd(adapter, handshake, &misagentHandle);
     if (err) {
         *error = makeError(err->code, @(err->message));
         idevice_error_free(err);
@@ -71,9 +71,9 @@ bool removeProfile(IdeviceProviderHandle* provider, NSString* uuid, NSError** er
     return true;
 }
 
-bool addProfile(IdeviceProviderHandle* provider, NSData* profile, NSError** error) {
+bool addProfile(AdapterHandle* adapter, RsdHandshakeHandle* handshake, NSData* profile, NSError** error) {
     MisagentClientHandle *misagentHandle = NULL;
-    IdeviceFfiError * err = misagent_connect(provider, &misagentHandle);
+    IdeviceFfiError * err = misagent_connect_rsd(adapter, handshake, &misagentHandle);
     if (err) {
         *error = makeError(err->code, @(err->message));
         idevice_error_free(err);
@@ -141,29 +141,29 @@ bool addProfile(IdeviceProviderHandle* provider, NSData* profile, NSError** erro
 @implementation JITEnableContext(Profile)
 
 - (NSArray<NSData*>*)fetchAllProfiles:(NSError **)error {
-    [self ensureHeartbeatWithError:error];
+    [self ensureTunnelWithError:error];
     if(*error) {
         return nil;
     }
     
-    return fetchAppProfiles(provider, error);
+    return fetchAppProfiles(adapter, handshake, error);
 }
 
 - (BOOL)removeProfileWithUUID:(NSString*)uuid error:(NSError **)error {
-    [self ensureHeartbeatWithError:error];
+    [self ensureTunnelWithError:error];
     if(*error) {
         return NO;
     }
     
-    return removeProfile(provider, uuid, error);
+    return removeProfile(adapter, handshake, uuid, error);
 }
 
 - (BOOL)addProfile:(NSData*)profile error:(NSError **)error {
-    [self ensureHeartbeatWithError:error];
+    [self ensureTunnelWithError:error];
     if(*error) {
         return NO;
     }
-    return addProfile(provider, profile, error);
+    return addProfile(adapter, handshake, profile, error);
 }
 
 

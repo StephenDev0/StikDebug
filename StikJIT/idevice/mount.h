@@ -9,6 +9,6 @@
 #define MOUNT_H
 #include "idevice.h"
 #include <Foundation/Foundation.h>
-size_t getMountedDeviceCount(IdeviceProviderHandle* provider, NSError** error);
-int mountPersonalDDI(IdeviceProviderHandle* provider, IdevicePairingFile* pairingFile2, NSString* imagePath, NSString* trustcachePath, NSString* manifestPath, NSError** error);
+size_t getMountedDeviceCount(AdapterHandle* adapter, RsdHandshakeHandle* handshake, NSError** error);
+int mountPersonalDDI(AdapterHandle* adapter, RsdHandshakeHandle* handshake, NSString* imagePath, NSString* trustcachePath, NSString* manifestPath, NSError** error);
 #endif

@@ -40,7 +40,7 @@ struct HomeView: View {
             startJITInBackground(bundleID: selectedBundle)
         }, showDoneButton: false, onImportPairingFile: { isShowingPairingFilePicker = true })
         .onAppear {
-            startHeartbeatInBackground()
+            startTunnelInBackground()
             MountingProgress.shared.checkforMounted()
             viewDidAppeared = true
             if let config = pendingJITEnableConfiguration {
@@ -94,8 +94,8 @@ struct HomeView: View {
                 }
             case "kill-process":
                 if let pidStr = components?.queryItems?.first(where: { $0.name == "pid" })?.value, let pid = Int(pidStr) {
-                    pubHeartBeat = false
-                    startHeartbeatInBackground(showErrorUI: false)
+                    pubTunnelConnected = false
+                    startTunnelInBackground(showErrorUI: false)
                     DispatchQueue.global(qos: .userInitiated).async {
                         sleep(1)
                         do {
@@ -133,10 +133,10 @@ struct HomeView: View {
                             try fileManager.removeItem(at: dest)
                         }
                         try fileManager.copyItem(at: url, to: dest)
-                        pubHeartBeat = false
-                        startHeartbeatInBackground()
+                        pubTunnelConnected = false
+                        startTunnelInBackground()
                         NotificationCenter.default.post(name: .pairingFileImported, object: nil)
-                        // Dismiss any existing heartbeat error alert
+                        // Dismiss any existing connection error alert
                         if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                            let root = scene.windows.first?.rootViewController {
                             var top = root
@@ -268,8 +268,8 @@ struct HomeView: View {
         BackgroundLocationManager.shared.requestStart()
 
         if triggeredByURLScheme {
-            pubHeartBeat = false
-            startHeartbeatInBackground(showErrorUI: false)
+            pubTunnelConnected = false
+            startTunnelInBackground(showErrorUI: false)
         }
 
         DispatchQueue.global(qos: .background).async {

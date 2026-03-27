@@ -78,6 +78,10 @@ typedef struct AmfiClientHandle AmfiClientHandle;
  */
 typedef struct AppServiceHandle AppServiceHandle;
 
+typedef struct BtPacketLoggerClientHandle BtPacketLoggerClientHandle;
+
+typedef struct CompanionProxyClientHandle CompanionProxyClientHandle;
+
 typedef struct CoreDeviceProxyHandle CoreDeviceProxyHandle;
 
 typedef struct CrashReportCopyMobileHandle CrashReportCopyMobileHandle;
@@ -116,20 +120,36 @@ typedef struct ImageMounterHandle ImageMounterHandle;
 
 typedef struct InstallationProxyClientHandle InstallationProxyClientHandle;
 
+typedef struct InstallcoordinationProxyHandle InstallcoordinationProxyHandle;
+
 /**
  * Opaque handle to a ProcessControlClient
  */
 typedef struct LocationSimulationHandle LocationSimulationHandle;
 
+typedef struct LocationSimulationServiceHandle LocationSimulationServiceHandle;
+
 typedef struct LockdowndClientHandle LockdowndClientHandle;
 
 typedef struct MisagentClientHandle MisagentClientHandle;
+
+/**
+ * Opaque handle wrapping a provider pointer for MobileActivationd.
+ * The client is recreated per call since each request requires a new connection.
+ */
+typedef struct MobileActivationdClientHandle MobileActivationdClientHandle;
+
+typedef struct MobileBackup2ClientHandle MobileBackup2ClientHandle;
 
 typedef struct NotificationProxyClientHandle NotificationProxyClientHandle;
 
 typedef struct OsTraceRelayClientHandle OsTraceRelayClientHandle;
 
 typedef struct OsTraceRelayReceiverHandle OsTraceRelayReceiverHandle;
+
+typedef struct PcapdClientHandle PcapdClientHandle;
+
+typedef struct PreboardServiceClientHandle PreboardServiceClientHandle;
 
 /**
  * Opaque handle to a ProcessControlClient
@@ -142,6 +162,13 @@ typedef struct ReadWriteOpaque ReadWriteOpaque;
  * Opaque handle to a RemoteServerClient
  */
 typedef struct RemoteServerHandle RemoteServerHandle;
+
+typedef struct RestoreServiceClientHandle RestoreServiceClientHandle;
+
+/**
+ * Opaque handle to an RPPairing file
+ */
+typedef struct RpPairingFileHandle RpPairingFileHandle;
 
 /**
  * Opaque handle to an RsdHandshake
@@ -212,6 +239,36 @@ typedef struct AfcDeviceInfo {
 } AfcDeviceInfo;
 
 /**
+ * Represents a parsed BT packet from the logger
+ */
+typedef struct BtPacketHandle {
+  /**
+   * Header: advisory length
+   */
+  uint32_t length;
+  /**
+   * Header: timestamp seconds
+   */
+  uint32_t ts_secs;
+  /**
+   * Header: timestamp microseconds
+   */
+  uint32_t ts_usecs;
+  /**
+   * Packet kind byte (0x00=HciCmd, 0x01=HciEvt, 0x02=AclSent, 0x03=AclRecv, etc.)
+   */
+  uint8_t kind;
+  /**
+   * H4-ready payload data
+   */
+  uint8_t *h4_data;
+  /**
+   * Length of h4_data
+   */
+  uintptr_t h4_data_len;
+} BtPacketHandle;
+
+/**
  * C-compatible app list entry
  */
 typedef struct AppListEntryC {
@@ -278,6 +335,43 @@ typedef struct DebugserverCommandHandle {
   uintptr_t argv_count;
 } DebugserverCommandHandle;
 
+/**
+ * C-compatible delegate for mobilebackup2 operations.
+ *
+ * All function pointers are required except `on_file_received` and
+ * `on_progress` which may be NULL.
+ *
+ * Every path argument is a null-terminated UTF-8 string.
+ * `context` is forwarded unchanged from the struct field.
+ */
+typedef struct Mobilebackup2BackupDelegateFFI {
+  void *context;
+  uint64_t (*get_free_disk_space)(const char *path, void *context);
+  struct IdeviceFfiError *(*open_file_read)(const char *path,
+                                            uint8_t **out_data,
+                                            uintptr_t *out_len,
+                                            void *context);
+  struct IdeviceFfiError *(*create_file_write)(const char *path, void *context);
+  struct IdeviceFfiError *(*write_chunk)(const char *path,
+                                         const uint8_t *data,
+                                         uintptr_t len,
+                                         void *context);
+  struct IdeviceFfiError *(*close_file)(const char *path, void *context);
+  struct IdeviceFfiError *(*create_dir_all)(const char *path, void *context);
+  struct IdeviceFfiError *(*remove)(const char *path, void *context);
+  struct IdeviceFfiError *(*rename)(const char *from, const char *to, void *context);
+  struct IdeviceFfiError *(*copy)(const char *src, const char *dst, void *context);
+  bool (*exists)(const char *path, void *context);
+  bool (*is_dir)(const char *path, void *context);
+  /**
+   * Optional progress callback. May be NULL.
+   */
+  void (*on_progress)(uint64_t bytes_done,
+                      uint64_t bytes_total,
+                      double overall_progress,
+                      void *context);
+} Mobilebackup2BackupDelegateFFI;
+
 typedef struct SyslogLabel {
   const char *subsystem;
   const char *category;
@@ -292,6 +386,31 @@ typedef struct OsTraceLog {
   const char *message;
   const struct SyslogLabel *label;
 } OsTraceLog;
+
+/**
+ * Represents a captured device packet from pcapd
+ */
+typedef struct DevicePacketHandle {
+  uint32_t header_length;
+  uint8_t header_version;
+  uint32_t packet_length;
+  uint8_t interface_type;
+  uint16_t unit;
+  uint8_t io;
+  uint32_t protocol_family;
+  uint32_t frame_pre_length;
+  uint32_t frame_post_length;
+  char *interface_name;
+  uint32_t pid;
+  char *comm;
+  uint32_t svc;
+  uint32_t epid;
+  char *ecomm;
+  uint32_t seconds;
+  uint32_t microseconds;
+  uint8_t *data;
+  uintptr_t data_len;
+} DevicePacketHandle;
 
 /**
  * C-compatible representation of an RSD service
@@ -636,6 +755,26 @@ struct IdeviceFfiError *adapter_recv(struct AdapterStreamHandle *handle,
  */
 struct IdeviceFfiError *afc_client_connect(struct IdeviceProviderHandle *provider,
                                            struct AfcClientHandle **client);
+
+/**
+ * Creates a new AfcClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated AfcClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *afc_client_connect_rsd(struct AdapterHandle *provider,
+                                               struct RsdHandshakeHandle *handshake,
+                                               struct AfcClientHandle **client);
 
 /**
  * Connects to the AFC2 service using a TCP provider
@@ -1021,6 +1160,26 @@ struct IdeviceFfiError *amfi_connect(struct IdeviceProviderHandle *provider,
                                      struct AmfiClientHandle **client);
 
 /**
+ * Creates a new AmfiClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated AmfiClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *amfi_connect_rsd(struct AdapterHandle *provider,
+                                         struct RsdHandshakeHandle *handshake,
+                                         struct AmfiClientHandle **client);
+
+/**
  * Automatically creates and connects to AMFI service, returning a client handle
  *
  * # Arguments
@@ -1090,6 +1249,224 @@ struct IdeviceFfiError *amfi_accept_developer_mode(struct AmfiClientHandle *clie
  * or NULL (in which case this function does nothing)
  */
 void amfi_client_free(struct AmfiClientHandle *handle);
+
+/**
+ * Automatically creates and connects to BTPacketLogger, returning a client handle
+ *
+ * # Arguments
+ * * [`provider`] - An IdeviceProvider
+ * * [`client`] - On success, will be set to point to a newly allocated BtPacketLoggerClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *bt_packet_logger_connect(struct IdeviceProviderHandle *provider,
+                                                 struct BtPacketLoggerClientHandle **client);
+
+/**
+ * Creates a new BtPacketLoggerClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated BtPacketLoggerClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *bt_packet_logger_connect_rsd(struct AdapterHandle *provider,
+                                                     struct RsdHandshakeHandle *handshake,
+                                                     struct BtPacketLoggerClientHandle **client);
+
+/**
+ * Creates a new BtPacketLoggerClient from an existing socket
+ *
+ * # Arguments
+ * * [`socket`] - An IdeviceSocket handle
+ * * [`client`] - On success, will be set to point to a newly allocated BtPacketLoggerClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `socket` must be a valid pointer to a handle allocated by this library. The socket is consumed,
+ * and may not be used again.
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *bt_packet_logger_new(struct IdeviceHandle *socket,
+                                             struct BtPacketLoggerClientHandle **client);
+
+/**
+ * Reads the next BT packet from the logger
+ *
+ * # Arguments
+ * * `client` - A valid BtPacketLoggerClient handle
+ * * `packet` - On success, will be set to point to a newly allocated BtPacketHandle.
+ *   May be set to NULL if EOF was reached.
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * The returned packet must be freed with `bt_packet_free`
+ */
+struct IdeviceFfiError *bt_packet_logger_next_packet(struct BtPacketLoggerClientHandle *client,
+                                                     struct BtPacketHandle **packet);
+
+/**
+ * Frees a BtPacketHandle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to the handle that was allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void bt_packet_free(struct BtPacketHandle *handle);
+
+/**
+ * Frees a BtPacketLoggerClient handle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to the handle that was allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void bt_packet_logger_client_free(struct BtPacketLoggerClientHandle *handle);
+
+/**
+ * Automatically creates and connects to Companion Proxy, returning a client handle
+ *
+ * # Arguments
+ * * [`provider`] - An IdeviceProvider
+ * * [`client`] - On success, will be set to point to a newly allocated CompanionProxy handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *companion_proxy_connect(struct IdeviceProviderHandle *provider,
+                                                struct CompanionProxyClientHandle **client);
+
+/**
+ * Creates a new CompanionProxy client via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated CompanionProxy handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *companion_proxy_connect_rsd(struct AdapterHandle *provider,
+                                                    struct RsdHandshakeHandle *handshake,
+                                                    struct CompanionProxyClientHandle **client);
+
+/**
+ * Creates a new CompanionProxy client from an existing socket
+ *
+ * # Arguments
+ * * [`socket`] - An IdeviceSocket handle
+ * * [`client`] - On success, will be set to point to a newly allocated CompanionProxy handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `socket` must be a valid pointer to a handle allocated by this library. The socket is consumed,
+ * and may not be used again.
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *companion_proxy_new(struct IdeviceHandle *socket,
+                                            struct CompanionProxyClientHandle **client);
+
+/**
+ * Gets the device registry from Companion Proxy, returning paired watch UDIDs
+ *
+ * # Arguments
+ * * `client` - A valid CompanionProxy handle
+ * * `udids` - On success, will be set to point to a newly allocated array of C strings
+ * * `udids_len` - On success, will be set to the length of the array
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * The returned strings must be freed with `idevice_string_free` and the outer array
+ * with `idevice_outer_slice_free`
+ */
+struct IdeviceFfiError *companion_proxy_get_device_registry(struct CompanionProxyClientHandle *client,
+                                                            char ***udids,
+                                                            uintptr_t *udids_len);
+
+/**
+ * Starts forwarding a service port through the companion proxy
+ *
+ * # Arguments
+ * * `client` - A valid CompanionProxy handle
+ * * `port` - The remote port number on the watch
+ * * `local_port` - On success, will be set to the local forwarded port number
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ */
+struct IdeviceFfiError *companion_proxy_start_forwarding_service_port(struct CompanionProxyClientHandle *client,
+                                                                      uint16_t port,
+                                                                      uint16_t *local_port);
+
+/**
+ * Stops forwarding a service port through the companion proxy
+ *
+ * # Arguments
+ * * `client` - A valid CompanionProxy handle
+ * * `port` - The remote port number to stop forwarding
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ */
+struct IdeviceFfiError *companion_proxy_stop_forwarding_service_port(struct CompanionProxyClientHandle *client,
+                                                                     uint16_t port);
+
+/**
+ * Frees a CompanionProxy client handle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to the handle that was allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void companion_proxy_client_free(struct CompanionProxyClientHandle *handle);
 
 /**
  * Creates a new AppServiceClient using RSD connection
@@ -1602,6 +1979,26 @@ struct IdeviceFfiError *crash_report_client_connect(struct IdeviceProviderHandle
                                                     struct CrashReportCopyMobileHandle **client);
 
 /**
+ * Creates a new CrashReportCopyMobileClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *crash_report_client_connect_rsd(struct AdapterHandle *provider,
+                                                        struct RsdHandshakeHandle *handshake,
+                                                        struct CrashReportCopyMobileHandle **client);
+
+/**
  * Creates a new CrashReportCopyMobile client from an existing Idevice connection
  *
  * # Arguments
@@ -1940,6 +2337,26 @@ void debug_proxy_set_ack_mode(struct DebugProxyHandle *handle, int enabled);
  */
 struct IdeviceFfiError *diagnostics_relay_client_connect(struct IdeviceProviderHandle *provider,
                                                          struct DiagnosticsRelayClientHandle **client);
+
+/**
+ * Creates a new DiagnosticsRelayClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated DiagnosticsRelayClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *diagnostics_relay_client_connect_rsd(struct AdapterHandle *provider,
+                                                             struct RsdHandshakeHandle *handshake,
+                                                             struct DiagnosticsRelayClientHandle **client);
 
 /**
  * Automatically creates and connects to Diagnostics Relay, returning a client handle
@@ -2417,6 +2834,26 @@ struct IdeviceFfiError *heartbeat_connect(struct IdeviceProviderHandle *provider
                                           struct HeartbeatClientHandle **client);
 
 /**
+ * Creates a new HeartbeatClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated HeartbeatClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *heartbeat_connect_rsd(struct AdapterHandle *provider,
+                                              struct RsdHandshakeHandle *handshake,
+                                              struct HeartbeatClientHandle **client);
+
+/**
  * Automatically creates and connects to Installation Proxy, returning a client handle
  *
  * # Arguments
@@ -2494,6 +2931,26 @@ void heartbeat_client_free(struct HeartbeatClientHandle *handle);
  */
 struct IdeviceFfiError *house_arrest_client_connect(struct IdeviceProviderHandle *provider,
                                                     struct HouseArrestClientHandle **client);
+
+/**
+ * Creates a new HouseArrestClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated HouseArrestClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *house_arrest_client_connect_rsd(struct AdapterHandle *provider,
+                                                        struct RsdHandshakeHandle *handshake,
+                                                        struct HouseArrestClientHandle **client);
 
 /**
  * Creates a new HouseArrestClient from an existing Idevice connection
@@ -2580,6 +3037,26 @@ void house_arrest_client_free(struct HouseArrestClientHandle *handle);
  */
 struct IdeviceFfiError *installation_proxy_connect(struct IdeviceProviderHandle *provider,
                                                    struct InstallationProxyClientHandle **client);
+
+/**
+ * Creates a new InstallationProxyClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated InstallationProxyClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *installation_proxy_connect_rsd(struct AdapterHandle *provider,
+                                                       struct RsdHandshakeHandle *handshake,
+                                                       struct InstallationProxyClientHandle **client);
 
 /**
  * Automatically creates and connects to Installation Proxy, returning a client handle
@@ -2818,6 +3295,147 @@ struct IdeviceFfiError *installation_proxy_browse(struct InstallationProxyClient
                                                   size_t *out_result_len);
 
 /**
+ * Creates a new InstallcoordinationProxy client from a ReadWrite stream
+ *
+ * # Arguments
+ * * [`socket`] - A ReadWriteOpaque handle (consumed)
+ * * [`client`] - On success, will be set to point to a newly allocated handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `socket` must be a valid pointer to a handle allocated by this library. The socket is consumed,
+ * and may not be used again.
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *installcoordination_proxy_new(struct ReadWriteOpaque *socket,
+                                                      struct InstallcoordinationProxyHandle **client);
+
+/**
+ * Creates a new InstallcoordinationProxy client via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated InstallcoordinationProxy handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *installcoordination_proxy_connect_rsd(struct AdapterHandle *provider,
+                                                              struct RsdHandshakeHandle *handshake,
+                                                              struct InstallcoordinationProxyHandle **client);
+
+/**
+ * Uninstalls an app by bundle ID
+ *
+ * # Arguments
+ * * `client` - A valid InstallcoordinationProxy handle
+ * * `bundle_id` - The bundle identifier of the app to uninstall
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `bundle_id` must be a valid null-terminated C string
+ */
+struct IdeviceFfiError *installcoordination_proxy_uninstall_app(struct InstallcoordinationProxyHandle *client,
+                                                                const char *bundle_id);
+
+/**
+ * Queries the install path of an app by bundle ID
+ *
+ * # Arguments
+ * * `client` - A valid InstallcoordinationProxy handle
+ * * `bundle_id` - The bundle identifier of the app to query
+ * * `path` - On success, will be set to a newly allocated C string with the install path
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `bundle_id` must be a valid null-terminated C string
+ * The returned string must be freed with `idevice_string_free`
+ */
+struct IdeviceFfiError *installcoordination_proxy_query_app_path(struct InstallcoordinationProxyHandle *client,
+                                                                 const char *bundle_id,
+                                                                 char **path);
+
+/**
+ * Frees an InstallcoordinationProxy client handle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to the handle that was allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void installcoordination_proxy_client_free(struct InstallcoordinationProxyHandle *handle);
+
+/**
+ * Connects to the Location Simulation service using a provider
+ * This is the location_simulation api for iOS 16 and below
+ * You must have a developer disk image mounted to use this API
+ *
+ * # Safety
+ * `provider` must be valid; `client` must be a non-null pointer to store the handle.
+ */
+struct IdeviceFfiError *lockdown_location_simulation_connect(struct IdeviceProviderHandle *provider,
+                                                             struct LocationSimulationServiceHandle **handle);
+
+/**
+ * Creates a new Location Simulation service client directly from an existing `IdeviceHandle` (socket).
+ *
+ * # Safety
+ * - `socket` must be a valid, unowned pointer to an `IdeviceHandle` that has been properly
+ *   initialized and represents an open connection to the Location Simulation service.
+ *   Ownership of the `IdeviceHandle` is transferred to this function.
+ * - `client` must be a non-null pointer to a location where the newly created
+ *   `*mut LocationSimulationServiceHandle` will be stored.
+ *
+ */
+struct IdeviceFfiError *lockdown_location_simulation_new(struct IdeviceHandle *socket,
+                                                         struct LocationSimulationServiceHandle **client);
+
+/**
+ * Sets the device's simulated location.
+ * This is the location_simulation api for iOS 16 and below.
+ *
+ * # Safety
+ * `handle` must be a valid pointer to a `LocationSimulationServiceHandle` returned by `lockdown_location_simulation_connect`.
+ * `latitude` and `longitude` must be valid, null-terminated C strings.
+ */
+struct IdeviceFfiError *lockdown_location_simulation_set(struct LocationSimulationServiceHandle *handle,
+                                                         const char *latitude,
+                                                         const char *longitude);
+
+/**
+ * Clears the device's simulated location, returning it to the actual location.
+ * This is the location_simulation api for iOS 16 and below.
+ *
+ * # Safety
+ * `handle` must be a valid pointer to a `LocationSimulationServiceHandle` returned by `lockdown_location_simulation_connect`.
+ */
+struct IdeviceFfiError *lockdown_location_simulation_clear(struct LocationSimulationServiceHandle *handle);
+
+/**
+ * Frees a LocationSimulationService handle
+ *
+ * # Safety
+ * `handle` must be a pointer returned by `lockdown_location_simulation_connect`.
+ */
+void lockdown_location_simulation_free(struct LocationSimulationServiceHandle *handle);
+
+/**
  * Connects to lockdownd service using provider
  *
  * # Arguments
@@ -2833,6 +3451,26 @@ struct IdeviceFfiError *installation_proxy_browse(struct InstallationProxyClient
  */
 struct IdeviceFfiError *lockdownd_connect(struct IdeviceProviderHandle *provider,
                                           struct LockdowndClientHandle **client);
+
+/**
+ * Creates a new LockdownClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated LockdownClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *lockdownd_connect_rsd(struct AdapterHandle *provider,
+                                              struct RsdHandshakeHandle *handshake,
+                                              struct LockdowndClientHandle **client);
 
 /**
  * Creates a new LockdowndClient from an existing Idevice connection
@@ -2890,6 +3528,30 @@ struct IdeviceFfiError *lockdownd_start_service(struct LockdowndClientHandle *cl
                                                 const char *identifier,
                                                 uint16_t *port,
                                                 bool *ssl);
+
+/**
+ * Pairs with the device using lockdownd
+ *
+ * # Arguments
+ * * `client` - A valid LockdowndClient handle
+ * * `host_id` - The host ID (null-terminated string)
+ * * `system_buid` - The system BUID (null-terminated string)
+ * * `pairing_file` - On success, will be set to point to a newly allocated IdevicePairingFile handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `host_id` must be a valid null-terminated string
+ * `system_buid` must be a valid null-terminated string
+ * `pairing_file` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *lockdownd_pair(struct LockdowndClientHandle *client,
+                                       const char *host_id,
+                                       const char *system_buid,
+                                       const char *host_name,
+                                       struct IdevicePairingFile **pairing_file);
 
 /**
  * Gets a value from lockdownd
@@ -2990,6 +3652,26 @@ struct IdeviceFfiError *misagent_connect(struct IdeviceProviderHandle *provider,
                                          struct MisagentClientHandle **client);
 
 /**
+ * Creates a new MisagentClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated MisagentClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *misagent_connect_rsd(struct AdapterHandle *provider,
+                                             struct RsdHandshakeHandle *handshake,
+                                             struct MisagentClientHandle **client);
+
+/**
  * Installs a provisioning profile on the device
  *
  * # Arguments
@@ -3087,6 +3769,26 @@ void misagent_client_free(struct MisagentClientHandle *handle);
  */
 struct IdeviceFfiError *image_mounter_connect(struct IdeviceProviderHandle *provider,
                                               struct ImageMounterHandle **client);
+
+/**
+ * Creates a new ImageMounter via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated ImageMounter handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *image_mounter_connect_rsd(struct AdapterHandle *provider,
+                                                  struct RsdHandshakeHandle *handshake,
+                                                  struct ImageMounterHandle **client);
 
 /**
  * Creates a new ImageMounter client from an existing Idevice connection
@@ -3430,6 +4132,183 @@ struct IdeviceFfiError *image_mounter_mount_personalized_with_callback(struct Im
                                                                        void *context);
 
 /**
+ * Creates a new MobileActivationd client handle from a provider
+ *
+ * # Arguments
+ * * [`provider`] - An IdeviceProvider (not consumed, must remain valid for the lifetime of the handle)
+ * * [`client`] - On success, will be set to point to a newly allocated handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library.
+ * The provider must remain valid for the lifetime of the returned handle.
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *mobileactivationd_connect(struct IdeviceProviderHandle *provider,
+                                                  struct MobileActivationdClientHandle **client);
+
+/**
+ * Gets the activation state of the device
+ *
+ * # Arguments
+ * * `client` - A valid MobileActivationd handle
+ * * `state` - On success, will be set to a newly allocated C string with the activation state
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * The returned string must be freed with `idevice_string_free`
+ */
+struct IdeviceFfiError *mobileactivationd_get_state(struct MobileActivationdClientHandle *client,
+                                                    char **state);
+
+/**
+ * Checks if the device is activated
+ *
+ * # Arguments
+ * * `client` - A valid MobileActivationd handle
+ * * `activated` - On success, will be set to true if the device is activated
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ */
+struct IdeviceFfiError *mobileactivationd_is_activated(struct MobileActivationdClientHandle *client,
+                                                       bool *activated);
+
+/**
+ * Deactivates the device
+ *
+ * # Arguments
+ * * `client` - A valid MobileActivationd handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ */
+struct IdeviceFfiError *mobileactivationd_deactivate(struct MobileActivationdClientHandle *client);
+
+/**
+ * Frees a MobileActivationd client handle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to the handle that was allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void mobileactivationd_client_free(struct MobileActivationdClientHandle *handle);
+
+/**
+ * Connects to the mobilebackup2 service via a provider
+ *
+ * # Safety
+ * All pointer arguments must be valid and non-null
+ */
+struct IdeviceFfiError *mobilebackup2_connect(struct IdeviceProviderHandle *provider,
+                                              struct MobileBackup2ClientHandle **client);
+
+/**
+ * Creates a new MobileBackup2Client via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated MobileBackup2Client handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *mobilebackup2_connect_rsd(struct AdapterHandle *provider,
+                                                  struct RsdHandshakeHandle *handshake,
+                                                  struct MobileBackup2ClientHandle **client);
+
+/**
+ * Creates a mobilebackup2 client from an existing connection (consumes the socket)
+ *
+ * # Safety
+ * `socket` is consumed and must not be used after this call
+ */
+struct IdeviceFfiError *mobilebackup2_new(struct IdeviceHandle *socket,
+                                          struct MobileBackup2ClientHandle **client);
+
+/**
+ * Frees a mobilebackup2 client handle
+ *
+ * # Safety
+ * `handle` must be valid or NULL
+ */
+void mobilebackup2_client_free(struct MobileBackup2ClientHandle *handle);
+
+/**
+ * Creates a backup of the device
+ *
+ * # Arguments
+ * * `client` - A valid MobileBackup2Client handle
+ * * `backup_root` - Path to the backup root directory (null-terminated UTF-8)
+ * * `source_identifier` - Source UDID (null-terminated UTF-8, or NULL for current device)
+ * * `options` - Optional plist dictionary of backup options (NULL for defaults)
+ * * `delegate` - Pointer to a populated Mobilebackup2BackupDelegateFFI struct
+ * * `out_response` - On success, receives the device response plist (caller must free). May be NULL.
+ *
+ * # Safety
+ * All non-null pointers must be valid. `delegate` must remain valid for the entire call.
+ */
+struct IdeviceFfiError *mobilebackup2_backup(struct MobileBackup2ClientHandle *client,
+                                             const char *backup_root,
+                                             const char *source_identifier,
+                                             plist_t options,
+                                             const struct Mobilebackup2BackupDelegateFFI *delegate,
+                                             plist_t *out_response);
+
+/**
+ * Restores a backup to the device
+ *
+ * # Safety
+ * All non-null pointers must be valid. `delegate` must remain valid for the entire call.
+ */
+struct IdeviceFfiError *mobilebackup2_restore(struct MobileBackup2ClientHandle *client,
+                                              const char *backup_root,
+                                              const char *source_identifier,
+                                              plist_t options,
+                                              const struct Mobilebackup2BackupDelegateFFI *delegate,
+                                              plist_t *out_response);
+
+/**
+ * Changes the backup password on the device
+ *
+ * # Safety
+ * All non-null pointers must be valid.
+ */
+struct IdeviceFfiError *mobilebackup2_change_password(struct MobileBackup2ClientHandle *client,
+                                                      const char *backup_root,
+                                                      const char *old_password,
+                                                      const char *new_password,
+                                                      const struct Mobilebackup2BackupDelegateFFI *delegate);
+
+/**
+ * Disconnects from the mobilebackup2 service
+ *
+ * # Safety
+ * `client` must be a valid handle
+ */
+struct IdeviceFfiError *mobilebackup2_disconnect(struct MobileBackup2ClientHandle *client);
+
+/**
  * Automatically creates and connects to Notification Proxy, returning a client handle
  *
  * # Arguments
@@ -3445,6 +4324,26 @@ struct IdeviceFfiError *image_mounter_mount_personalized_with_callback(struct Im
  */
 struct IdeviceFfiError *notification_proxy_connect(struct IdeviceProviderHandle *provider,
                                                    struct NotificationProxyClientHandle **client);
+
+/**
+ * Creates a new NotificationProxyClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated NotificationProxyClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *notification_proxy_connect_rsd(struct AdapterHandle *provider,
+                                                       struct RsdHandshakeHandle *handshake,
+                                                       struct NotificationProxyClientHandle **client);
 
 /**
  * Creates a new NotificationProxyClient from an existing Idevice connection
@@ -3586,6 +4485,26 @@ void notification_proxy_client_free(struct NotificationProxyClientHandle *handle
  */
 struct IdeviceFfiError *os_trace_relay_connect(struct IdeviceProviderHandle *provider,
                                                struct OsTraceRelayClientHandle **client);
+
+/**
+ * Creates a new OsTraceRelayClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated OsTraceRelayClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *os_trace_relay_connect_rsd(struct AdapterHandle *provider,
+                                                   struct RsdHandshakeHandle *handshake,
+                                                   struct OsTraceRelayClientHandle **client);
 
 /**
  * Frees the relay client
@@ -3742,6 +4661,207 @@ struct IdeviceFfiError *idevice_pairing_file_serialize(const struct IdevicePairi
 void idevice_pairing_file_free(struct IdevicePairingFile *pairing_file);
 
 /**
+ * Automatically creates and connects to pcapd, returning a client handle.
+ * Note that this service only works over USB or through RSD.
+ *
+ * # Arguments
+ * * [`provider`] - An IdeviceProvider
+ * * [`client`] - On success, will be set to point to a newly allocated PcapdClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *pcapd_connect(struct IdeviceProviderHandle *provider,
+                                      struct PcapdClientHandle **client);
+
+/**
+ * Creates a new PcapdClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated PcapdClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *pcapd_connect_rsd(struct AdapterHandle *provider,
+                                          struct RsdHandshakeHandle *handshake,
+                                          struct PcapdClientHandle **client);
+
+/**
+ * Creates a new PcapdClient from an existing socket
+ *
+ * # Arguments
+ * * [`socket`] - An IdeviceSocket handle
+ * * [`client`] - On success, will be set to point to a newly allocated PcapdClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `socket` must be a valid pointer to a handle allocated by this library. The socket is consumed,
+ * and may not be used again.
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *pcapd_new(struct IdeviceHandle *socket, struct PcapdClientHandle **client);
+
+/**
+ * Reads the next packet from the pcapd service
+ *
+ * # Arguments
+ * * `client` - A valid PcapdClient handle
+ * * `packet` - On success, will be set to point to a newly allocated DevicePacketHandle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * The returned packet must be freed with `pcapd_device_packet_free`
+ */
+struct IdeviceFfiError *pcapd_next_packet(struct PcapdClientHandle *client,
+                                          struct DevicePacketHandle **packet);
+
+/**
+ * Frees a DevicePacketHandle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to the handle that was allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void pcapd_device_packet_free(struct DevicePacketHandle *handle);
+
+/**
+ * Frees a PcapdClient handle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to the handle that was allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void pcapd_client_free(struct PcapdClientHandle *handle);
+
+/**
+ * Automatically creates and connects to Preboard Service, returning a client handle
+ *
+ * # Arguments
+ * * [`provider`] - An IdeviceProvider
+ * * [`client`] - On success, will be set to point to a newly allocated PreboardServiceClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *preboard_service_connect(struct IdeviceProviderHandle *provider,
+                                                 struct PreboardServiceClientHandle **client);
+
+/**
+ * Creates a new PreboardServiceClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated PreboardServiceClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *preboard_service_connect_rsd(struct AdapterHandle *provider,
+                                                     struct RsdHandshakeHandle *handshake,
+                                                     struct PreboardServiceClientHandle **client);
+
+/**
+ * Creates a new PreboardServiceClient from an existing socket
+ *
+ * # Arguments
+ * * [`socket`] - An IdeviceSocket handle
+ * * [`client`] - On success, will be set to point to a newly allocated PreboardServiceClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `socket` must be a valid pointer to a handle allocated by this library. The socket is consumed,
+ * and may not be used again.
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *preboard_service_new(struct IdeviceHandle *socket,
+                                             struct PreboardServiceClientHandle **client);
+
+/**
+ * Creates a stashbag on the device
+ *
+ * # Arguments
+ * * `client` - A valid PreboardServiceClient handle
+ * * `manifest` - Pointer to the manifest data
+ * * `manifest_len` - Length of the manifest data
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `manifest` must be a valid pointer to `manifest_len` bytes of data
+ */
+struct IdeviceFfiError *preboard_service_create_stashbag(struct PreboardServiceClientHandle *client,
+                                                         const uint8_t *manifest,
+                                                         uintptr_t manifest_len);
+
+/**
+ * Commits a stashbag on the device
+ *
+ * # Arguments
+ * * `client` - A valid PreboardServiceClient handle
+ * * `manifest` - Pointer to the manifest data
+ * * `manifest_len` - Length of the manifest data
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `manifest` must be a valid pointer to `manifest_len` bytes of data
+ */
+struct IdeviceFfiError *preboard_service_commit_stashbag(struct PreboardServiceClientHandle *client,
+                                                         const uint8_t *manifest,
+                                                         uintptr_t manifest_len);
+
+/**
+ * Frees a PreboardServiceClient handle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to the handle that was allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void preboard_service_client_free(struct PreboardServiceClientHandle *handle);
+
+/**
  * Creates a TCP provider for idevice
  *
  * # Arguments
@@ -3818,6 +4938,207 @@ struct IdeviceFfiError *usbmuxd_provider_new(struct UsbmuxdAddrHandle *addr,
  */
 struct IdeviceFfiError *idevice_provider_get_pairing_file(struct IdeviceProviderHandle *provider,
                                                           struct IdevicePairingFile **pairing_file);
+
+/**
+ * Creates a new RestoreServiceClient from a ReadWrite stream
+ *
+ * # Arguments
+ * * [`socket`] - A ReadWriteOpaque handle (consumed)
+ * * [`client`] - On success, will be set to point to a newly allocated handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `socket` must be a valid pointer to a handle allocated by this library. The socket is consumed,
+ * and may not be used again.
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *restore_service_new(struct ReadWriteOpaque *socket,
+                                            struct RestoreServiceClientHandle **client);
+
+/**
+ * Creates a new RestoreServiceClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated RestoreServiceClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *restore_service_connect_rsd(struct AdapterHandle *provider,
+                                                    struct RsdHandshakeHandle *handshake,
+                                                    struct RestoreServiceClientHandle **client);
+
+/**
+ * Enters recovery mode on the device
+ *
+ * # Arguments
+ * * `client` - A valid RestoreServiceClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ */
+struct IdeviceFfiError *restore_service_enter_recovery(struct RestoreServiceClientHandle *client);
+
+/**
+ * Reboots the device
+ *
+ * # Arguments
+ * * `client` - A valid RestoreServiceClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ */
+struct IdeviceFfiError *restore_service_reboot(struct RestoreServiceClientHandle *client);
+
+/**
+ * Gets preflight info from the device
+ *
+ * # Arguments
+ * * `client` - A valid RestoreServiceClient handle
+ * * `res` - Will be set to a pointer of a plist dictionary node on success
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ */
+struct IdeviceFfiError *restore_service_get_preflightinfo(struct RestoreServiceClientHandle *client,
+                                                          plist_t *res);
+
+/**
+ * Gets nonces from the device
+ *
+ * # Arguments
+ * * `client` - A valid RestoreServiceClient handle
+ * * `res` - Will be set to a pointer of a plist dictionary node on success
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ */
+struct IdeviceFfiError *restore_service_get_nonces(struct RestoreServiceClientHandle *client,
+                                                   plist_t *res);
+
+/**
+ * Gets app parameters from the device
+ *
+ * # Arguments
+ * * `client` - A valid RestoreServiceClient handle
+ * * `res` - Will be set to a pointer of a plist dictionary node on success
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ */
+struct IdeviceFfiError *restore_service_get_app_parameters(struct RestoreServiceClientHandle *client,
+                                                           plist_t *res);
+
+/**
+ * Restores the device language
+ *
+ * # Arguments
+ * * `client` - A valid RestoreServiceClient handle
+ * * `language` - The language to restore to
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `client` must be a valid pointer to a handle allocated by this library
+ * `language` must be a valid null-terminated C string
+ */
+struct IdeviceFfiError *restore_service_restore_lang(struct RestoreServiceClientHandle *client,
+                                                     const char *language);
+
+/**
+ * Frees a RestoreServiceClient handle
+ *
+ * # Arguments
+ * * [`handle`] - The handle to free
+ *
+ * # Safety
+ * `handle` must be a valid pointer to the handle that was allocated by this library,
+ * or NULL (in which case this function does nothing)
+ */
+void restore_service_client_free(struct RestoreServiceClientHandle *handle);
+
+/**
+ * Generates a new RPPairing file with fresh Ed25519 keys.
+ *
+ * # Safety
+ * `hostname` must be a valid null-terminated C string.
+ * `out` must be valid and non-null.
+ */
+struct IdeviceFfiError *rp_pairing_file_generate(const char *hostname,
+                                                 struct RpPairingFileHandle **out);
+
+/**
+ * Reads an RPPairing file from a path.
+ *
+ * # Safety
+ * `path` must be a valid null-terminated C string.
+ * `out` must be valid and non-null.
+ */
+struct IdeviceFfiError *rp_pairing_file_read(const char *path, struct RpPairingFileHandle **out);
+
+/**
+ * Parses an RPPairing file from plist bytes (XML or binary).
+ *
+ * # Safety
+ * `data` must point to `len` valid bytes.
+ * `out` must be valid and non-null.
+ */
+struct IdeviceFfiError *rp_pairing_file_from_bytes(const uint8_t *data,
+                                                   uintptr_t len,
+                                                   struct RpPairingFileHandle **out);
+
+/**
+ * Serializes an RPPairing file to XML plist bytes.
+ *
+ * The caller must free the returned bytes with `idevice_data_free(data, len)`.
+ *
+ * # Safety
+ * `handle`, `out_data`, and `out_len` must be valid and non-null.
+ */
+struct IdeviceFfiError *rp_pairing_file_to_bytes(struct RpPairingFileHandle *handle,
+                                                 uint8_t **out_data,
+                                                 uintptr_t *out_len);
+
+/**
+ * Writes an RPPairing file to a path.
+ *
+ * # Safety
+ * `handle` and `path` must be valid.
+ */
+struct IdeviceFfiError *rp_pairing_file_write(struct RpPairingFileHandle *handle, const char *path);
+
+/**
+ * Frees an RPPairing file handle.
+ *
+ * # Safety
+ * `handle` must be valid or NULL.
+ */
+void rp_pairing_file_free(struct RpPairingFileHandle *handle);
 
 /**
  * Creates a new RSD handshake from a ReadWrite connection
@@ -4000,6 +5321,26 @@ struct IdeviceFfiError *screenshotr_connect(struct IdeviceProviderHandle *provid
                                             struct ScreenshotrClientHandle **client);
 
 /**
+ * Creates a new ScreenshotService via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated ScreenshotrClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *screenshotr_connect_rsd(struct AdapterHandle *provider,
+                                                struct RsdHandshakeHandle *handshake,
+                                                struct ScreenshotrClientHandle **client);
+
+/**
  * Takes a screenshot from the device
  *
  * # Arguments
@@ -4057,6 +5398,26 @@ void screenshotr_client_free(struct ScreenshotrClientHandle *handle);
  */
 struct IdeviceFfiError *springboard_services_connect(struct IdeviceProviderHandle *provider,
                                                      struct SpringBoardServicesClientHandle **client);
+
+/**
+ * Creates a new SpringBoardServicesClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated SpringBoardServicesClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *springboard_services_connect_rsd(struct AdapterHandle *provider,
+                                                         struct RsdHandshakeHandle *handshake,
+                                                         struct SpringBoardServicesClientHandle **client);
 
 /**
  * Creates a new SpringBoardServices client from an existing Idevice connection
@@ -4195,6 +5556,26 @@ struct IdeviceFfiError *syslog_relay_connect_tcp(struct IdeviceProviderHandle *p
                                                  struct SyslogRelayClientHandle **client);
 
 /**
+ * Creates a new SyslogRelayClient via RSD
+ *
+ * # Arguments
+ * * [`provider`] - An adapter created by this library
+ * * [`handshake`] - An RSD handshake from the same provider
+ * * [`client`] - On success, will be set to point to a newly allocated SyslogRelayClient handle
+ *
+ * # Returns
+ * An IdeviceFfiError on error, null on success
+ *
+ * # Safety
+ * `provider` must be a valid pointer to a handle allocated by this library
+ * `handshake` must be a valid pointer to a handle allocated by this library
+ * `client` must be a valid, non-null pointer to a location where the handle will be stored
+ */
+struct IdeviceFfiError *syslog_relay_connect_rsd(struct AdapterHandle *provider,
+                                                 struct RsdHandshakeHandle *handshake,
+                                                 struct SyslogRelayClientHandle **client);
+
+/**
  * Frees a handle
  *
  * # Arguments
@@ -4261,6 +5642,73 @@ void idevice_free_tcp_feed_object(struct TcpFeedObject *object);
  * Pass a valid pointer allocated by this library
  */
 void idevice_free_tcp_eat_object(struct TcpEatObject *object);
+
+/**
+ * Creates a tunnel over USB via CoreDeviceProxy.
+ * No need to stop remoted.
+ *
+ * # Safety
+ * All pointer arguments must be valid and non-null.
+ */
+struct IdeviceFfiError *tunnel_create_usb(struct IdeviceProviderHandle *lockdown_provider,
+                                          struct AdapterHandle **out_adapter,
+                                          struct RsdHandshakeHandle **out_handshake);
+
+/**
+ * Pairs via USB CoreDeviceProxy tunnel (no SIGSTOP needed).
+ *
+ * For iOS, `pin_callback` can be NULL (defaults to "000000").
+ * For Apple TV / Vision Pro, provide a callback returning the on-screen PIN.
+ *
+ * # Safety
+ * All pointer arguments must be valid and non-null (except `pin_callback`/`pin_context`).
+ */
+struct IdeviceFfiError *tunnel_pair_usb(struct IdeviceProviderHandle *lockdown_provider,
+                                        const char *hostname,
+                                        const char *(*pin_callback)(void *context),
+                                        void *pin_context,
+                                        struct RpPairingFileHandle **out_pairing_file);
+
+/**
+ * Creates a tunnel over the network via RemoteXPC.
+ *
+ * Use this when connecting to a device discovered via `_remoted._tcp` (RSD port).
+ * The connection goes: RSD → find tunnel service → RemoteXPC → RPPairing → tunnel.
+ *
+ * # Safety
+ * All pointer arguments must be valid and non-null (except `pin_callback`/`pin_context`).
+ * `pairing_file` is borrowed, not consumed.
+ */
+struct IdeviceFfiError *tunnel_create_remotexpc(const idevice_sockaddr *addr,
+                                                idevice_socklen_t addr_len,
+                                                const char *hostname,
+                                                struct RpPairingFileHandle *pairing_file,
+                                                const char *(*pin_callback)(void *context),
+                                                void *pin_context,
+                                                struct AdapterHandle **out_adapter,
+                                                struct RsdHandshakeHandle **out_handshake);
+
+/**
+ * Creates a tunnel over the network via raw RPPairing protocol.
+ *
+ * Use this when connecting to a device discovered via `_remotepairing._tcp`.
+ * The connection goes: direct TCP → RPPairing (JSON) → tunnel.
+ *
+ * This path only supports pair-verify (existing pairing file required).
+ * For initial pairing, use `tunnel_pair_usb`.
+ *
+ * # Safety
+ * All pointer arguments must be valid and non-null (except `pin_callback`/`pin_context`).
+ * `pairing_file` is borrowed, not consumed.
+ */
+struct IdeviceFfiError *tunnel_create_rppairing(const idevice_sockaddr *addr,
+                                                idevice_socklen_t addr_len,
+                                                const char *hostname,
+                                                struct RpPairingFileHandle *pairing_file,
+                                                const char *(*pin_callback)(void *context),
+                                                void *pin_context,
+                                                struct AdapterHandle **out_adapter,
+                                                struct RsdHandshakeHandle **out_handshake);
 
 /**
  * Connects to a usbmuxd instance over TCP
@@ -4601,6 +6049,10 @@ uint8_t idevice_usbmuxd_device_get_connection_type(const struct UsbmuxdDeviceHan
 #endif  /* IDEVICE_H */
 
 
+
+// THIS FILE IS UNDER ITS ORIGINAL LICENSE FROM LIBIMOBILEDEVICE
+// THIS IS NOT PART OF IDEVICE AND ITS LICENSE
+// MORE INFORMATION CAN BE FOUND AT https://github.com/libimobiledevice/libplist
 
 /**
  * @file plist/plist.h

@@ -8,35 +8,35 @@
 @import UIKit;
 #include "idevice.h"
 #include "jit.h"
-#include "heartbeat.h"
 #include "mount.h"
 
-typedef void (^HeartbeatCompletionHandler)(int result, NSString *message);
 typedef void (^LogFuncC)(const char* message, ...);
 typedef void (^LogFunc)(NSString *message);
 typedef void (^SyslogLineHandler)(NSString *line);
 typedef void (^SyslogErrorHandler)(NSError *error);
 
 @interface JITEnableContext : NSObject {
+    // tunnel
+    @protected AdapterHandle *adapter;
+    @protected RsdHandshakeHandle *handshake;
+
     // process
     @protected dispatch_queue_t processInspectorQueue;
-    @protected IdeviceProviderHandle* provider;
-        
+
     // syslog
     @protected dispatch_queue_t syslogQueue;
     @protected BOOL syslogStreaming;
     @protected SyslogRelayClientHandle *syslogClient;
     @protected SyslogLineHandler syslogLineHandler;
     @protected SyslogErrorHandler syslogErrorHandler;
-    
+
     // ideviceInfo
     @protected LockdowndClientHandle *   g_client;
 }
 @property (class, readonly)JITEnableContext* shared;
-- (IdevicePairingFile*)getPairingFileWithError:(NSError**)error;
-- (IdeviceProviderHandle*)getTcpProviderHandle;
-- (BOOL)ensureHeartbeatWithError:(NSError**)err;
-- (BOOL)startHeartbeat:(NSError**)err;
+- (RpPairingFileHandle*)getPairingFileWithError:(NSError**)error;
+- (BOOL)ensureTunnelWithError:(NSError**)err;
+- (BOOL)startTunnel:(NSError**)err;
 
 @end
 

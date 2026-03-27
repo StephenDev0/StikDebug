@@ -9,7 +9,6 @@
 #include <signal.h>
 #include <stdlib.h>
 
-#include "heartbeat.h"
 #include "jit.h"
 #include "applist.h"
 #include "profiles.h"
@@ -21,13 +20,11 @@
 
 static JITEnableContext* sharedJITContext = nil;
 
-@implementation JITEnableContext {    
-    int heartbeatToken;
-    NSError* lastHeartbeatError;
-    os_unfair_lock heartbeatLock;
-    BOOL heartbeatRunning;
-    dispatch_semaphore_t heartbeatSemaphore;
-
+@implementation JITEnableContext {
+    NSError* lastTunnelError;
+    os_unfair_lock tunnelLock;
+    BOOL tunnelConnecting;
+    dispatch_semaphore_t tunnelSemaphore;
 }
 
 + (instancetype)shared {
@@ -48,12 +45,11 @@ static JITEnableContext* sharedJITContext = nil;
     syslogClient = NULL;
     dispatch_queue_attr_t qosAttr = dispatch_queue_attr_make_with_qos_class(DISPATCH_QUEUE_SERIAL, QOS_CLASS_USER_INITIATED, 0);
     processInspectorQueue = dispatch_queue_create("com.stikdebug.processInspector", qosAttr);
-    
-    heartbeatToken = 0;
-    heartbeatLock = OS_UNFAIR_LOCK_INIT;
-    heartbeatRunning = NO;
-    heartbeatSemaphore = NULL;
-    lastHeartbeatError = nil;
+
+    tunnelLock = OS_UNFAIR_LOCK_INIT;
+    tunnelConnecting = NO;
+    tunnelSemaphore = NULL;
+    lastTunnelError = nil;
 
     return self;
 }
@@ -88,7 +84,7 @@ static JITEnableContext* sharedJITContext = nil;
     };
 }
 
-- (IdevicePairingFile*)getPairingFileWithError:(NSError**)error {
+- (RpPairingFileHandle*)getPairingFileWithError:(NSError**)error {
     NSFileManager* fm = [NSFileManager defaultManager];
     NSURL* docPathUrl = [fm URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask].firstObject;
     NSURL* pairingFileURL = [docPathUrl URLByAppendingPathComponent:@"pairingFile.plist"];
@@ -98,112 +94,108 @@ static JITEnableContext* sharedJITContext = nil;
         return nil;
     }
 
-    IdevicePairingFile* pairingFile = NULL;
-    IdeviceFfiError* err = idevice_pairing_file_read(pairingFileURL.fileSystemRepresentation, &pairingFile);
+    RpPairingFileHandle* pairingFile = NULL;
+    IdeviceFfiError* err = rp_pairing_file_read(pairingFileURL.fileSystemRepresentation, &pairingFile);
     if (err) {
         *error = [self errorWithStr:@"Failed to read pairing file!" code:err->code];
+        idevice_error_free(err);
         return nil;
     }
     return pairingFile;
 }
 
-- (IdeviceProviderHandle*)getTcpProviderHandle {
-    return provider;
-}
+- (BOOL)startTunnel:(NSError**)err {
+    os_unfair_lock_lock(&tunnelLock);
 
-// only block until first heartbeat is completed or failed.
-- (BOOL)startHeartbeat:(NSError**)err {
-    os_unfair_lock_lock(&heartbeatLock);
-    
-    // If heartbeat is already running, wait for it to complete
-    if (heartbeatRunning) {
-        dispatch_semaphore_t waitSemaphore = heartbeatSemaphore;
-        os_unfair_lock_unlock(&heartbeatLock);
-        
+    // If tunnel is already being created, wait for it to complete
+    if (tunnelConnecting) {
+        dispatch_semaphore_t waitSemaphore = tunnelSemaphore;
+        os_unfair_lock_unlock(&tunnelLock);
+
         if (waitSemaphore) {
             dispatch_semaphore_wait(waitSemaphore, DISPATCH_TIME_FOREVER);
             dispatch_semaphore_signal(waitSemaphore);
         }
-        *err = lastHeartbeatError;
+        *err = lastTunnelError;
         return *err == nil;
     }
-    
-    // Mark heartbeat as running
-    heartbeatRunning = YES;
-    heartbeatSemaphore = dispatch_semaphore_create(0);
-    dispatch_semaphore_t completionSemaphore = heartbeatSemaphore;
-    os_unfair_lock_unlock(&heartbeatLock);
-    
-    IdevicePairingFile* pairingFile = [self getPairingFileWithError:err];
+
+    // Mark tunnel as connecting
+    tunnelConnecting = YES;
+    tunnelSemaphore = dispatch_semaphore_create(0);
+    dispatch_semaphore_t completionSemaphore = tunnelSemaphore;
+    os_unfair_lock_unlock(&tunnelLock);
+
+    RpPairingFileHandle* pairingFile = [self getPairingFileWithError:err];
     if (*err) {
-        os_unfair_lock_lock(&heartbeatLock);
-        heartbeatRunning = NO;
-        heartbeatSemaphore = NULL;
-        os_unfair_lock_unlock(&heartbeatLock);
+        os_unfair_lock_lock(&tunnelLock);
+        tunnelConnecting = NO;
+        tunnelSemaphore = NULL;
+        os_unfair_lock_unlock(&tunnelLock);
         dispatch_semaphore_signal(completionSemaphore);
         return NO;
     }
 
-    globalHeartbeatToken++;
-    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
-    __block bool completionCalled = false;
-    HeartbeatCompletionHandlerC Ccompletion = ^(int result, const char *message) {
-        if(completionCalled) {
-            return;
-        }
-        if (result != 0) {
-            *err = [self errorWithStr:[NSString stringWithCString:message
-                                                         encoding:NSASCIIStringEncoding] code:result];
-            self->lastHeartbeatError = *err;
-        } else {
-            self->lastHeartbeatError = nil;
-        }
-        completionCalled = true;
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(49152);
 
-        dispatch_semaphore_signal(semaphore);
-    };
-    
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
-        startHeartbeat(
-            pairingFile,
-            &self->provider,
-                       globalHeartbeatToken,Ccompletion
-        );
-    });
-    // allow 5 seconds for heartbeat, otherwise we declare timeout
-    intptr_t isTimeout = dispatch_semaphore_wait(semaphore, dispatch_time(DISPATCH_TIME_NOW, (uint64_t)(5 * NSEC_PER_SEC)));
-    if(isTimeout) {
-        Ccompletion(-1, "Heartbeat failed to complete in reasonable time.");
+    NSString* deviceIP = [[NSUserDefaults standardUserDefaults] stringForKey:@"customTargetIP"];
+    inet_pton(AF_INET, (deviceIP && deviceIP.length > 0) ? [deviceIP UTF8String] : "10.7.0.1", &addr.sin_addr);
+
+    AdapterHandle *newAdapter = NULL;
+    RsdHandshakeHandle *newHandshake = NULL;
+    IdeviceFfiError *ffiErr = tunnel_create_rppairing(
+        (const idevice_sockaddr *)&addr,
+        sizeof(addr),
+        "StikDebug",
+        pairingFile,
+        NULL,
+        NULL,
+        &newAdapter,
+        &newHandshake
+    );
+    rp_pairing_file_free(pairingFile);
+
+    if (ffiErr) {
+        *err = [self errorWithStr:[NSString stringWithUTF8String:ffiErr->message ?: "Failed to create tunnel"]
+                             code:ffiErr->code];
+        lastTunnelError = *err;
+        idevice_error_free(ffiErr);
+    } else {
+        // Clean up old tunnel if any
+        if (handshake) { rsd_handshake_free(handshake); }
+        if (adapter) { adapter_free(adapter); }
+        adapter = newAdapter;
+        handshake = newHandshake;
+        lastTunnelError = nil;
     }
 
-    os_unfair_lock_lock(&heartbeatLock);
-    heartbeatRunning = NO;
-    heartbeatSemaphore = NULL;
-    os_unfair_lock_unlock(&heartbeatLock);
+    os_unfair_lock_lock(&tunnelLock);
+    tunnelConnecting = NO;
+    tunnelSemaphore = NULL;
+    os_unfair_lock_unlock(&tunnelLock);
     dispatch_semaphore_signal(completionSemaphore);
-    
+
     return *err == nil;
 }
 
-- (BOOL)ensureHeartbeatWithError:(NSError**)err {
-    // if it's 15s after last heartbeat, we restart heartbeat.
-    if((!lastHeartbeatDate || [[NSDate now] timeIntervalSinceDate:lastHeartbeatDate] > 15)) {
-        return [self startHeartbeat:err];
+- (BOOL)ensureTunnelWithError:(NSError**)err {
+    if (!adapter || !handshake) {
+        return [self startTunnel:err];
     }
     return YES;
 }
 
-
-
 - (void)dealloc {
     [self stopSyslogRelay];
-    if (provider) {
-        idevice_provider_free(provider);
+    if (handshake) {
+        rsd_handshake_free(handshake);
+    }
+    if (adapter) {
+        adapter_free(adapter);
     }
 }
-
-
-
-
 
 @end

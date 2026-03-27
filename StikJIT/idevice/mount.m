@@ -11,9 +11,9 @@
 
 NSError* makeError(int code, NSString* msg);
 
-size_t getMountedDeviceCount(IdeviceProviderHandle* provider, NSError** error) {
+size_t getMountedDeviceCount(AdapterHandle* adapter, RsdHandshakeHandle* handshake, NSError** error) {
     ImageMounterHandle *client = NULL;
-    IdeviceFfiError *err = image_mounter_connect(provider, &client);
+    IdeviceFfiError *err = image_mounter_connect_rsd(adapter, handshake, &client);
     if (err) {
         *error = makeError(err->code, @(err->message));
         idevice_error_free(err);
@@ -37,32 +37,22 @@ size_t getMountedDeviceCount(IdeviceProviderHandle* provider, NSError** error) {
     return deviceLength;
 }
 
-int mountPersonalDDI(IdeviceProviderHandle* provider, IdevicePairingFile* pairingFile2, NSString* imagePath, NSString* trustcachePath, NSString* manifestPath, NSError** error) {
+int mountPersonalDDI(AdapterHandle* adapter, RsdHandshakeHandle* handshake, NSString* imagePath, NSString* trustcachePath, NSString* manifestPath, NSError** error) {
     NSData *image         = [NSData dataWithContentsOfFile:imagePath];
     NSData *trustcache    = [NSData dataWithContentsOfFile:trustcachePath];
     NSData *buildManifest = [NSData dataWithContentsOfFile:manifestPath];
     if (!image || !trustcache || !buildManifest) {
-        idevice_pairing_file_free(pairingFile2);
         *error = makeError(1, @"Failed to read one or more files");
         return 1;
     }
 
+    // Get UniqueChipID via lockdownd over RSD (no session start needed - tunnel handles auth)
     LockdowndClientHandle *lockdownClient = NULL;
-    IdeviceFfiError *err = lockdownd_connect(provider, &lockdownClient);
+    IdeviceFfiError *err = lockdownd_connect_rsd(adapter, handshake, &lockdownClient);
     if (err) {
         *error = makeError(6, @(err->message));
-        idevice_pairing_file_free(pairingFile2);
         idevice_error_free(err);
         return 6;
-    }
-
-    err = lockdownd_start_session(lockdownClient, pairingFile2);
-    idevice_pairing_file_free(pairingFile2);
-    if (err) {
-        *error = makeError(7, @(err->message));
-        idevice_error_free(err);
-        lockdownd_client_free(lockdownClient);
-        return 7;
     }
 
     plist_t uniqueChipIDPlist = NULL;
@@ -79,50 +69,33 @@ int mountPersonalDDI(IdeviceProviderHandle* provider, IdevicePairingFile* pairin
     plist_free(uniqueChipIDPlist);
 
     ImageMounterHandle *mounterClient = NULL;
-    err = image_mounter_connect(provider, &mounterClient);
+    err = image_mounter_connect_rsd(adapter, handshake, &mounterClient);
     if (err) {
         *error = makeError(9, @(err->message));
         idevice_error_free(err);
         return 9;
     }
 
-    err = image_mounter_mount_personalized(
-        mounterClient,
-        provider,
-        [image bytes],
-        [image length],
-        [trustcache bytes],
-        [trustcache length],
-        [buildManifest bytes],
-        [buildManifest length],
-        NULL,
-        uniqueChipID
-    );
+    // TODO: image_mounter_mount_personalized still requires an IdeviceProviderHandle.
+    // The FFI needs an RSD variant (e.g. image_mounter_mount_personalized_rsd) that
+    // takes an AdapterHandle instead.
+    *error = makeError(10, @"mount_personalized not yet available over RSD tunnels");
     image_mounter_free(mounterClient);
-
-    if (err) {
-        *error = makeError(10, @(err->message));
-        idevice_error_free(err);
-        return 10;
-    }
-
-    return 0;
+    return 10;
 }
 
 @implementation JITEnableContext(DDI)
 
 - (NSUInteger)getMountedDeviceCount:(NSError**)error {
-    [self ensureHeartbeatWithError:error];
+    [self ensureTunnelWithError:error];
     if (*error) { return 0; }
-    return getMountedDeviceCount(provider, error);
+    return getMountedDeviceCount(adapter, handshake, error);
 }
 
 - (NSInteger)mountPersonalDDIWithImagePath:(NSString*)imagePath trustcachePath:(NSString*)trustcachePath manifestPath:(NSString*)manifestPath error:(NSError**)error {
-    [self ensureHeartbeatWithError:error];
+    [self ensureTunnelWithError:error];
     if (*error) { return 0; }
-    IdevicePairingFile *pairing = [self getPairingFileWithError:error];
-    if (*error) { return 0; }
-    return mountPersonalDDI(provider, pairing, imagePath, trustcachePath, manifestPath, error);
+    return mountPersonalDDI(adapter, handshake, imagePath, trustcachePath, manifestPath, error);
 }
 
 @end

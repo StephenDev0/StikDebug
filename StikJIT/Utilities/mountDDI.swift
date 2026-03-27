@@ -7,10 +7,9 @@
 
 import Foundation
 
-typealias IdevicePairingFile = OpaquePointer
-typealias TcpProviderHandle = OpaquePointer
-typealias CoreDeviceProxyHandle = OpaquePointer
+typealias RpPairingFileHandle = OpaquePointer
 typealias AdapterHandle = OpaquePointer
+typealias RsdHandshakeHandle = OpaquePointer
 typealias ImageMounterHandle = OpaquePointer
 typealias LockdowndClientHandle = OpaquePointer
 

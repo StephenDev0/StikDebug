@@ -38,7 +38,7 @@ struct InstalledAppQuery: EntityStringQuery {
     }
 
     func suggestedEntities() async throws -> [InstalledAppEntity] {
-        await ensureHeartbeat()
+        await ensureTunnel()
         let allApps = (try? JITEnableContext.shared.getAppList()) ?? [:]
         return allApps.map { InstalledAppEntity(id: $0.key, displayName: $0.value) }
             .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
@@ -94,7 +94,7 @@ struct RunningProcessEntity: AppEntity {
 struct RunningProcessQuery: EntityStringQuery {
     func entities(for identifiers: [String]) async throws -> [RunningProcessEntity] {
         // Always fetch fresh so PIDs are current
-        await ensureHeartbeat()
+        await ensureTunnel()
         let all = try fetchProcessEntities()
         let idSet = Set(identifiers)
         return all.filter { idSet.contains($0.id) }
@@ -112,7 +112,7 @@ struct RunningProcessQuery: EntityStringQuery {
     }
 
     func suggestedEntities() async throws -> [RunningProcessEntity] {
-        await ensureHeartbeat()
+        await ensureTunnel()
         return try fetchProcessEntities()
     }
 
@@ -172,7 +172,7 @@ struct EnableJITIntent: AppIntent, ForegroundContinuableIntent {
             return .result(value: "Select an app to enable JIT for.")
         }
 
-        await ensureHeartbeat()
+        await ensureTunnel()
 
         var scriptData: Data? = nil
         var scriptName: String? = nil
@@ -250,9 +250,9 @@ struct KillProcessIntent: AppIntent {
         if let pid {
             targetPID = pid
             targetName = "PID \(pid)"
-            await ensureHeartbeat()
+            await ensureTunnel()
         } else if let process {
-            await ensureHeartbeat()
+            await ensureTunnel()
 
             // Always re-resolve to get the current PID — the stored one may be stale
             guard let resolved = process.resolveCurrentPID() else {
@@ -313,12 +313,12 @@ struct StikDebugShortcuts: AppShortcutsProvider {
     }
 }
 
-// MARK: - Shared Heartbeat Helper
+// MARK: - Shared Tunnel Helper
 
-func ensureHeartbeat() async {
+func ensureTunnel() async {
     await MainActor.run {
-        pubHeartBeat = false
-        startHeartbeatInBackground(showErrorUI: false)
+        pubTunnelConnected = false
+        startTunnelInBackground(showErrorUI: false)
     }
     try? await Task.sleep(nanoseconds: 1_000_000_000)
 }

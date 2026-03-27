@@ -14,7 +14,7 @@
                              onError:(SyslogErrorHandler)errorHandler
 {
     NSError* error = nil;
-    [self ensureHeartbeatWithError:&error];
+    [self ensureTunnelWithError:&error];
     if(error) {
         errorHandler(error);
         return;
@@ -33,7 +33,7 @@
         if (!strongSelf) { return; }
 
         SyslogRelayClientHandle *client = NULL;
-        IdeviceFfiError *err = syslog_relay_connect_tcp(strongSelf->provider, &client);
+        IdeviceFfiError *err = syslog_relay_connect_rsd(strongSelf->adapter, strongSelf->handshake, &client);
         if (err != NULL) {
             NSString *message = err->message ? [NSString stringWithCString:err->message encoding:NSASCIIStringEncoding] : @"Failed to connect to syslog relay";
             NSError *nsError = [strongSelf errorWithStr:message code:err->code];
