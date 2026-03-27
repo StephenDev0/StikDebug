@@ -210,18 +210,23 @@ struct LocationSimulationView: View {
                                 .tint(.red)
                                 .disabled(!pairingExists || isBusy)
 
-                            Button("Simulate Location", action: simulate)
-                                .buttonStyle(.borderedProminent)
-                                .disabled(!pairingExists || isBusy)
+                            if isDrawingPath {
+                                if routeCoordinates.count > 1 {
+                                    Button("Run Path", action: simulateRoute)
+                                        .buttonStyle(.borderedProminent)
+                                        .disabled(!pairingExists || isBusy)
+                                }
+                            } else {
+                                Button("Simulate Location", action: simulate)
+                                    .buttonStyle(.borderedProminent)
+                                    .disabled(!pairingExists || isBusy)
+                            }
 
                             Button {
                                 isDrawingPath.toggle()
                                 if !isDrawingPath {
-                                    if let coord = coordinate, routeCoordinates.isEmpty {
-                                        routeCoordinates = [coord]
-                                    }
-                                } else {
                                     stopRouteLoop()
+                                    routeCoordinates.removeAll()
                                 }
                             } label: {
                                 Image(systemName: isDrawingPath ? "pencil.circle.fill" : "pencil.circle")
@@ -229,33 +234,14 @@ struct LocationSimulationView: View {
                             .buttonStyle(.bordered)
                             .tint(.orange)
 
-                            if routeCoordinates.count > 1 {
-                                Button("Run Path", action: simulateRoute)
-                                    .buttonStyle(.borderedProminent)
-                                    .tint(.green)
-                                    .disabled(!pairingExists || isBusy)
-                            }
-
-                            Button {
-                                showSaveBookmark = true
-                            } label: {
-                                Image(systemName: "bookmark")
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(.blue)
-
-                            if !routeCoordinates.isEmpty {
+                            if !isDrawingPath {
                                 Button {
-                                    stopRouteLoop()
-                                    routeCoordinates.removeAll()
-                                    if isDrawingPath {
-                                        isDrawingPath = false
-                                    }
+                                    showSaveBookmark = true
                                 } label: {
-                                    Image(systemName: "trash")
+                                    Image(systemName: "bookmark")
                                 }
                                 .buttonStyle(.bordered)
-                                .tint(.red)
+                                .tint(.blue)
                             }
                         }
                     } else {
