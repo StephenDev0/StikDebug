@@ -9,9 +9,17 @@ import SwiftUI
 import MapKit
 import UIKit
 
-extension CLLocationCoordinate2D: Equatable {
-    public static func == (lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool {
-        lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude
+private struct CoordinateSnapshot: Equatable {
+    let latitude: Double
+    let longitude: Double
+
+    init(_ coordinate: CLLocationCoordinate2D) {
+        latitude = coordinate.latitude
+        longitude = coordinate.longitude
+    }
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
 
@@ -56,8 +64,8 @@ final class LocationSearchCompleter: NSObject, ObservableObject, MKLocalSearchCo
 }
 
 struct LocationSimulationView: View {
-    // Serial queue: simulate_location and clear_simulated_location share C global
-    // state — serialising all calls eliminates the use-after-free race.
+    // Serial queue: the location simulation helpers share process-wide state, so
+    // serialising all calls avoids handle lifetime races.
     private static let locationQueue = DispatchQueue(label: "com.stik.location-sim",
                                                     qos: .userInitiated)
 
@@ -81,7 +89,7 @@ struct LocationSimulationView: View {
     @State private var newBookmarkName = ""
 
     private var pairingFilePath: String {
-        URL.documentsDirectory.appendingPathComponent("pairingFile.plist").path()
+        PairingFileStore.prepareURL().path()
     }
 
     private var pairingExists: Bool {
@@ -91,6 +99,39 @@ struct LocationSimulationView: View {
     private var deviceIP: String {
         let stored = UserDefaults.standard.string(forKey: "customTargetIP") ?? ""
         return stored.isEmpty ? "10.7.0.1" : stored
+    }
+
+    private var searchResultsListBase: some View {
+        List(searchCompleter.results.prefix(5), id: \.self) { result in
+            Button {
+                selectSearchResult(result)
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(result.title)
+                        .font(.subheadline)
+                    if !result.subtitle.isEmpty {
+                        Text(result.subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .listStyle(.plain)
+        .frame(maxHeight: 350)
+        .scrollDisabled(true)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private var searchResultsList: some View {
+        if #available(iOS 26, *) {
+            searchResultsListBase
+                .glassEffect(in: .rect(cornerRadius: 12))
+        } else {
+            searchResultsListBase
+        }
     }
 
     var body: some View {
@@ -112,59 +153,22 @@ struct LocationSimulationView: View {
                     MapCompass()
                 }
             }
-            .ignoresSafeArea()
-            .onChange(of: coordinate) { _, new in
-                if let new {
-                    position = .region(MKCoordinateRegion(center: new, latitudinalMeters: 1000, longitudinalMeters: 1000))
+                .ignoresSafeArea()
+                .onChange(of: coordinate.map(CoordinateSnapshot.init)) { _, new in
+                    if let new {
+                        position = .region(
+                            MKCoordinateRegion(
+                                center: new.coordinate,
+                                latitudinalMeters: 1000,
+                                longitudinalMeters: 1000
+                            )
+                        )
+                    }
                 }
-            }
 
             VStack(spacing: 0) {
                 if !searchCompleter.results.isEmpty {
-                    if #available(iOS 26, *) {
-                        List(searchCompleter.results.prefix(5), id: \.self) { result in
-                            Button {
-                                selectSearchResult(result)
-                            } label: {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(result.title)
-                                        .font(.subheadline)
-                                    if !result.subtitle.isEmpty {
-                                        Text(result.subtitle)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                        }
-                        .listStyle(.plain)
-                        .frame(maxHeight: 350)
-                        .scrollDisabled(true)
-                        .glassEffect(in: .rect(cornerRadius: 12))
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                    } else {
-                        List(searchCompleter.results.prefix(5), id: \.self) { result in
-                            Button {
-                                selectSearchResult(result)
-                            } label: {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(result.title)
-                                        .font(.subheadline)
-                                    if !result.subtitle.isEmpty {
-                                        Text(result.subtitle)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                        }
-                        .listStyle(.plain)
-                        .frame(maxHeight: 350)
-                        .scrollDisabled(true)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                    }
+                    searchResultsList
                 }
 
                 Spacer()
@@ -298,22 +302,39 @@ struct LocationSimulationView: View {
 
     private func simulate() {
         guard pairingExists, let coord = coordinate, !isBusy else { return }
-        isBusy = true
         let ip = deviceIP
         let path = pairingFilePath
         let lat = coord.latitude
         let lon = coord.longitude
+        runLocationCommand(
+            errorTitle: "Simulation Failed",
+            errorMessage: { code in
+                "Could not simulate location (error \(code)). Make sure the device is connected and the DDI is mounted."
+            },
+            operation: { simulate_location(ip, lat, lon, path) }
+        ) {
+            beginBackgroundTask()
+            startResendLoop()
+            BackgroundLocationManager.shared.requestStart()
+        }
+    }
+
+    private func runLocationCommand(
+        errorTitle: String,
+        errorMessage: @escaping (Int32) -> String,
+        operation: @escaping () -> Int32,
+        onSuccess: @escaping () -> Void
+    ) {
+        isBusy = true
         Self.locationQueue.async {
-            let code = simulate_location(ip, lat, lon, path)
+            let code = operation()
             DispatchQueue.main.async {
                 isBusy = false
                 if code == 0 {
-                    beginBackgroundTask()
-                    startResendLoop()
-                    BackgroundLocationManager.shared.requestStart()
+                    onSuccess()
                 } else {
-                    alertTitle = "Simulation Failed"
-                    alertMessage = "Could not simulate location (error \(code)). Make sure the device is connected and the DDI is mounted."
+                    alertTitle = errorTitle
+                    alertMessage = errorMessage(code)
                     showAlert = true
                 }
             }
@@ -322,22 +343,15 @@ struct LocationSimulationView: View {
 
     private func clear() {
         guard pairingExists, !isBusy else { return }
-        isBusy = true
         stopResendLoop()
-        Self.locationQueue.async {
-            let code = clear_simulated_location()
-            DispatchQueue.main.async {
-                isBusy = false
-                if code == 0 {
-                    coordinate = nil
-                    endBackgroundTask()
-                    BackgroundLocationManager.shared.requestStop()
-                } else {
-                    alertTitle = "Clear Failed"
-                    alertMessage = "Could not clear simulated location (error \(code))."
-                    showAlert = true
-                }
-            }
+        runLocationCommand(
+            errorTitle: "Clear Failed",
+            errorMessage: { code in "Could not clear simulated location (error \(code))." },
+            operation: clear_simulated_location
+        ) {
+            coordinate = nil
+            endBackgroundTask()
+            BackgroundLocationManager.shared.requestStop()
         }
     }
 

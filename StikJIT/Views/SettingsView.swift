@@ -4,7 +4,6 @@
 //  Created by Stephen on 3/27/25.
 
 import SwiftUI
-import UniformTypeIdentifiers
 import UIKit
 
 struct SettingsView: View {
@@ -187,7 +186,7 @@ struct SettingsView: View {
         }
             .fileImporter(
             isPresented: $isShowingPairingFilePicker,
-            allowedContentTypes: [UTType(filenameExtension: "mobiledevicepairing", conformingTo: .data)!, UTType(filenameExtension: "mobiledevicepair", conformingTo: .data)!, .propertyList],
+            allowedContentTypes: PairingFileStore.supportedContentTypes,
             allowsMultipleSelection: false
         ) { result in
             switch result {
@@ -195,43 +194,32 @@ struct SettingsView: View {
                 guard let url = urls.first else { return }
 
                 let fileManager = FileManager.default
-                let accessing = url.startAccessingSecurityScopedResource()
+                do {
+                    try PairingFileStore.importFromPicker(url, fileManager: fileManager)
+                    DispatchQueue.main.async {
+                        isImportingFile = true
+                        importProgress = 0.0
+                        pairingStatusMessage = nil
+                        showPairingFileMessage = false
+                    }
 
-                if fileManager.fileExists(atPath: url.path) {
-                    do {
-                        if fileManager.fileExists(atPath: URL.documentsDirectory.appendingPathComponent("pairingFile.plist").path) {
-                            try fileManager.removeItem(at: URL.documentsDirectory.appendingPathComponent("pairingFile.plist"))
-                        }
-
-                        try fileManager.copyItem(at: url, to: URL.documentsDirectory.appendingPathComponent("pairingFile.plist"))
+                    let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { timer in
                         DispatchQueue.main.async {
-                            isImportingFile = true
-                            importProgress = 0.0
-                            pairingStatusMessage = nil
-                            showPairingFileMessage = false
-                        }
-
-                        let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { timer in
-                            DispatchQueue.main.async {
-                                if importProgress < 1.0 {
-                                    importProgress += 0.05
-                                } else {
-                                    timer.invalidate()
-                                    isImportingFile = false
-                                }
+                            if importProgress < 1.0 {
+                                importProgress += 0.05
+                            } else {
+                                timer.invalidate()
+                                isImportingFile = false
                             }
                         }
+                    }
 
-                        RunLoop.current.add(progressTimer, forMode: .common)
-                        DispatchQueue.main.async {
-                            startTunnelInBackground()
-                        }
-
-                    } catch { }
-                }
-
-                if accessing {
-                    url.stopAccessingSecurityScopedResource()
+                    RunLoop.current.add(progressTimer, forMode: .common)
+                    DispatchQueue.main.async {
+                        startTunnelInBackground()
+                    }
+                } catch {
+                    break
                 }
             case .failure:
                 break

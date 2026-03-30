@@ -8,6 +8,7 @@
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
+import idevice
 
 // MARK: - Device Info Manager
 
@@ -59,9 +60,10 @@ final class DeviceInfoManager: ObservableObject {
     private func loadInfo() {
         busy = true
         Task.detached {
-            var cXml : UnsafeMutablePointer<CChar>? = nil;
+            let lockdownHandle = await MainActor.run { self.lockdownHandle }
+            var cXml: UnsafeMutablePointer<CChar>?
             do {
-                cXml = try await JITEnableContext.shared.ideviceInfoGetXML(withLockdownClient: self.lockdownHandle?.raw)
+                cXml = try JITEnableContext.shared.ideviceInfoGetXML(withLockdownClient: lockdownHandle?.raw)
             } catch {
                 await MainActor.run {
                     self.error = ("Fetch Error", "Failed to fetch device info \(error)")
@@ -71,7 +73,7 @@ final class DeviceInfoManager: ObservableObject {
             }
             guard let cXml else { return }
             
-            defer { free(UnsafeMutableRawPointer(mutating: cXml)) }
+            defer { plist_mem_free(cXml) }
             guard let xml = String(validatingUTF8: cXml) else {
                 await MainActor.run {
                     self.error = ("Parse Error", "Invalid XML data")
@@ -139,8 +141,7 @@ struct DeviceInfoView: View {
     @State private var showShareSheet = false
     @State private var justCopied = false
 
-    private let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-    private var pairingURL: URL { docs.appendingPathComponent("pairingFile.plist") }
+    private var pairingURL: URL { PairingFileStore.prepareURL() }
     private var isPaired: Bool { FileManager.default.fileExists(atPath: pairingURL.path) }
 
     @State private var searchText = ""
@@ -274,7 +275,7 @@ struct DeviceInfoView: View {
                     }
                 }
             }
-            .fileImporter(isPresented: $importer, allowedContentTypes: [.propertyList]) { result in
+            .fileImporter(isPresented: $importer, allowedContentTypes: PairingFileStore.supportedContentTypes) { result in
                 if case .success(let url) = result { importPairing(from: url) }
             }
             .fileExporter(
@@ -288,7 +289,7 @@ struct DeviceInfoView: View {
             }
             .onAppear { if isPaired { mgr.initAndLoad() } }
             .onDisappear { mgr.cleanup() }
-            .onChange(of: mgr.error?.message) { _ in
+            .onChange(of: mgr.error?.message) { _, _ in
                 if let err = mgr.error {
                     fail(err.title, err.message)
                     mgr.error = nil
@@ -352,14 +353,8 @@ struct DeviceInfoView: View {
     // MARK: - Pairing Import
 
     private func importPairing(from src: URL) {
-        guard src.startAccessingSecurityScopedResource() else { return }
-        defer { src.stopAccessingSecurityScopedResource() }
         do {
-            if FileManager.default.fileExists(atPath: pairingURL.path) {
-                try FileManager.default.removeItem(at: pairingURL)
-            }
-            try FileManager.default.copyItem(at: src, to: pairingURL)
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: pairingURL.path)
+            try PairingFileStore.importFromPicker(src)
             notify("Pairing File Added", "Your device is ready. Tap Reload to fetch info.")
             mgr.initAndLoad()
         } catch {

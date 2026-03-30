@@ -7,7 +7,7 @@
 
 import SwiftUI
 import Network
-import UniformTypeIdentifiers
+import idevice
 
 // Register default settings before the app starts
 private func registerAdvancedOptionsDefault() {
@@ -134,7 +134,8 @@ struct HeartbeatApp: App {
         if UserDefaults.standard.bool(forKey: "keepAliveAudio") {
             BackgroundAudioManager.shared.start()
         }
-        if let fixMethod  = class_getInstanceMethod(UIDocumentPickerViewController.self, #selector(UIDocumentPickerViewController.fix_init(forOpeningContentTypes:asCopy:))),
+        let fixSelector = NSSelectorFromString("fix_initForOpeningContentTypes:asCopy:")
+        if let fixMethod  = class_getInstanceMethod(UIDocumentPickerViewController.self, fixSelector),
            let origMethod = class_getInstanceMethod(UIDocumentPickerViewController.self, #selector(UIDocumentPickerViewController.init(forOpeningContentTypes:asCopy:))) {
             method_exchangeImplementations(origMethod, fixMethod)
         }
@@ -177,7 +178,7 @@ struct HeartbeatApp: App {
                         }
                     }
                 }
-            .onChange(of: scenePhase) { newPhase in
+            .onChange(of: scenePhase) { _, newPhase in
                 handleScenePhaseChange(newPhase)
             }
         }
@@ -269,7 +270,7 @@ class MountingProgress: ObservableObject {
 }
 
 func isPairing() -> Bool {
-    let pairingpath = URL.documentsDirectory.appendingPathComponent("pairingFile.plist").path
+    let pairingpath = PairingFileStore.prepareURL().path
     var pairingFile: RpPairingFileHandle?
     let err = rp_pairing_file_read(pairingpath, &pairingFile)
     if err != nil { return false }
@@ -279,7 +280,7 @@ func isPairing() -> Bool {
 
 func startTunnelInBackground(showErrorUI: Bool = true) {
     assert(Thread.isMainThread, "startTunnelInBackground must be called on the main thread")
-    let pairingFileURL = URL.documentsDirectory.appendingPathComponent("pairingFile.plist")
+    let pairingFileURL = PairingFileStore.prepareURL()
 
     guard FileManager.default.fileExists(atPath: pairingFileURL.path) else {
         tunnelStartPending = false
@@ -321,7 +322,7 @@ func startTunnelInBackground(showErrorUI: Bool = true) {
             DispatchQueue.main.async {
                 if code == -9 {
                     do {
-                        try FileManager.default.removeItem(at: URL.documentsDirectory.appendingPathComponent("pairingFile.plist"))
+                        try PairingFileStore.remove()
                         LogManager.shared.addInfoLog("Removed invalid pairing file")
                     } catch {
                         LogManager.shared.addErrorLog("Failed to remove invalid pairing file: \(error.localizedDescription)")

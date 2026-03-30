@@ -11,6 +11,8 @@ final class BackgroundAudioManager {
     private var engine = AVAudioEngine()
     private var player = AVAudioPlayerNode()
     private var isRunning = false
+    private var persistentEnabled = false
+    private var activityCount = 0
     private var healthCheckTimer: Timer?
 
     private init() {
@@ -29,22 +31,54 @@ final class BackgroundAudioManager {
     }
 
     func start() {
-        isRunning = true
-        startEngine()
-        startHealthCheck()
+        persistentEnabled = true
+        refreshRunningState()
     }
 
     func stop() {
-        isRunning = false
-        healthCheckTimer?.invalidate()
-        healthCheckTimer = nil
-        player.stop()
-        engine.stop()
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        persistentEnabled = false
+        refreshRunningState()
+    }
+
+    func requestStart() {
+        activityCount += 1
+        refreshRunningState()
+    }
+
+    func requestStop() {
+        activityCount = max(activityCount - 1, 0)
+        refreshRunningState()
+    }
+
+    private func refreshRunningState() {
+        let shouldRun = persistentEnabled || (activityCount > 0 && UserDefaults.standard.bool(forKey: "keepAliveAudio"))
+        guard shouldRun != isRunning else {
+            if shouldRun {
+                recoverIfNeeded()
+            }
+            return
+        }
+
+        isRunning = shouldRun
+        if shouldRun {
+            startEngine()
+            startHealthCheck()
+        } else {
+            healthCheckTimer?.invalidate()
+            healthCheckTimer = nil
+            player.stop()
+            engine.stop()
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
     }
 
     private func startEngine() {
         do {
+            engine.stop()
+            player.stop()
+            engine = AVAudioEngine()
+            player = AVAudioPlayerNode()
+
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, options: .mixWithOthers)
             try session.setActive(true)

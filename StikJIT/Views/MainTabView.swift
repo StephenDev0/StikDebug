@@ -26,7 +26,7 @@ struct MainTabView: View {
     @State private var didSetInitialHome = false
 
     private var configurableTabs: [TabDescriptor] {
-        var tabs: [TabDescriptor] = [
+        let tabs: [TabDescriptor] = [
             TabDescriptor(id: "home", title: "Apps", systemImage: "square.grid.2x2") { AnyView(HomeView()) },
             TabDescriptor(id: "scripts", title: "Scripts", systemImage: "scroll") { AnyView(ScriptListView()) },
             TabDescriptor(id: "tools", title: "Tools", systemImage: "wrench.and.screwdriver") { AnyView(ToolsView()) },
@@ -108,7 +108,7 @@ struct MainTabView: View {
                     switchObserver = nil
                 }
             }
-            .onChange(of: enabledTabIdentifiers) { _ in
+            .onChange(of: enabledTabIdentifiers) { _, _ in
                 ensureSelectionIsValid()
             }
             .sheet(item: $detachedTab) { descriptor in

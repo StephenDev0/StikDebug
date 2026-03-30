@@ -73,18 +73,14 @@ struct RunningProcessEntity: AppEntity {
     /// Resolve the current PID for this process by re-fetching the process list.
     func resolveCurrentPID() -> Int? {
         var err: NSError?
-        let entries = FetchDeviceProcessList(&err) ?? []
+        let entries = ProcessInfoEntry.currentEntries(&err)
         for item in entries {
-            guard let dict = item as? NSDictionary,
-                  let pidNum = dict["pid"] as? NSNumber else { continue }
-            let name = dict["name"] as? String ?? ""
-            let bID = dict["bundleID"] as? String ?? ""
             // Match by bundle ID first (most stable), then by name
-            if let myBundle = bundleID, !myBundle.isEmpty, bID == myBundle {
-                return pidNum.intValue
+            if let myBundle = bundleID, !myBundle.isEmpty, item.bundleID == myBundle {
+                return item.pid
             }
-            if name == displayName {
-                return pidNum.intValue
+            if item.displayName == displayName {
+                return item.pid
             }
         }
         return nil
@@ -118,32 +114,16 @@ struct RunningProcessQuery: EntityStringQuery {
 
     private func fetchProcessEntities() throws -> [RunningProcessEntity] {
         var err: NSError?
-        let entries = FetchDeviceProcessList(&err) ?? []
+        let entries = ProcessInfoEntry.currentEntries(&err)
         if let err { throw err }
 
-        return entries.compactMap { item -> RunningProcessEntity? in
-            guard let dict = item as? NSDictionary,
-                  let pidNumber = dict["pid"] as? NSNumber else { return nil }
-            let pid = pidNumber.intValue
-            let name = dict["name"] as? String
-            let bundleID = dict["bundleID"] as? String
-            let path = dict["path"] as? String ?? ""
-
-            let displayName: String
-            if let name, !name.isEmpty {
-                displayName = name
-            } else if let bundleID, !bundleID.isEmpty {
-                displayName = bundleID
-            } else if let last = path.replacingOccurrences(of: "file://", with: "").split(separator: "/").last {
-                displayName = String(last)
-            } else {
-                displayName = "Process \(pid)"
-            }
-
-            // Use bundleID as stable ID if available, otherwise fall back to name
-            let stableID = (bundleID != nil && !bundleID!.isEmpty) ? bundleID! : displayName
-
-            return RunningProcessEntity(id: stableID, pid: pid, displayName: displayName, bundleID: bundleID)
+        return entries.map { entry in
+            RunningProcessEntity(
+                id: entry.stableIdentifier,
+                pid: entry.pid,
+                displayName: entry.displayName,
+                bundleID: entry.bundleID
+            )
         }
         .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
     }
@@ -176,7 +156,7 @@ struct EnableJITIntent: AppIntent, ForegroundContinuableIntent {
 
         var scriptData: Data? = nil
         var scriptName: String? = nil
-        if let preferred = IntentScriptResolver.preferredScript(for: bundleID) {
+        if let preferred = ScriptStore.preferredScript(for: bundleID) {
             scriptData = preferred.data
             scriptName = preferred.name
         }
@@ -198,9 +178,10 @@ struct EnableJITIntent: AppIntent, ForegroundContinuableIntent {
                         userInfo: ["model": model, "scriptData": sd, "scriptName": name]
                     )
                 }
-                DispatchQueue.global(qos: .background).async {
-                    do { try model.runScript(data: sd, name: name) }
-                    catch { LogManager.shared.addErrorLog("Script error: \(error.localizedDescription)") }
+                do { try model.runScript(data: sd, name: name) }
+                catch {
+                    semaphore.signal()
+                    LogManager.shared.addErrorLog("Script error: \(error.localizedDescription)")
                 }
             }
         }
@@ -321,76 +302,4 @@ func ensureTunnel() async {
         startTunnelInBackground(showErrorUI: false)
     }
     try? await Task.sleep(nanoseconds: 1_000_000_000)
-}
-
-// MARK: - Script Resolution (mirrors HomeView logic)
-
-enum IntentScriptResolver {
-    static func preferredScript(for bundleID: String) -> (data: Data, name: String)? {
-        if let assigned = assignedScript(for: bundleID) {
-            return assigned
-        }
-        return autoScript(for: bundleID)
-    }
-
-    private static func assignedScript(for bundleID: String) -> (data: Data, name: String)? {
-        guard let mapping = UserDefaults.standard.dictionary(forKey: "BundleScriptMap") as? [String: String],
-              let scriptName = mapping[bundleID] else { return nil }
-        let scriptsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("scripts")
-        let scriptURL = scriptsDir.appendingPathComponent(scriptName)
-        guard FileManager.default.fileExists(atPath: scriptURL.path),
-              let data = try? Data(contentsOf: scriptURL) else { return nil }
-        return (data, scriptName)
-    }
-
-    private static func autoScript(for bundleID: String) -> (data: Data, name: String)? {
-        guard ProcessInfo.processInfo.hasTXM else { return nil }
-        guard #available(iOS 26, *) else { return nil }
-        let appName = (try? JITEnableContext.shared.getAppList()[bundleID]) ?? storedFavoriteName(for: bundleID)
-        guard let appName,
-              let resource = autoScriptResource(for: appName) else {
-            return nil
-        }
-        let scriptsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("scripts")
-        let documentsURL = scriptsDir.appendingPathComponent(resource.fileName)
-        if let data = try? Data(contentsOf: documentsURL) {
-            return (data, resource.fileName)
-        }
-        guard let bundleURL = Bundle.main.url(forResource: resource.resource, withExtension: "js"),
-              let data = try? Data(contentsOf: bundleURL) else {
-            return nil
-        }
-        return (data, resource.fileName)
-    }
-
-    private static func storedFavoriteName(for bundleID: String) -> String? {
-        let defaults = UserDefaults(suiteName: "group.com.stik.sj")
-        let names = defaults?.dictionary(forKey: "favoriteAppNames") as? [String: String]
-        return names?[bundleID]
-    }
-
-    private static func autoScriptResource(for appName: String) -> (resource: String, fileName: String)? {
-        switch appName {
-        case "maciOS":
-            return ("maciOS", "maciOS.js")
-        case "Amethyst", "MeloNX":
-            return ("Amethyst-MeloNX", "Amethyst-MeloNX.js")
-        case "Geode":
-            return ("Geode", "Geode.js")
-        case "Manic EMU":
-            return ("manic", "manic.js")
-        case "UTM", "DolphiniOS", "Flycast":
-            return ("UTM-Dolphin", "UTM-Dolphin.js")
-        default:
-            return nil
-        }
-    }
-}
-
-// MARK: - Notification for JS Script UI
-
-extension Notification.Name {
-    static let intentJSScriptReady = Notification.Name("intentJSScriptReady")
 }

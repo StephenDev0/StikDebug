@@ -17,7 +17,6 @@ struct ConsoleLogsView: View {
     @State private var showingCustomAlert = false
     @State private var alertMessage = ""
     @State private var alertTitle = ""
-    @State private var isError = false
     
     @State private var logCheckTimer: Timer? = nil
     
@@ -111,12 +110,9 @@ struct ConsoleLogsView: View {
                 .onDisappear {
             systemLogStream.stop()
         }
-        .onChange(of: systemLogStream.lastError) { newError in
+        .onChange(of: systemLogStream.lastError) { _, newError in
             if let error = newError {
-                alertTitle = "Syslog Error"
-                alertMessage = error
-                isError = true
-                showingCustomAlert = true
+                presentAlert(title: "Syslog Error", message: error)
                 systemLogStream.lastError = nil
             }
         }
@@ -177,7 +173,7 @@ struct ConsoleLogsView: View {
             .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
                 jitIsAtBottom = offset > -20
             }
-            .onChange(of: logManager.logs.count) { _ in
+            .onChange(of: logManager.logs.count) { _, _ in
                 guard jitIsAtBottom, let lastLog = logManager.logs.last else { return }
                 withAnimation {
                     proxy.scrollTo(lastLog.id, anchor: .bottom)
@@ -246,7 +242,7 @@ struct ConsoleLogsView: View {
                 .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
                     syslogIsAtBottom = offset > -20
                 }
-                .onChange(of: systemLogStream.entries.count) { _ in
+                .onChange(of: systemLogStream.entries.count) { _, _ in
                     guard syslogIsAtBottom, syslogSearchText.isEmpty,
                           let lastLog = systemLogStream.entries.last else { return }
                     withAnimation {
@@ -276,10 +272,7 @@ struct ConsoleLogsView: View {
             "[\(formatTime(date: $0.timestamp))] [\($0.type.rawValue)] \($0.message)"
         }.joined(separator: "\n")
         UIPasteboard.general.string = logsContent
-        alertTitle = "Logs Copied"
-        alertMessage = "Logs have been copied to clipboard."
-        isError = false
-        showingCustomAlert = true
+        presentAlert(title: "Logs Copied", message: "Logs have been copied to clipboard.")
     }
 
     @ViewBuilder
@@ -294,10 +287,7 @@ struct ConsoleLogsView: View {
             }
         } else {
             Button("Export Logs", systemImage: "square.and.arrow.up") {
-                alertTitle = "Export Failed"
-                alertMessage = "No idevice logs found"
-                isError = true
-                showingCustomAlert = true
+                presentAlert(title: "Export Failed", message: "No idevice logs found")
             }
         }
     }
@@ -332,7 +322,7 @@ struct ConsoleLogsView: View {
     }
 
     private func createSyslogAttributedString(_ entry: SystemLogStream.Entry) -> NSAttributedString {
-        let type = logType(for: entry.raw)
+        let type = Self.logType(for: entry.raw)
         let fullString = NSMutableAttributedString()
 
         let timestampString = "[\(DateFormatter.consoleLogsFormatter.string(from: entry.timestamp))]"
@@ -358,9 +348,7 @@ struct ConsoleLogsView: View {
         return fullString
     }
     private func formatTime(date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm:ss"
-        return formatter.string(from: date)
+        DateFormatter.consoleLogsFormatter.string(from: date)
     }
     
     private func colorForLogType(_ type: LogManager.LogEntry.LogType) -> Color {
@@ -376,7 +364,7 @@ struct ConsoleLogsView: View {
         }
     }
 
-    private func logType(for line: String) -> LogManager.LogEntry.LogType {
+    nonisolated private static func logType(for line: String) -> LogManager.LogEntry.LogType {
         let lowercase = line.lowercased()
         if lowercase.contains("error") {
             return .error
@@ -391,7 +379,7 @@ struct ConsoleLogsView: View {
 
     private var syslogErrorCount: Int {
         systemLogStream.entries.reduce(0) { count, entry in
-            count + (logType(for: entry.raw) == .error ? 1 : 0)
+            count + (Self.logType(for: entry.raw) == .error ? 1 : 0)
         }
     }
 
@@ -428,26 +416,7 @@ struct ConsoleLogsView: View {
 
                 let skipPrefixes = ["=== DEVICE INFORMATION ===", "Version:", "Name:", "Model:", "=== LOG ENTRIES ==="]
 
-                var parsed: [LogManager.LogEntry] = []
-                parsed.reserveCapacity(recentLines.count)
-
-                for line in recentLines {
-                    if line.isEmpty { continue }
-                    if skipPrefixes.contains(where: { line.contains($0) }) { continue }
-
-                    let type: LogManager.LogEntry.LogType
-                    if line.contains("ERROR") || line.contains("Error") {
-                        type = .error
-                    } else if line.contains("WARNING") || line.contains("Warning") {
-                        type = .warning
-                    } else if line.contains("DEBUG") {
-                        type = .debug
-                    } else {
-                        type = .info
-                    }
-                    parsed.append(LogManager.LogEntry(timestamp: Date(), type: type, message: line))
-                }
-
+                let parsed = Self.parseAppLogEntries(from: recentLines, skipPrefixes: skipPrefixes)
                 return (parsed, lines.count)
             } catch {
                 return nil
@@ -501,25 +470,7 @@ struct ConsoleLogsView: View {
                 guard lines.count > previousCount else { return ([], lines.count) }
 
                 let newLines = lines[previousCount..<lines.count]
-                var parsed: [LogManager.LogEntry] = []
-                parsed.reserveCapacity(newLines.count)
-
-                for line in newLines {
-                    if line.isEmpty { continue }
-
-                    let type: LogManager.LogEntry.LogType
-                    if line.contains("ERROR") || line.contains("Error") {
-                        type = .error
-                    } else if line.contains("WARNING") || line.contains("Warning") {
-                        type = .warning
-                    } else if line.contains("DEBUG") {
-                        type = .debug
-                    } else {
-                        type = .info
-                    }
-                    parsed.append(LogManager.LogEntry(timestamp: Date(), type: type, message: line))
-                }
-
+                let parsed = Self.parseAppLogEntries(from: newLines)
                 return (parsed, lines.count)
             } catch {
                 return nil
@@ -558,10 +509,8 @@ struct ConsoleLogsView: View {
     private func copySyslogToClipboard() {
         let entries = filteredSyslogEntries
         guard !entries.isEmpty else {
-            alertTitle = "Export Failed"
-            alertMessage = syslogSearchText.isEmpty ? "No syslog entries to copy." : "No matching syslog entries to copy."
-            isError = true
-            showingCustomAlert = true
+            let message = syslogSearchText.isEmpty ? "No syslog entries to copy." : "No matching syslog entries to copy."
+            presentAlert(title: "Export Failed", message: message)
             return
         }
 
@@ -570,12 +519,10 @@ struct ConsoleLogsView: View {
         }.joined(separator: "\n")
 
         UIPasteboard.general.string = content
-        alertTitle = "Logs Copied"
-        alertMessage = syslogSearchText.isEmpty
+        let message = syslogSearchText.isEmpty
             ? "Latest syslog entries copied to clipboard."
             : "\(entries.count) filtered syslog entries copied to clipboard."
-        isError = false
-        showingCustomAlert = true
+        presentAlert(title: "Logs Copied", message: message)
     }
 
     private var syslogControlIcon: String {
@@ -590,6 +537,24 @@ struct ConsoleLogsView: View {
             return "Start syslog relay"
         }
         return systemLogStream.isPaused ? "Resume syslog stream" : "Pause syslog stream"
+    }
+
+    private func presentAlert(title: String, message: String) {
+        alertTitle = title
+        alertMessage = message
+        showingCustomAlert = true
+    }
+
+    nonisolated private static func parseAppLogEntries<S: Sequence>(from lines: S, skipPrefixes: [String] = []) -> [LogManager.LogEntry] where S.Element == String {
+        var parsed: [LogManager.LogEntry] = []
+        parsed.reserveCapacity(lines.underestimatedCount)
+
+        for line in lines {
+            if line.isEmpty { continue }
+            if skipPrefixes.contains(where: { line.contains($0) }) { continue }
+            parsed.append(LogManager.LogEntry(timestamp: Date(), type: Self.logType(for: line), message: line))
+        }
+        return parsed
     }
 
 }

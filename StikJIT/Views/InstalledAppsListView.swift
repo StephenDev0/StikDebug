@@ -15,7 +15,7 @@ import Combine
 struct InstalledAppsListView: View {
     @StateObject private var viewModel = InstalledAppsViewModel()
 
-    private let sharedDefaults = UserDefaults(suiteName: "group.com.stik.sj") ?? .standard
+    private let sharedDefaults = UserDefaults(suiteName: ScriptStore.favoriteAppNamesSuiteName) ?? .standard
 
     @AppStorage("recentApps") private var recentApps: [String] = []
     @AppStorage("favoriteApps") private var favoriteApps: [String] = [] {
@@ -414,7 +414,7 @@ private enum AppListTab: Int, CaseIterable, Identifiable {
         let prevF = (sharedDefaults.array(forKey: "favoriteApps") as? [String]) ?? []
         let prevPinned = (sharedDefaults.array(forKey: "pinnedSystemApps") as? [String]) ?? []
         let prevPinnedNames = (sharedDefaults.dictionary(forKey: "pinnedSystemAppNames") as? [String: String]) ?? [:]
-        let prevFavNames = (sharedDefaults.dictionary(forKey: "favoriteAppNames") as? [String: String]) ?? [:]
+        let prevFavNames = (sharedDefaults.dictionary(forKey: ScriptStore.favoriteAppNamesKey) as? [String: String]) ?? [:]
 
         if prevR != recentApps {
             sharedDefaults.set(recentApps, forKey: "recentApps")
@@ -441,7 +441,7 @@ private enum AppListTab: Int, CaseIterable, Identifiable {
             return (id, name)
         })
         if prevFavNames != computedFavNames {
-            sharedDefaults.set(computedFavNames, forKey: "favoriteAppNames")
+            sharedDefaults.set(computedFavNames, forKey: ScriptStore.favoriteAppNamesKey)
             touched = true
         }
 
@@ -693,16 +693,14 @@ struct AppButton: View {
     }
 
     private func assignScript(_ url: URL?) {
-        var mapping = UserDefaults.standard.dictionary(forKey: "BundleScriptMap") as? [String: String] ?? [:]
         if let url {
             let filename = url.lastPathComponent
-            mapping[bundleID] = filename
+            ScriptStore.updateAssignedScriptName(filename, for: bundleID)
             assignedScriptName = filename
         } else {
-            mapping.removeValue(forKey: bundleID)
+            ScriptStore.updateAssignedScriptName(nil, for: bundleID)
             assignedScriptName = nil
         }
-        UserDefaults.standard.set(mapping, forKey: "BundleScriptMap")
         Haptics.light()
     }
 
@@ -711,8 +709,7 @@ struct AppButton: View {
     }
 
     private static func currentAssignment(for bundleID: String) -> String? {
-        let mapping = UserDefaults.standard.dictionary(forKey: "BundleScriptMap") as? [String: String]
-        return mapping?[bundleID]
+        ScriptStore.assignedScriptName(for: bundleID)
     }
 
     private func persistIfChanged() {

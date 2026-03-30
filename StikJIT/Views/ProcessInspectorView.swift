@@ -215,19 +215,17 @@ final class ProcessInspectorViewModel: ObservableObject {
         guard !isRefreshing else { return }
         isRefreshing = true
         Task.detached(priority: .utility) { [weak self] in
+            guard let self else { return }
             var err: NSError?
-            let entries = FetchDeviceProcessList(&err) ?? []
+            let parsedEntries = ProcessInfoEntry.currentEntries(&err)
+            let errorMessage = err?.localizedDescription
             await MainActor.run {
-                guard let self else { return }
-                if let err {
+                if let errorMessage {
                     self.errorAlertTitle = "Failed to Load Processes"
-                    self.errorAlertMessage = err.localizedDescription
+                    self.errorAlertMessage = errorMessage
                     self.showErrorAlert = true
                 } else {
-                    self.processes = entries.compactMap { item -> ProcessInfoEntry? in
-                        guard let dict = item as? NSDictionary else { return nil }
-                        return ProcessInfoEntry(dictionary: dict)
-                    }
+                    self.processes = parsedEntries
                     self.lastUpdated = Date()
                 }
                 self.isRefreshing = false
@@ -246,22 +244,21 @@ final class ProcessInspectorViewModel: ObservableObject {
         killingPID = targetPID
         killTimeoutTask?.cancel()
         killTimeoutTask = Task { [weak self] in
+            guard let self else { return }
             try? await Task.sleep(for: .seconds(8))
-            await MainActor.run {
-                guard let self else { return }
-                if self.killingPID == targetPID {
-                    self.killingPID = nil
-                    self.killAlertTitle = "Kill Timed Out"
-                    self.killAlertMessage = "Could not confirm termination for PID \(targetPID). Try again."
-                    self.showKillAlert = true
-                }
+            if self.killingPID == targetPID {
+                self.killingPID = nil
+                self.killAlertTitle = "Kill Timed Out"
+                self.killAlertMessage = "Could not confirm termination for PID \(targetPID). Try again."
+                self.showKillAlert = true
             }
         }
         Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
             var err: NSError?
             let success = KillDeviceProcess(Int32(targetPID), &err)
+            let errorMessage = err?.localizedDescription ?? "Unknown error"
             await MainActor.run {
-                guard let self else { return }
                 self.killTimeoutTask?.cancel()
                 self.killTimeoutTask = nil
                 guard self.killingPID == targetPID else { return }
@@ -273,46 +270,11 @@ final class ProcessInspectorViewModel: ObservableObject {
                     self.refresh()
                 } else {
                     self.killAlertTitle = "Kill Failed"
-                    self.killAlertMessage = err?.localizedDescription ?? "Unknown error"
+                    self.killAlertMessage = errorMessage
                     self.showKillAlert = true
                 }
             }
         }
     }
     
-}
-
-struct ProcessInfoEntry: Identifiable {
-    let pid: Int
-    private let rawPath: String
-    let bundleID: String?
-    let name: String?
-    
-    init?(dictionary: NSDictionary) {
-        guard let pidNumber = dictionary["pid"] as? NSNumber else { return nil }
-        pid = pidNumber.intValue
-        rawPath = dictionary["path"] as? String ?? "Unknown"
-        bundleID = dictionary["bundleID"] as? String
-        name = dictionary["name"] as? String
-    }
-    
-    var id: Int { pid }
-    
-    var executablePath: String {
-        rawPath.replacingOccurrences(of: "file://", with: "")
-    }
-    
-    var displayName: String {
-        if let name = name, !name.isEmpty {
-            return name
-        }
-        if let bundle = bundleID, !bundle.isEmpty {
-            return bundle
-        }
-        let cleaned = executablePath
-        if let component = cleaned.split(separator: "/").last {
-            return String(component)
-        }
-        return "Process \(pid)"
-    }
 }

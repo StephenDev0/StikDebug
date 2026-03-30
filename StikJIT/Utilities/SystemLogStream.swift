@@ -55,10 +55,13 @@ final class SystemLogStream: ObservableObject {
         startBatchTimer()
 
         JITEnableContext.shared.startSyslogRelay(handler: { [weak self] line in
-            guard let line else { return }
-            self?.handleLine(line)
+            Task { @MainActor [weak self] in
+                self?.handleLine(line)
+            }
         }, onError: { [weak self] error in
-            self?.handleError(error as NSError?)
+            Task { @MainActor [weak self] in
+                self?.handleError(error)
+            }
         })
     }
 
@@ -136,9 +139,11 @@ final class SystemLogStream: ObservableObject {
     private func startBatchTimer() {
         batchTimer?.invalidate()
         batchTimer = Timer.scheduledTimer(withTimeInterval: Self.batchInterval, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            guard !self.isPaused, self.updateInterval == 0, !self.pendingEntries.isEmpty else { return }
-            self.flushAllPending()
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                guard !self.isPaused, self.updateInterval == 0, !self.pendingEntries.isEmpty else { return }
+                self.flushAllPending()
+            }
         }
         if let batchTimer {
             RunLoop.main.add(batchTimer, forMode: .common)
@@ -178,12 +183,14 @@ final class SystemLogStream: ObservableObject {
         }
 
         flushTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: false) { [weak self] _ in
-            guard let self else { return }
-            self.flushTimer = nil
-            guard !self.isPaused else { return }
-            self.flushAllPending()
-            if !self.pendingEntries.isEmpty {
-                self.scheduleFlushIfNeeded()
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.flushTimer = nil
+                guard !self.isPaused else { return }
+                self.flushAllPending()
+                if !self.pendingEntries.isEmpty {
+                    self.scheduleFlushIfNeeded()
+                }
             }
         }
 
@@ -196,10 +203,12 @@ final class SystemLogStream: ObservableObject {
         guard !isStreaming else { return }
         guard retryTimer == nil else { return }
         let timer = Timer(timeInterval: 2.0, repeats: false) { [weak self] _ in
-            guard let self else { return }
-            self.retryTimer = nil
-            if !self.isStreaming && !self.isPaused {
-                self.start()
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.retryTimer = nil
+                if !self.isStreaming && !self.isPaused {
+                    self.start()
+                }
             }
         }
         retryTimer = timer

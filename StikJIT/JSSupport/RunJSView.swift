@@ -7,11 +7,12 @@
 
 import SwiftUI
 import JavaScriptCore
+import idevice
 
 typealias RemoteServerHandle = OpaquePointer
 typealias ScreenshotClientHandle = OpaquePointer
 
-class RunJSViewModel: ObservableObject {
+final class RunJSViewModel: ObservableObject, @unchecked Sendable {
     var context: JSContext?
     @Published var logs: [String] = []
     @Published var scriptName: String = "Script"
@@ -19,9 +20,9 @@ class RunJSViewModel: ObservableObject {
     var pid: Int
     var debugProxy: OpaquePointer?
     var remoteServer: OpaquePointer?
-    var semaphore: dispatch_semaphore_t?
+    var semaphore: DispatchSemaphore?
     
-    init(pid: Int, debugProxy: OpaquePointer?, remoteServer: OpaquePointer?, semaphore: dispatch_semaphore_t?) {
+    init(pid: Int, debugProxy: OpaquePointer?, remoteServer: OpaquePointer?, semaphore: DispatchSemaphore?) {
         self.pid = pid
         self.debugProxy = debugProxy
         self.remoteServer = remoteServer
@@ -166,7 +167,7 @@ class RunJSViewModel: ObservableObject {
     
     private func sanitizedScreenshotName(from preferredName: String?) -> String {
         let defaultName = "screenshot-\(Int(Date().timeIntervalSince1970))"
-        guard var candidate = preferredName?.trimmingCharacters(in: .whitespacesAndNewlines),
+        guard let candidate = preferredName?.trimmingCharacters(in: .whitespacesAndNewlines),
               !candidate.isEmpty else {
             return "\(defaultName).png"
         }
@@ -215,7 +216,7 @@ struct RunJSView: View {
                 }
             }
             .navigationTitle("Running \(model.scriptName)")
-            .onChange(of: model.logs.count) { newCount in
+            .onChange(of: model.logs.count) { _, newCount in
                 guard newCount > 0 else { return }
                 withAnimation {
                     proxy.scrollTo(newCount - 1, anchor: .bottom)

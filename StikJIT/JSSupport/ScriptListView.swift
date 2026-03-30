@@ -14,7 +14,7 @@ struct ScriptListView: View {
     @State private var showNewFileAlert = false
     @State private var newFileName = ""
     @State private var showImporter = false
-    @AppStorage("DefaultScriptName") private var defaultScriptName = "attachDetach.js"
+    @AppStorage(UserDefaults.Keys.defaultScriptName) private var defaultScriptName = UserDefaults.Keys.defaultScriptNameValue
 
     @State private var isBusy = false
     @State private var alertVisible = false
@@ -200,43 +200,14 @@ struct ScriptListView: View {
 
     // MARK: - File Ops
 
-    private func scriptsDirectory() -> URL {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("scripts")
-        var isDir: ObjCBool = false
-        let exists = FileManager.default.fileExists(atPath: dir.path, isDirectory: &isDir)
-        do {
-            if exists && !isDir.boolValue {
-                try FileManager.default.removeItem(at: dir)
-            }
-            if !exists || !isDir.boolValue {
-                try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            }
-            try ensureDefaultScripts(in: dir)
-        } catch {
-            presentError(title: "Unable to Create Scripts Folder", message: error.localizedDescription)
-        }
-        return dir
+    private func scriptsDirectory() throws -> URL {
+        let directory = try ScriptStore.prepareDirectory()
+        try ensureEditorScripts(in: directory)
+        return directory
     }
 
-    private func ensureDefaultScripts(in directory: URL) throws {
+    private func ensureEditorScripts(in directory: URL) throws {
         let fm = FileManager.default
-        let bundledScripts: [(resource: String, filename: String)] = [
-            ("attachDetach", "attachDetach.js"),
-            ("maciOS", "maciOS.js"),
-            ("Amethyst-MeloNX", "Amethyst-MeloNX.js"),
-            ("Geode", "Geode.js"),
-            ("manic", "manic.js"),
-            ("UTM-Dolphin", "UTM-Dolphin.js")
-        ]
-        for entry in bundledScripts {
-            if let bundleURL = Bundle.main.url(forResource: entry.resource, withExtension: "js") {
-                let destination = directory.appendingPathComponent(entry.filename)
-                if !fm.fileExists(atPath: destination.path) {
-                    try fm.copyItem(at: bundleURL, to: destination)
-                }
-            }
-        }
         let screenshotURL = directory.appendingPathComponent("screenshot-demo.js")
         if !fm.fileExists(atPath: screenshotURL.path) {
             try screenshotDemoScript.write(to: screenshotURL, atomically: true, encoding: .utf8)
@@ -248,10 +219,15 @@ struct ScriptListView: View {
     }
 
     private func loadScripts() {
-        let dir = scriptsDirectory()
-        scripts = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil))?
-            .filter { $0.pathExtension.lowercased() == "js" }
-            .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending } ?? []
+        do {
+            let directory = try scriptsDirectory()
+            scripts = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+                .filter { $0.pathExtension.lowercased() == "js" }
+                .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+        } catch {
+            scripts = []
+            presentError(title: "Unable to Load Scripts", message: error.localizedDescription)
+        }
     }
 
     private func saveDefaultScript(_ url: URL) {
@@ -263,12 +239,12 @@ struct ScriptListView: View {
         guard !newFileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         var filename = newFileName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !filename.hasSuffix(".js") { filename += ".js" }
-        let newURL = scriptsDirectory().appendingPathComponent(filename)
-        guard !FileManager.default.fileExists(atPath: newURL.path) else {
-            presentError(title: "Failed to Create New Script", message: "A script with the same name already exists.")
-            return
-        }
         do {
+            let newURL = try scriptsDirectory().appendingPathComponent(filename)
+            guard !FileManager.default.fileExists(atPath: newURL.path) else {
+                presentError(title: "Failed to Create New Script", message: "A script with the same name already exists.")
+                return
+            }
             try "".write(to: newURL, atomically: true, encoding: .utf8)
             newFileName = ""
             loadScripts()
@@ -282,7 +258,7 @@ struct ScriptListView: View {
         do {
             try FileManager.default.removeItem(at: url)
             if url.lastPathComponent == defaultScriptName {
-                UserDefaults.standard.removeObject(forKey: "DefaultScriptName")
+                UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.defaultScriptName)
             }
             loadScripts()
         } catch {
@@ -295,7 +271,8 @@ struct ScriptListView: View {
         DispatchQueue.global(qos: .userInitiated).async {
             defer { DispatchQueue.main.async { self.isBusy = false } }
             do {
-                let dest = self.scriptsDirectory().appendingPathComponent(fileURL.lastPathComponent)
+                let directory = try self.scriptsDirectory()
+                let dest = directory.appendingPathComponent(fileURL.lastPathComponent)
                 if FileManager.default.fileExists(atPath: dest.path) {
                     try FileManager.default.removeItem(at: dest)
                 }

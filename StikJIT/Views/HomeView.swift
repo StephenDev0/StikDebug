@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import UniformTypeIdentifiers
 import UIKit
 
 struct JITEnableConfiguration {
@@ -14,6 +13,63 @@ struct JITEnableConfiguration {
     var pid : Int? = nil
     var scriptData: Data? = nil
     var scriptName : String? = nil
+}
+
+private final class DebugKeepAliveLease {
+    private let stateLock = NSLock()
+    private var isActive = false
+    private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+
+    init() {
+        activate()
+    }
+
+    func invalidate() {
+        stateLock.lock()
+        guard isActive else {
+            stateLock.unlock()
+            return
+        }
+        isActive = false
+        stateLock.unlock()
+
+        runOnMain {
+            BackgroundAudioManager.shared.requestStop()
+            BackgroundLocationManager.shared.requestStop()
+
+            if self.backgroundTaskID != .invalid {
+                UIApplication.shared.endBackgroundTask(self.backgroundTaskID)
+                self.backgroundTaskID = .invalid
+            }
+        }
+    }
+
+    private func activate() {
+        stateLock.lock()
+        guard !isActive else {
+            stateLock.unlock()
+            return
+        }
+        isActive = true
+        stateLock.unlock()
+
+        runOnMain {
+            BackgroundAudioManager.shared.requestStart()
+            BackgroundLocationManager.shared.requestStart()
+            self.backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "StikDebugDebugSession") { [weak self] in
+                LogManager.shared.addWarningLog("Debug session background task expired")
+                self?.invalidate()
+            }
+        }
+    }
+
+    private func runOnMain(_ work: @escaping () -> Void) {
+        if Thread.isMainThread {
+            work()
+        } else {
+            DispatchQueue.main.sync(execute: work)
+        }
+    }
 }
 
 struct HomeView: View {
@@ -27,7 +83,7 @@ struct HomeView: View {
 
     @State var scriptViewShow = false
     @State private var isShowingConsole = false
-    @AppStorage("DefaultScriptName") var selectedScript = "attachDetach.js"
+    @AppStorage(UserDefaults.Keys.defaultScriptName) var selectedScript = UserDefaults.Keys.defaultScriptNameValue
     @State var jsModel: RunJSViewModel?
     @ObservedObject private var mounting = MountingProgress.shared
 
@@ -83,7 +139,7 @@ struct HomeView: View {
                     config.scriptName = scriptName
                 }
                 if config.scriptData == nil, let bundleID = config.bundleID,
-                   let scriptInfo = preferredScript(for: bundleID) {
+                   let scriptInfo = ScriptStore.preferredScript(for: bundleID) {
                     config.scriptData = scriptInfo.data
                     config.scriptName = scriptInfo.name
                 }
@@ -121,33 +177,25 @@ struct HomeView: View {
                 break
             }
         }
-        .fileImporter(isPresented: $isShowingPairingFilePicker, allowedContentTypes: [UTType(filenameExtension: "mobiledevicepairing", conformingTo: .data)!, UTType(filenameExtension: "mobiledevicepair", conformingTo: .data)!, .propertyList]) { result in
+        .fileImporter(isPresented: $isShowingPairingFilePicker, allowedContentTypes: PairingFileStore.supportedContentTypes) { result in
             switch result {
             case .success(let url):
                 let fileManager = FileManager.default
-                let accessing = url.startAccessingSecurityScopedResource()
-                if fileManager.fileExists(atPath: url.path) {
-                    do {
-                        let dest = URL.documentsDirectory.appendingPathComponent("pairingFile.plist")
-                        if fileManager.fileExists(atPath: dest.path) {
-                            try fileManager.removeItem(at: dest)
-                        }
-                        try fileManager.copyItem(at: url, to: dest)
-                        pubTunnelConnected = false
-                        startTunnelInBackground()
-                        NotificationCenter.default.post(name: .pairingFileImported, object: nil)
-                        // Dismiss any existing connection error alert
-                        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                           let root = scene.windows.first?.rootViewController {
-                            var top = root
-                            while let presented = top.presentedViewController { top = presented }
-                            if top is UIAlertController { top.dismiss(animated: true) }
-                        }
-                    } catch {
-                        print("Error copying pairing file: \(error)")
+                do {
+                    try PairingFileStore.importFromPicker(url, fileManager: fileManager)
+                    pubTunnelConnected = false
+                    startTunnelInBackground()
+                    NotificationCenter.default.post(name: .pairingFileImported, object: nil)
+                    // Dismiss any existing connection error alert
+                    if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let root = scene.windows.first?.rootViewController {
+                        var top = root
+                        while let presented = top.presentedViewController { top = presented }
+                        if top is UIAlertController { top.dismiss(animated: true) }
                     }
+                } catch {
+                    print("Error copying pairing file: \(error)")
                 }
-                if accessing { url.stopAccessingSecurityScopedResource() }
             case .failure(let error):
                 print("Failed to import pairing file: \(error)")
             }
@@ -179,70 +227,6 @@ struct HomeView: View {
             }
         }
     }
-
-
-    private func autoScript(for bundleID: String) -> (data: Data, name: String)? {
-        guard ProcessInfo.processInfo.hasTXM else { return nil }
-        guard #available(iOS 26, *) else { return nil }
-        let appName = (try? JITEnableContext.shared.getAppList()[bundleID]) ?? storedFavoriteName(for: bundleID)
-        guard let appName,
-              let resource = autoScriptResource(for: appName) else {
-            return nil
-        }
-        let scriptsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("scripts")
-        let documentsURL = scriptsDir.appendingPathComponent(resource.fileName)
-        if let data = try? Data(contentsOf: documentsURL) {
-            return (data, resource.fileName)
-        }
-        guard let bundleURL = Bundle.main.url(forResource: resource.resource, withExtension: "js"),
-              let data = try? Data(contentsOf: bundleURL) else {
-            return nil
-        }
-        return (data, resource.fileName)
-    }
-
-    private func assignedScript(for bundleID: String) -> (data: Data, name: String)? {
-        guard let mapping = UserDefaults.standard.dictionary(forKey: "BundleScriptMap") as? [String: String],
-              let scriptName = mapping[bundleID] else { return nil }
-        let scriptsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("scripts")
-        let scriptURL = scriptsDir.appendingPathComponent(scriptName)
-        guard FileManager.default.fileExists(atPath: scriptURL.path),
-              let data = try? Data(contentsOf: scriptURL) else { return nil }
-        return (data, scriptName)
-    }
-
-    private func preferredScript(for bundleID: String) -> (data: Data, name: String)? {
-        if let assigned = assignedScript(for: bundleID) {
-            return assigned
-        }
-        return autoScript(for: bundleID)
-    }
-
-    private func storedFavoriteName(for bundleID: String) -> String? {
-        let defaults = UserDefaults(suiteName: "group.com.stik.sj")
-        let names = defaults?.dictionary(forKey: "favoriteAppNames") as? [String: String]
-        return names?[bundleID]
-    }
-
-    private func autoScriptResource(for appName: String) -> (resource: String, fileName: String)? {
-        switch appName {
-        case "maciOS":
-            return ("maciOS", "maciOS.js")
-        case "Amethyst", "MeloNX", "XeniOS", "MeloCafe":
-            return ("universal", "universal.js")
-        case "Geode":
-            return ("Geode", "Geode.js")
-        case "Manic EMU":
-            return ("manic", "manic.js")
-        case "UTM", "DolphiniOS", "Flycast":
-            return ("UTM-Dolphin", "UTM-Dolphin.js")
-        default:
-            return nil
-        }
-    }
-
     private func getJsCallback(_ script: Data, name: String? = nil) -> DebugAppCallback {
         return { pid, debugProxyHandle, remoteServerHandle, semaphore in
             let model = RunJSViewModel(pid: Int(pid),
@@ -255,9 +239,13 @@ struct HomeView: View {
                 scriptViewShow = true
             }
 
-            DispatchQueue.global(qos: .background).async {
-                do { try model.runScript(data: script, name: name) }
-                catch { showAlert(title: "Error Occurred While Executing Script.".localized, message: error.localizedDescription, showOk: true) }
+            do {
+                try model.runScript(data: script, name: name)
+            } catch {
+                semaphore.signal()
+                DispatchQueue.main.async {
+                    showAlert(title: "Error Occurred While Executing Script.".localized, message: error.localizedDescription, showOk: true)
+                }
             }
         }
     }
@@ -265,7 +253,6 @@ struct HomeView: View {
     private func startJITInBackground(bundleID: String? = nil, pid: Int? = nil, scriptData: Data? = nil, scriptName: String? = nil, triggeredByURLScheme: Bool = false) {
         isProcessing = true
         LogManager.shared.addInfoLog("Starting Debug for \(bundleID ?? String(pid ?? 0))")
-        BackgroundLocationManager.shared.requestStart()
 
         if triggeredByURLScheme {
             pubTunnelConnected = false
@@ -273,6 +260,8 @@ struct HomeView: View {
         }
 
         DispatchQueue.global(qos: .background).async {
+            let keepAliveLease = DebugKeepAliveLease()
+            defer { keepAliveLease.invalidate() }
 
             if triggeredByURLScheme {
                 sleep(1)
@@ -280,7 +269,6 @@ struct HomeView: View {
             let finishProcessing = {
                 DispatchQueue.main.async {
                     isProcessing = false
-                    BackgroundLocationManager.shared.requestStop()
                 }
             }
 
@@ -288,7 +276,7 @@ struct HomeView: View {
             var scriptName = scriptName
             if scriptData == nil,
                let bundleID,
-               let preferred = preferredScript(for: bundleID) {
+               let preferred = ScriptStore.preferredScript(for: bundleID) {
                 scriptName = preferred.name
                 scriptData = preferred.data
             }
