@@ -431,7 +431,7 @@ extension JITEnableContext {
         }
     }
 
-    func killProcess(withPID pid: Int32) throws {
+    func sendSignal(_ signal: Int32, toProcessWithPID pid: Int32) throws {
         try IdeviceBridge.withTunnelHandles(for: self) { adapter, handshake in
             try IdeviceBridge.withConnectedClient(
                 fallback: "Unable to open AppService",
@@ -440,7 +440,7 @@ extension JITEnableContext {
                 cleanup: { app_service_free($0) }
             ) { appService in
                 var response: UnsafeMutablePointer<SignalResponseC>?
-                let ffiError = app_service_send_signal(appService, UInt32(pid), UInt32(SIGKILL), &response)
+                let ffiError = app_service_send_signal(appService, UInt32(pid), UInt32(signal), &response)
                 defer {
                     if let response {
                         app_service_free_signal_response(response)
@@ -448,10 +448,14 @@ extension JITEnableContext {
                 }
 
                 if let ffiError {
-                    throw IdeviceBridge.consumeFFIError(ffiError, fallback: "Failed to kill process")
+                    throw IdeviceBridge.consumeFFIError(ffiError, fallback: "Failed to send signal \(signal) to process")
                 }
             }
         }
+    }
+
+    func killProcess(withPID pid: Int32) throws {
+        try sendSignal(Int32(SIGKILL), toProcessWithPID: pid)
     }
 
     func getAppList() throws -> [String: String] {
