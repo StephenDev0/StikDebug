@@ -1,9 +1,15 @@
 {
   "fill" : {
-    "solid" : "extended-gray:0.00000,0.85000"
+    "solid" : "extended-gray:1.00000,0.70000"
   },
   "groups" : [
     {
+      "blur-material-specializations" : [
+        {
+          "appearance" : "light",
+          "value" : 1.0
+        }
+      ],
       "layers" : [
         {
           "image-name" : "1Bolt 2.svg",
@@ -12,12 +18,19 @@
       ],
       "shadow" : {
         "kind" : "neutral",
-        "opacity" : 0.2
+        "opacity" : 0.15
       },
-      "translucency" : {
-        "enabled" : true,
-        "value" : 0.6
-      }
+      "translucency-specializations" : [
+        {
+          "appearance" : "vibrant",
+          "value" : {
+            "enabled" : true,
+            "fill" : {
+              "solid" : "extended-gray:0.00000,1.00000"
+            }
+          }
+        }
+      ]
     }
   ],
   "supported-platforms" : {
