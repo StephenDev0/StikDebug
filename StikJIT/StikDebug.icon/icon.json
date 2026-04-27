@@ -1,49 +1,78 @@
 {
   "fill" : {
-    "solid" : "extended-gray:1.00000,0.80000"
+    "linear-gradient" : [
+      "display-p3:0.38110,0.78809,0.97949,1.00000",
+      "display-p3:0.20813,0.42505,0.94629,1.00000"
+    ]
   },
   "groups" : [
     {
-      "name" : "Background",
       "blur-material-specializations" : [
         {
-          "appearance" : "light",
-          "value" : 1.0
+          "value" : 0.5
+        },
+        {
+          "appearance" : "tinted",
+          "value" : 0.25
         }
       ],
       "layers" : [
         {
-          "image-name" : "2Grid.svg",
-          "name" : "GlassBase"
-        }
-      ]
-    },
-    {
-      "name" : "Foreground",
-      "layers" : [
-        {
           "image-name" : "1Bolt 2.svg",
-          "name" : "BlackIcon"
+          "name" : "1Bolt 2"
+        },
+        {
+          "hidden" : true,
+          "image-name" : "1Bolt.svg",
+          "name" : "1Bolt"
         }
       ],
       "shadow" : {
         "kind" : "neutral",
-        "opacity" : 0.2
+        "opacity" : 0.5
       },
       "translucency-specializations" : [
         {
-          "appearance" : "vibrant",
           "value" : {
             "enabled" : true,
-            "fill" : {
-              "solid" : "extended-gray:0.00000,1.00000"
-            }
+            "value" : 0.5
+          }
+        },
+        {
+          "appearance" : "tinted",
+          "value" : {
+            "enabled" : true,
+            "value" : 0.7
           }
         }
       ]
+    },
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "solid" : "extended-gray:1.00000,0.30000"
+          },
+          "glass" : false,
+          "image-name" : "2Grid.svg",
+          "name" : "2Grid"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "specular" : false,
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0.5
+      }
     }
   ],
   "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
     "squares" : "shared"
   }
 }
