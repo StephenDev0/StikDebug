@@ -1,79 +1,77 @@
 {
-  "fill" : {
-    "linear-gradient" : [
-      "display-p3:1.00000,1.00000,1.00000,0.05000",
-      "display-p3:1.00000,1.00000,1.00000,0.05000"
-    ]
+  "fill": {
+    "solid": "display-p3:1.00000,1.00000,1.00000,1.00000"
   },
-  "groups" : [
+  "groups": [
     {
-      "blur-material-specializations" : [
+      "blur-material-specializations": [
         {
-          "value" : 0.6
+          "value": 0
         },
         {
-          "appearance" : "tinted",
-          "value" : 0.4
+          "appearance": "tinted",
+          "value": 0
         }
       ],
-      "layers" : [
+      "layers": [
         {
-          "image-name" : "1Bolt 2.svg",
-          "name" : "1Bolt 2"
+          "image-name": "1Bolt 2.svg",
+          "name": "1Bolt 2",
+          "tint": "display-p3:0.00000,0.00000,0.00000,1.00000"
         },
         {
-          "hidden" : true,
-          "image-name" : "1Bolt.svg",
-          "name" : "1Bolt"
+          "hidden": true,
+          "image-name": "1Bolt.svg",
+          "name": "1Bolt",
+          "tint": "display-p3:0.00000,0.00000,0.00000,1.00000"
         }
       ],
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.25
+      "shadow": {
+        "kind": "none",
+        "opacity": 0
       },
-      "translucency-specializations" : [
+      "translucency-specializations": [
         {
-          "value" : {
-            "enabled" : true,
-            "value" : 0.6
+          "value": {
+            "enabled": false,
+            "value": 0
           }
-          
         },
         {
-          "appearance" : "tinted",
-          "value" : {
-            "enabled" : true,
-            "value" : 0.72
+          "appearance": "tinted",
+          "value": {
+            "enabled": false,
+            "value": 0
           }
         }
       ]
     },
     {
-      "layers" : [
+      "layers": [
         {
-          "fill" : {
-            "solid" : "extended-gray:1.00000,0.08000"
+          "fill": {
+            "solid": "display-p3:0.00000,0.00000,0.00000,1.00000"
           },
-          "glass" : false,
-          "image-name" : "2Grid.svg",
-          "name" : "2Grid"
+          "glass": false,
+          "image-name": "2Grid.svg",
+          "name": "2Grid"
         }
       ],
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.25
+      "shadow": {
+        "kind": "none",
+        "opacity": 0
       },
-      "specular" : false,
-      "translucency" : {
-        "enabled" : false,
-        "value" : 0.5
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0
       }
     }
   ],
-  "supported-platforms" : {
-    "circles" : [
+  "supported-platforms": {
+    "circles": [
       "watchOS"
     ],
-    "squares" : "shared"
+    "squares": "shared"
   }
 }
