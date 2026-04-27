@@ -476,19 +476,10 @@ struct LocationSimulationView: View {
 
     private var routeSummaryText: String? {
         guard let routePlan else { return nil }
-        let distanceText = Measurement(
+        return Measurement(
             value: routePlan.distance / 1000,
             unit: UnitLength.kilometers
         ).formatted(.measurement(width: .abbreviated, usage: .road))
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = [.hour, .minute]
-        formatter.unitsStyle = .abbreviated
-        formatter.zeroFormattingBehavior = .dropAll
-        let durationText = formatter.string(from: routePlan.expectedTravelTime)
-        if let durationText, !durationText.isEmpty {
-            return "\(distanceText) • ETA \(durationText)"
-        }
-        return distanceText
     }
 
     private var routeStatusText: String {
@@ -801,11 +792,23 @@ struct LocationSimulationView: View {
             }
 
             if routePlan != nil && !isLoadingRoute {
-                VStack(spacing: 4) {
-                    Text("Speed: \(Int(customSpeedKmh)) km/h")
-                        .font(.footnote.weight(.medium))
-                    Slider(value: $customSpeedKmh, in: 1...120, step: 1)
-                        .disabled(isRouteRunning)
+                VStack(spacing: 6) {
+                    HStack {
+                        Text("Speed:")
+                            .font(.footnote.weight(.medium))
+                        TextField("km/h", value: $customSpeedKmh, format: .number.precision(.fractionLength(1)))
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.footnote.monospaced())
+                            .frame(width: 80)
+                            .onSubmit {
+                                customSpeedKmh = min(120, max(1, customSpeedKmh))
+                            }
+                        Text("km/h")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: $customSpeedKmh, in: 1...120, step: 0.1)
                         .onChange(of: customSpeedKmh) { _, _ in
                             rebuildPlaybackSamplesIfNeeded()
                         }
@@ -857,8 +860,7 @@ struct LocationSimulationView: View {
 
     private func simulateRoute() {
         guard pairingExists,
-              routePlan != nil,
-              let firstCoordinate = routePlaybackSamples.first?.coordinate,
+              let firstCoordinate = routePlan?.displayCoordinates.first,
               !isBusy else {
             return
         }
@@ -1083,14 +1085,27 @@ struct LocationSimulationView: View {
     }
 
     private func startRoutePlayback() {
-        routePlaybackTask = Task {
-            var lastSuccessfulCoordinate = routePlaybackSamples.first?.coordinate
+        guard let routePlan else { return }
+        let coordinates = routePlan.displayCoordinates
+        guard coordinates.count > 1 else { return }
 
-            for sample in routePlaybackSamples.dropFirst() {
-                try? await Task.sleep(for: .seconds(sample.delayFromPrevious))
+        routePlaybackTask = Task {
+            var lastSuccessfulCoordinate = coordinates.first
+
+            for i in 1..<coordinates.count {
+                let prev = coordinates[i - 1]
+                let curr = coordinates[i]
+                let distance = CLLocation(latitude: prev.latitude, longitude: prev.longitude)
+                    .distance(from: CLLocation(latitude: curr.latitude, longitude: curr.longitude))
+
+                let currentSpeedKmh = await MainActor.run { customSpeedKmh }
+                let speedMps = max(currentSpeedKmh / 3.6, RouteSimulationDefaults.minimumSpeedMetersPerSecond)
+                let delay = distance / speedMps
+
+                try? await Task.sleep(for: .seconds(delay))
                 guard !Task.isCancelled else { return }
 
-                let code = await sendLocationUpdate(for: sample.coordinate)
+                let code = await sendLocationUpdate(for: curr)
                 guard code == 0 else {
                     await MainActor.run {
                         routePlaybackTask = nil
@@ -1105,9 +1120,9 @@ struct LocationSimulationView: View {
                     return
                 }
 
-                lastSuccessfulCoordinate = sample.coordinate
+                lastSuccessfulCoordinate = curr
                 await MainActor.run {
-                    routePlaybackCoordinate = sample.coordinate
+                    routePlaybackCoordinate = curr
                 }
             }
 
