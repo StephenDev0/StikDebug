@@ -424,6 +424,10 @@ struct LocationSimulationView: View {
     @State private var showSaveBookmark = false
     @State private var newBookmarkName = ""
 
+    @State private var latitudeText = ""
+    @State private var longitudeText = ""
+    @State private var customSpeedKmh: Double = 60.0
+
     private var pairingFilePath: String {
         PairingFileStore.prepareURL().path()
     }
@@ -591,6 +595,8 @@ struct LocationSimulationView: View {
                                 longitudinalMeters: 1000
                             )
                         )
+                        latitudeText = String(format: "%.6f", new.coordinate.latitude)
+                        longitudeText = String(format: "%.6f", new.coordinate.longitude)
                     }
                 }
 
@@ -729,6 +735,25 @@ struct LocationSimulationView: View {
 
     @ViewBuilder
     private var pinControls: some View {
+        HStack(spacing: 8) {
+            TextField("Latitude", text: $latitudeText)
+                .keyboardType(.numbersAndPunctuation)
+                .textFieldStyle(.roundedBorder)
+                .font(.footnote.monospaced())
+
+            TextField("Longitude", text: $longitudeText)
+                .keyboardType(.numbersAndPunctuation)
+                .textFieldStyle(.roundedBorder)
+                .font(.footnote.monospaced())
+
+            Button("Go") {
+                applyManualCoordinates()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .disabled(latitudeText.isEmpty || longitudeText.isEmpty)
+        }
+
         if let coord = coordinate {
             Text(String(format: "%.6f, %.6f", coord.latitude, coord.longitude))
                 .font(.footnote.monospaced())
@@ -754,7 +779,7 @@ struct LocationSimulationView: View {
                 .disabled(isRouteRunning)
             }
         } else {
-            Text("Tap map to drop pin")
+            Text("Tap map to drop pin or enter coordinates")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -773,6 +798,19 @@ struct LocationSimulationView: View {
                 Text(routeSummaryText)
                     .font(.footnote.monospaced())
                     .foregroundStyle(.secondary)
+            }
+
+            if routePlan != nil && !isLoadingRoute {
+                VStack(spacing: 4) {
+                    Text("Speed: \(Int(customSpeedKmh)) km/h")
+                        .font(.footnote.weight(.medium))
+                    Slider(value: $customSpeedKmh, in: 1...120, step: 1)
+                        .disabled(isRouteRunning)
+                        .onChange(of: customSpeedKmh) { _, _ in
+                            rebuildPlaybackSamplesIfNeeded()
+                        }
+                }
+                .padding(.horizontal, 4)
             }
 
             routeAttributionLink
@@ -940,6 +978,31 @@ struct LocationSimulationView: View {
         isPrefetchingRouteSpeeds = false
     }
 
+    private func applyManualCoordinates() {
+        let latStr = latitudeText.trimmingCharacters(in: .whitespaces)
+        let lonStr = longitudeText.trimmingCharacters(in: .whitespaces)
+        guard let lat = Double(latStr),
+              let lon = Double(lonStr),
+              (-90...90).contains(lat),
+              (-180...180).contains(lon) else {
+            alertTitle = "Invalid Coordinates"
+            alertMessage = "Please enter valid latitude (-90 to 90) and longitude (-180 to 180)."
+            showAlert = true
+            return
+        }
+        applySelection(CLLocationCoordinate2D(latitude: lat, longitude: lon))
+    }
+
+    private func rebuildPlaybackSamplesIfNeeded() {
+        guard let routePlan else { return }
+        let speedMps = customSpeedKmh / 3.6
+        routePlaybackSamples = buildPlaybackSamples(
+            from: routePlan.displayCoordinates,
+            speedWays: [],
+            fallbackSpeedMetersPerSecond: speedMps
+        )
+    }
+
     private func refreshRoute() {
         routeLoadTask?.cancel()
         routeSpeedPrefetchTask?.cancel()
@@ -990,31 +1053,15 @@ struct LocationSimulationView: View {
                     guard routeRequestID == requestID else { return }
                     self.routePlan = routePlan
                     isLoadingRoute = false
-                    isPrefetchingRouteSpeeds = true
+                    isPrefetchingRouteSpeeds = false
                     if let routePolyline {
                         position = .rect(routePolyline.boundingMapRect)
                     }
                 }
 
-                let fallbackSpeed = route.expectedTravelTime > 0
-                    ? route.distance / route.expectedTravelTime
-                    : 13.4
-
                 await MainActor.run {
                     guard routeRequestID == requestID else { return }
-                    routeSpeedPrefetchTask?.cancel()
-                    routeSpeedPrefetchTask = Task.detached(priority: .utility) {
-                        let playbackSamples = await prefetchRoutePlaybackSamples(
-                            displayCoordinates: displayCoordinates,
-                            fallbackSpeedMetersPerSecond: fallbackSpeed
-                        )
-                        guard !Task.isCancelled else { return }
-                        await MainActor.run {
-                            guard routeRequestID == requestID else { return }
-                            routePlaybackSamples = playbackSamples
-                            isPrefetchingRouteSpeeds = false
-                        }
-                    }
+                    rebuildPlaybackSamplesIfNeeded()
                 }
             } catch is CancellationError {
                 await MainActor.run {
