@@ -51,7 +51,7 @@
       "layers" : [
         {
           "fill" : {
-            "solid" : "extended-gray:1.00000,0.75000"
+            "solid" : "extended-gray:1.00000,0.15000"
           },
           "glass" : false,
           "image-name" : "2Grid.svg",
