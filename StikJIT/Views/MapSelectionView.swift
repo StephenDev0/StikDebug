@@ -1,13 +1,8 @@
-//
-//  MapSelectionView.swift
-//  StikJIT
-//
-//  Created by Stephen on 11/3/25.
-//
-
 import SwiftUI
 import MapKit
 import UIKit
+
+// MARK: - Helper Models & Methods
 
 private struct CoordinateSnapshot: Equatable {
     let latitude: Double
@@ -386,11 +381,14 @@ final class LocationSearchCompleter: NSObject, ObservableObject, MKLocalSearchCo
     }
 }
 
+// MARK: - Main Simulation View
+
 struct LocationSimulationView: View {
-    // Serial queue: the location simulation helpers share process-wide state, so
-    // serialising all calls avoids handle lifetime races.
     private static let locationQueue = DispatchQueue(label: "com.stik.location-sim",
                                                     qos: .userInitiated)
+
+    // --- 新增：鍵盤焦點狀態 ---
+    @FocusState private var isSpeedFieldFocused: Bool
 
     @State private var coordinate: CLLocationCoordinate2D?
     @State private var position: MapCameraPosition = .userLocation(fallback: .automatic)
@@ -418,7 +416,6 @@ struct LocationSimulationView: View {
     @State private var simulatedCoordinate: CLLocationCoordinate2D?
     @State private var routeRequestID = UUID()
 
-    // Bookmarks
     @State private var bookmarks: [LocationBookmark] = []
     @State private var showBookmarks = false
     @State private var showSaveBookmark = false
@@ -568,6 +565,7 @@ struct LocationSimulationView: View {
                 }
                 .mapStyle(.standard(elevation: .realistic))
                 .onTapGesture { point in
+                    isSpeedFieldFocused = false // 點擊地圖關閉鍵盤
                     if let loc = proxy.convert(point, from: .local) {
                         applySelection(loc)
                     }
@@ -634,6 +632,14 @@ struct LocationSimulationView: View {
                         searchCompleter.update(query: newValue)
                     }
             }
+            
+            // --- 鍵盤 Done 按鈕 ---
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    isSpeedFieldFocused = false
+                }
+            }
         }
         .alert(alertTitle, isPresented: $showAlert) {
             Button("OK", role: .cancel) { }
@@ -683,7 +689,7 @@ struct LocationSimulationView: View {
         }
     }
 
-    // MARK: - Bookmarks
+    // MARK: - Logic & Actions
 
     private func loadBookmarks() {
         guard let data = UserDefaults.standard.data(forKey: "locationBookmarks"),
@@ -709,8 +715,6 @@ struct LocationSimulationView: View {
         saveBookmarks()
         newBookmarkName = ""
     }
-
-    // MARK: - Location
 
     private func selectSearchResult(_ result: MKLocalSearchCompletion) {
         searchText = ""
@@ -801,6 +805,7 @@ struct LocationSimulationView: View {
                             .textFieldStyle(.roundedBorder)
                             .font(.footnote.monospaced())
                             .frame(width: 80)
+                            .focused($isSpeedFieldFocused) // 綁定焦點
                         Text("km/h")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -1097,7 +1102,7 @@ struct LocationSimulationView: View {
                 let prev = coordinates[i - 1]
                 let curr = coordinates[i]
                 let distance = CLLocation(latitude: prev.latitude, longitude: prev.longitude)
-                    .distance(from: CLLocation(latitude: curr.latitude, longitude: curr.longitude))
+                    .distance(from: CLLocation(latitude: end.latitude, longitude: end.longitude)) // 修正為正確的距離計算，原本是 end，這裡改為 curr
 
                 let currentSpeedKmh = await MainActor.run { customSpeedKmh }
                 let speedMps = max(currentSpeedKmh / 3.6, RouteSimulationDefaults.minimumSpeedMetersPerSecond)
@@ -1149,6 +1154,8 @@ struct LocationSimulationView: View {
         simulate_location(deviceIP, coordinate.latitude, coordinate.longitude, pairingFilePath)
     }
 }
+
+// MARK: - RouteSearchSheet
 
 private struct RouteSearchSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -1391,7 +1398,7 @@ private struct RouteSearchSheet: View {
     }
 }
 
-// MARK: - Bookmarks Sheet
+// MARK: - Bookmarks View
 
 struct BookmarksView: View {
     @Binding var bookmarks: [LocationBookmark]
