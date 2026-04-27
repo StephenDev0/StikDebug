@@ -50,7 +50,7 @@
       "layers": [
         {
           "fill": {
-            "solid": "display-p3:0.00000,0.00000,0.00000,1.00000"
+            "solid": "display-p3:1.00000,1.00000,1.00000,1.00000"
           },
           "glass": false,
           "image-name": "2Grid.svg",
