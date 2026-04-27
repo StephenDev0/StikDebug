@@ -1,38 +1,49 @@
 {
   "fill" : {
-    "solid" : "extended-gray:1.00000,0.80000" // 白色，80% 透明
+    "solid" : "extended-gray:1.00000,0.80000"
   },
   "groups" : [
-    // --- 後層：白色磨砂玻璃 ---
     {
-      "name" : "BackgroundGlass",
+      "name" : "Background",
       "blur-material-specializations" : [
-        { "appearance" : "light", "value" : 1.0 } // 亮色磨砂
+        {
+          "appearance" : "light",
+          "value" : 1.0
+        }
       ],
       "layers" : [
         {
-          "image-name" : "Background.svg", // 純白方塊
-          "name" : "GlassLayer"
+          "image-name" : "2Grid.svg",
+          "name" : "GlassBase"
         }
       ]
     },
-    // --- 前層：你的清晰黑色圖案 ---
     {
-      "name" : "ForegroundIcon",
+      "name" : "Foreground",
       "layers" : [
         {
-          "image-name" : "1Bolt 2.svg", // 你的黑色標誌
-          "name" : "IconLayer"
+          "image-name" : "1Bolt 2.svg",
+          "name" : "BlackIcon"
         }
       ],
-      "shadow" : { "kind" : "neutral", "opacity" : 0.2 },
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.2
+      },
       "translucency-specializations" : [
         {
-          "appearance" : "vibrant",     // 強制清晰
-          "value" : { "enabled" : true, "fill" : { "solid" : "extended-gray:0.0,1.0" } } // 純黑
+          "appearance" : "vibrant",
+          "value" : {
+            "enabled" : true,
+            "fill" : {
+              "solid" : "extended-gray:0.00000,1.00000"
+            }
+          }
         }
       ]
     }
   ],
-  "supported-platforms" : { "squares" : "shared" }
+  "supported-platforms" : {
+    "squares" : "shared"
+  }
 }
