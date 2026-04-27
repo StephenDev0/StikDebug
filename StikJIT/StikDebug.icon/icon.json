@@ -1,19 +1,19 @@
 {
   "fill" : {
     "linear-gradient" : [
-      "display-p3:1.00000,1.00000,1.00000,0.30000",
-      "display-p3:1.00000,1.00000,1.00000,0.30000"
+      "display-p3:1.00000,1.00000,1.00000,0.88000",
+      "display-p3:1.00000,1.00000,1.00000,0.88000"
     ]
   },
   "groups" : [
     {
       "blur-material-specializations" : [
         {
-          "value" : 0.5
+          "value" : 0.6
         },
         {
           "appearance" : "tinted",
-          "value" : 0.25
+          "value" : 0.4
         }
       ],
       "layers" : [
@@ -29,13 +29,13 @@
       ],
       "shadow" : {
         "kind" : "neutral",
-        "opacity" : 0.5
+        "opacity" : 0.25
       },
       "translucency-specializations" : [
         {
           "value" : {
             "enabled" : true,
-            "value" : 0.5
+            "value" : 0.6
           }
           
         },
@@ -43,7 +43,7 @@
           "appearance" : "tinted",
           "value" : {
             "enabled" : true,
-            "value" : 0.7
+            "value" : 0.72
           }
         }
       ]
@@ -52,7 +52,7 @@
       "layers" : [
         {
           "fill" : {
-            "solid" : "extended-gray:1.00000,0.15000"
+            "solid" : "extended-gray:1.00000,0.08000"
           },
           "glass" : false,
           "image-name" : "2Grid.svg",
@@ -61,7 +61,7 @@
       ],
       "shadow" : {
         "kind" : "neutral",
-        "opacity" : 0.5
+        "opacity" : 0.25
       },
       "specular" : false,
       "translucency" : {
