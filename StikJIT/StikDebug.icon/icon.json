@@ -1,39 +1,38 @@
 {
   "fill" : {
-    "solid" : "extended-gray:1.00000,0.70000"
+    "solid" : "extended-gray:1.00000,0.80000" // 白色，80% 透明
   },
   "groups" : [
+    // --- 後層：白色磨砂玻璃 ---
     {
+      "name" : "BackgroundGlass",
       "blur-material-specializations" : [
-        {
-          "appearance" : "light",
-          "value" : 1.0
-        }
+        { "appearance" : "light", "value" : 1.0 } // 亮色磨砂
       ],
       "layers" : [
         {
-          "image-name" : "1Bolt 2.svg",
-          "name" : "1Bolt 2"
+          "image-name" : "Background.svg", // 純白方塊
+          "name" : "GlassLayer"
+        }
+      ]
+    },
+    // --- 前層：你的清晰黑色圖案 ---
+    {
+      "name" : "ForegroundIcon",
+      "layers" : [
+        {
+          "image-name" : "1Bolt 2.svg", // 你的黑色標誌
+          "name" : "IconLayer"
         }
       ],
-      "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.15
-      },
+      "shadow" : { "kind" : "neutral", "opacity" : 0.2 },
       "translucency-specializations" : [
         {
-          "appearance" : "vibrant",
-          "value" : {
-            "enabled" : true,
-            "fill" : {
-              "solid" : "extended-gray:0.00000,1.00000"
-            }
-          }
+          "appearance" : "vibrant",     // 強制清晰
+          "value" : { "enabled" : true, "fill" : { "solid" : "extended-gray:0.0,1.0" } } // 純黑
         }
       ]
     }
   ],
-  "supported-platforms" : {
-    "squares" : "shared"
-  }
+  "supported-platforms" : { "squares" : "shared" }
 }
