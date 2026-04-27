@@ -1,8 +1,8 @@
 {
   "fill" : {
     "linear-gradient" : [
-      "display-p3:1.00000,1.00000,1.00000,0.75000",
-      "display-p3:1.00000,1.00000,1.00000,0.75000"
+      "display-p3:1.00000,1.00000,1.00000,1.00000",
+      "display-p3:1.00000,1.00000,1.00000,1.00000"
     ]
   },
   "groups" : [
@@ -51,7 +51,7 @@
       "layers" : [
         {
           "fill" : {
-            "solid" : "extended-gray:1.00000,0.30000"
+            "solid" : "extended-gray:1.00000,0.75000"
           },
           "glass" : false,
           "image-name" : "2Grid.svg",
