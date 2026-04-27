@@ -801,15 +801,16 @@ struct LocationSimulationView: View {
                             .textFieldStyle(.roundedBorder)
                             .font(.footnote.monospaced())
                             .frame(width: 80)
-                            .onSubmit {
-                                customSpeedKmh = min(120, max(1, customSpeedKmh))
-                            }
                         Text("km/h")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                     Slider(value: $customSpeedKmh, in: 1...120, step: 0.1)
-                        .onChange(of: customSpeedKmh) { _, _ in
+                        .onChange(of: customSpeedKmh) { _, newValue in
+                            let clamped = min(120, max(1, newValue))
+                            if clamped != newValue {
+                                customSpeedKmh = clamped
+                            }
                             rebuildPlaybackSamplesIfNeeded()
                         }
                 }
