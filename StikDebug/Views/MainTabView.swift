@@ -24,9 +24,9 @@ private enum ExternalLocationAction: Identifiable {
     var title: String {
         switch self {
         case .simulate:
-            return "Simulate Location?"
+            return "Simulate Location?".localized
         case .clear:
-            return "Clear Location?"
+            return "Clear Location?".localized
         }
     }
 
@@ -35,16 +35,16 @@ private enum ExternalLocationAction: Identifiable {
         case .simulate(_, let latitude, let longitude):
             return String(format: "An external link wants to set the simulated location to %.6f, %.6f.", latitude, longitude)
         case .clear:
-            return "An external link wants to clear the simulated location."
+            return "An external link wants to clear the simulated location.".localized
         }
     }
 
     var confirmationTitle: String {
         switch self {
         case .simulate:
-            return "Set Location"
+            return "Set Location".localized
         case .clear:
-            return "Clear Location"
+            return "Clear Location".localized
         }
     }
 }
@@ -156,8 +156,8 @@ struct MainTabView: View {
     private func confirmSimulatedLocation(from url: URL) {
         guard let coordinate = coordinate(from: url) else {
             showAlert(
-                title: "Invalid Location URL",
-                message: "Use stikdebug://simulate-location?lat=37.3349&lon=-122.0090",
+                title: "Invalid Location URL".localized,
+                message: "Use stikdebug://simulate-location?lat=37.3349&lon=-122.0090".localized,
                 showOk: true
             )
             return
@@ -165,8 +165,8 @@ struct MainTabView: View {
 
         guard coordinateIsValid(latitude: coordinate.latitude, longitude: coordinate.longitude) else {
             showAlert(
-                title: "Invalid Coordinates",
-                message: "Latitude must be between -90 and 90. Longitude must be between -180 and 180.",
+                title: "Invalid Coordinates".localized,
+                message: "Latitude must be between -90 and 90. Longitude must be between -180 and 180.".localized,
                 showOk: true
             )
             return
@@ -187,8 +187,8 @@ struct MainTabView: View {
     private func simulateLocation(from url: URL) {
         guard let coordinate = coordinate(from: url) else {
             showAlert(
-                title: "Invalid Location URL",
-                message: "Use stikdebug://simulate-location?lat=37.3349&lon=-122.0090",
+                title: "Invalid Location URL".localized,
+                message: "Use stikdebug://simulate-location?lat=37.3349&lon=-122.0090".localized,
                 showOk: true
             )
             return
@@ -196,8 +196,8 @@ struct MainTabView: View {
 
         guard coordinateIsValid(latitude: coordinate.latitude, longitude: coordinate.longitude) else {
             showAlert(
-                title: "Invalid Coordinates",
-                message: "Latitude must be between -90 and 90. Longitude must be between -180 and 180.",
+                title: "Invalid Coordinates".localized,
+                message: "Latitude must be between -90 and 90. Longitude must be between -180 and 180.".localized,
                 showOk: true
             )
             return
@@ -206,8 +206,8 @@ struct MainTabView: View {
         let pairingFile = PairingFileStore.prepareURL()
         guard FileManager.default.fileExists(atPath: pairingFile.path) else {
             showAlert(
-                title: "Pairing File Required",
-                message: "Import a pairing file before simulating location from a URL.",
+                title: "Pairing File Required".localized,
+                message: "Import a pairing file before simulating location from a URL.".localized,
                 showOk: true
             )
             return
@@ -229,8 +229,8 @@ struct MainTabView: View {
                     )
                 } else {
                     showAlert(
-                        title: "Location Simulation Failed",
-                        message: "Could not simulate location from URL (error \(code)). Make sure the device is connected and the DDI is mounted.",
+                        title: "Location Simulation Failed".localized,
+                        message: String(format: "Could not simulate location from URL (error %@). Make sure the device is connected and the DDI is mounted.".localized, code),
                         showOk: true
                     )
                 }
@@ -247,8 +247,8 @@ struct MainTabView: View {
                     LogManager.shared.addInfoLog("Cleared simulated location from URL")
                 } else {
                     showAlert(
-                        title: "Clear Location Failed",
-                        message: "Could not clear simulated location from URL (error \(code)).",
+                        title: "Clear Location Failed".localized,
+                        message: String(format: "Could not clear simulated location from URL (error %@).".localized, code),
                         showOk: true
                     )
                 }

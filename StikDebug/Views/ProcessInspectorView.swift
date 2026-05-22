@@ -122,11 +122,11 @@ enum ProcessControlAction: String {
     var buttonLabel: String {
         switch self {
         case .resume:
-            return String(format: "Resume".localized)
+            return "Resume".localized
         case .pause:
-            return String(format: "Pause".localized)
+            return "Pause".localized
         case .kill:
-            return String(format: "Kill".localized)
+            return "Kill".localized
         }
     }
 
@@ -155,44 +155,44 @@ enum ProcessControlAction: String {
     var progressTitle: String {
         switch self {
         case .resume:
-            return String(format: "Resuming Process".localized)
+            return "Resuming Process".localized
         case .pause:
-            return String(format: "Pausing Process".localized)
+            return "Pausing Process".localized
         case .kill:
-            return String(format: "Terminating Process".localized)
+            return "Terminating Process".localized
         }
     }
 
     var timeoutTitle: String {
         switch self {
         case .resume:
-            return String(format: "Resume Timed Out".localized)
+            return "Resume Timed Out".localized
         case .pause:
-            return String(format: "Pause Timed Out".localized)
+            return "Pause Timed Out".localized
         case .kill:
-            return String(format: "Kill Timed Out".localized)
+            return "Kill Timed Out".localized
         }
     }
 
     var failureTitle: String {
         switch self {
         case .resume:
-            return String(format: "Resume Failed".localized)
+            return "Resume Failed".localized
         case .pause:
-            return String(format: "Pause Failed".localized)
+            return "Pause Failed".localized
         case .kill:
-            return String(format: "Kill Failed".localized)
+            return "Kill Failed".localized
         }
     }
 
     var successTitle: String {
         switch self {
         case .resume:
-            return String(format: "Process Resumed".localized)
+            return "Process Resumed".localized
         case .pause:
-            return String(format: "Process Paused".localized)
+            return "Process Paused".localized
         case .kill:
-            return String(format: "Process Terminated".localized)
+            return "Process Terminated".localized
         }
     }
 

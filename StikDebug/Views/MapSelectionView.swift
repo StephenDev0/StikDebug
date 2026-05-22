@@ -819,18 +819,18 @@ struct LocationSimulationView: View {
 
     private var routeStatusText: String {
         if isLoadingRoute {
-            return "Calculating route…"
+            return "Calculating route…".localized
         }
         if isPrefetchingRouteSpeeds {
-            return "Prefetching road speeds…"
+            return "Prefetching road speeds…".localized
         }
         if routePlan != nil {
-            return "Route ready."
+            return "Route ready.".localized
         }
         if routeStartSelection != nil || routeEndSelection != nil {
-            return "Pick both route endpoints to build the drive."
+            return "Pick both route endpoints to build the drive.".localized
         }
-        return "Plan a route from the toolbar."
+        return "Plan a route from the toolbar.".localized
     }
 
     private var routeAttributionLink: some View {
@@ -933,7 +933,7 @@ struct LocationSimulationView: View {
 
                 VStack(spacing: 12) {
                     if isImportingCoordinates {
-                        ProgressView("Importing coordinates…")
+                        ProgressView(String(format: "Importing coordinates…".localized))
                             .font(.footnote)
                     }
 
@@ -1646,7 +1646,7 @@ private struct RouteSearchSheet: View {
                 }
 
                 if isResolvingSelection {
-                    ProgressView("Resolving location…")
+                    ProgressView(String(format: "Resolving location…".localized))
                         .font(.footnote)
                 } else if !activeResults.isEmpty {
                     ScrollView {

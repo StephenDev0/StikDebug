@@ -509,7 +509,7 @@ private enum AppListTab: Int, CaseIterable, Identifiable {
         case .debuggable:
             return "JIT"
         case .launch:
-            return "Other"
+            return "Other".localized
         }
     }
 
