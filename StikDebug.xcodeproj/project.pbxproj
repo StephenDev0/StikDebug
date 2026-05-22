@@ -18,14 +18,14 @@
 			containerPortal = DC6F1D2F2D94EADD0071B2B6 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = DC6F1D362D94EADD0071B2B6;
-			remoteInfo = StikJIT;
+			remoteInfo = StikDebug;
 		};
 		DC6F1D532D94EADF0071B2B6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = DC6F1D2F2D94EADD0071B2B6 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = DC6F1D362D94EADD0071B2B6;
-			remoteInfo = StikJIT;
+			remoteInfo = StikDebug;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -52,7 +52,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		1775D3612D9644FD00DFA8E0 /* Exceptions for "StikJIT" folder in "StikDebug" target */ = {
+		1775D3612D9644FD00DFA8E0 /* Exceptions for "StikDebug" folder in "StikDebug" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -62,22 +62,22 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		DC6F1D392D94EADD0071B2B6 /* StikJIT */ = {
+		DC6F1D392D94EADD0071B2B6 /* StikDebug */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				1775D3612D9644FD00DFA8E0 /* Exceptions for "StikJIT" folder in "StikDebug" target */,
+				1775D3612D9644FD00DFA8E0 /* Exceptions for "StikDebug" folder in "StikDebug" target */,
 			);
-			path = StikJIT;
+			path = StikDebug;
 			sourceTree = "<group>";
 		};
-		DC6F1D4B2D94EADF0071B2B6 /* StikJITTests */ = {
+		DC6F1D4B2D94EADF0071B2B6 /* StikDebugTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = StikJITTests;
+			path = StikDebugTests;
 			sourceTree = "<group>";
 		};
-		DC6F1D552D94EADF0071B2B6 /* StikJITUITests */ = {
+		DC6F1D552D94EADF0071B2B6 /* StikDebugUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = StikJITUITests;
+			path = StikDebugUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -112,10 +112,9 @@
 		DC6F1D2E2D94EADD0071B2B6 = {
 			isa = PBXGroup;
 			children = (
-				43953ACB2F9246C6006CB77E /* Localizable.xcstrings */,
-				DC6F1D392D94EADD0071B2B6 /* StikJIT */,
-				DC6F1D4B2D94EADF0071B2B6 /* StikJITTests */,
-				DC6F1D552D94EADF0071B2B6 /* StikJITUITests */,
+				DC6F1D392D94EADD0071B2B6 /* StikDebug */,
+				DC6F1D4B2D94EADF0071B2B6 /* StikDebugTests */,
+				DC6F1D552D94EADF0071B2B6 /* StikDebugUITests */,
 				DC6F1D752D94EB620071B2B6 /* Frameworks */,
 				DC6F1D382D94EADD0071B2B6 /* Products */,
 			);
@@ -157,14 +156,14 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				DC6F1D392D94EADD0071B2B6 /* StikJIT */,
+				DC6F1D392D94EADD0071B2B6 /* StikDebug */,
 			);
 			name = StikDebug;
 			packageProductDependencies = (
 				68D569BD2E1B415700A5BA36 /* CodeEditorView */,
 				68D569BF2E1B415700A5BA36 /* LanguageSupport */,
 			);
-			productName = StikJIT;
+			productName = StikDebug;
 			productReference = DC6F1D372D94EADD0071B2B6 /* StikDebug.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -182,12 +181,12 @@
 				DC6F1D4A2D94EADF0071B2B6 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				DC6F1D4B2D94EADF0071B2B6 /* StikJITTests */,
+				DC6F1D4B2D94EADF0071B2B6 /* StikDebugTests */,
 			);
 			name = StikDebugTests;
 			packageProductDependencies = (
 			);
-			productName = StikJITTests;
+			productName = StikDebugTests;
 			productReference = DC6F1D482D94EADF0071B2B6 /* StikDebugTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -205,12 +204,12 @@
 				DC6F1D542D94EADF0071B2B6 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				DC6F1D552D94EADF0071B2B6 /* StikJITUITests */,
+				DC6F1D552D94EADF0071B2B6 /* StikDebugUITests */,
 			);
 			name = StikDebugUITests;
 			packageProductDependencies = (
 			);
-			productName = StikJITUITests;
+			productName = StikDebugUITests;
 			productReference = DC6F1D522D94EADF0071B2B6 /* StikDebugUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
@@ -455,7 +454,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = StikJIT/StikJIT.entitlements;
+				CODE_SIGN_ENTITLEMENTS = StikDebug/StikDebug.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -466,9 +465,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/StikJIT/idevice",
+					"$(PROJECT_DIR)/StikDebug/idevice",
 				);
-				INFOPLIST_FILE = StikJIT/Info.plist;
+				INFOPLIST_FILE = StikDebug/Info.plist;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "StikDebug needs access to devices on your local network so it can connect to the targets you add to the Device Library.";
@@ -490,10 +489,10 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/StikJIT/idevice",
+					"$(PROJECT_DIR)/StikDebug/idevice",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.1;
-				MARKETING_VERSION = 3.1.3;
+				MARKETING_VERSION = 3.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.stik.stikdebug;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -502,7 +501,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_INCLUDE_PATHS = "$(inherited) $(PROJECT_DIR)/StikJIT/idevice";
+				SWIFT_INCLUDE_PATHS = "$(inherited) $(PROJECT_DIR)/StikDebug/idevice";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -517,7 +516,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = StikJIT/StikJIT.entitlements;
+				CODE_SIGN_ENTITLEMENTS = StikDebug/StikDebug.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -528,9 +527,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/StikJIT/idevice",
+					"$(PROJECT_DIR)/StikDebug/idevice",
 				);
-				INFOPLIST_FILE = StikJIT/Info.plist;
+				INFOPLIST_FILE = StikDebug/Info.plist;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = YES;
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "StikDebug needs access to devices on your local network so it can connect to the targets you add to the Device Library.";
@@ -552,10 +551,10 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/StikJIT/idevice",
+					"$(PROJECT_DIR)/StikDebug/idevice",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.1;
-				MARKETING_VERSION = 3.1.3;
+				MARKETING_VERSION = 3.1.4;
 				PRODUCT_BUNDLE_IDENTIFIER = com.stik.stikdebug;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -564,7 +563,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_INCLUDE_PATHS = "$(inherited) $(PROJECT_DIR)/StikJIT/idevice";
+				SWIFT_INCLUDE_PATHS = "$(inherited) $(PROJECT_DIR)/StikDebug/idevice";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				XROS_DEPLOYMENT_TARGET = 2.2;
@@ -581,21 +580,21 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/StikJIT/idevice",
+					"$(PROJECT_DIR)/StikDebug/idevice",
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/StikJIT/idevice",
+					"$(PROJECT_DIR)/StikDebug/idevice",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.1;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.stik.StikJITTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.stik.stikdebug.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_INCLUDE_PATHS = "$(inherited) $(PROJECT_DIR)/StikJIT/idevice";
+				SWIFT_INCLUDE_PATHS = "$(inherited) $(PROJECT_DIR)/StikDebug/idevice";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StikDebug.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/StikDebug";
@@ -613,21 +612,21 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/StikJIT/idevice",
+					"$(PROJECT_DIR)/StikDebug/idevice",
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/StikJIT/idevice",
+					"$(PROJECT_DIR)/StikDebug/idevice",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.1;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.stik.StikJITTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.stik.stikdebug.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_INCLUDE_PATHS = "$(inherited) $(PROJECT_DIR)/StikJIT/idevice";
+				SWIFT_INCLUDE_PATHS = "$(inherited) $(PROJECT_DIR)/StikDebug/idevice";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/StikDebug.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/StikDebug";
@@ -645,14 +644,14 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.1;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.stik.StikJITUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.stik.stikdebug.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_TARGET_NAME = StikJIT;
+				TEST_TARGET_NAME = StikDebug;
 				XROS_DEPLOYMENT_TARGET = 2.2;
 			};
 			name = Debug;
@@ -667,14 +666,14 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MACOSX_DEPLOYMENT_TARGET = 15.1;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.stik.StikJITUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.stik.stikdebug.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_TARGET_NAME = StikJIT;
+				TEST_TARGET_NAME = StikDebug;
 				XROS_DEPLOYMENT_TARGET = 2.2;
 			};
 			name = Release;
