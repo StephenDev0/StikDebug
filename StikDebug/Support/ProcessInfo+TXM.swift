@@ -6,20 +6,24 @@
 import Foundation
 
 public extension ProcessInfo {
-    var hasTXMClassic: Bool {
-        ProcessInfo.processInfo.isiOSAppOnMac ? false : ProcessInfo.detectLocalTXM()
-    }
-
     var hasTXM: Bool {
         if isTXMOverridden {
             return true
         }
 
-        return ProcessInfo.hasTXMSupport(
-            isIOS266OrNewer: ProcessInfo.isIOS266OrNewer,
-            hasTXMClassic: hasTXMClassic,
-            hardwareIdentifier: hardwareIdentifier()
-        )
+        let hardware = hardwareIdentifier()
+
+        if ProcessInfo.isIOS27OrNewer {
+            return hardware != "iPad8,11" && hardware != "iPad8,12"
+        }
+
+        if ProcessInfo.isIOS26OrNewer {
+            return ProcessInfo.hasTXMSupport(
+                hardwareIdentifier: hardware
+            )
+        }
+
+        return false
     }
 
     var isTXMOverridden: Bool {
@@ -27,26 +31,20 @@ public extension ProcessInfo {
     }
 
     internal static func hasTXMSupport(
-        isIOS266OrNewer: Bool,
-        hasTXMClassic: Bool,
         hardwareIdentifier: String
     ) -> Bool {
-        if isIOS266OrNewer, !hasTXMClassic {
-            let firstTXM = 14.2
-            let iPadTXM = 14.5
+        let firstTXM = 14.2
+        let iPadTXM = 14.5
 
-            if let ver = ProcessInfo.processInfo.deviceVersion(from: hardwareIdentifier) {
-                if hardwareIdentifier.hasPrefix("iPad") {
-                    return ver >= iPadTXM
-                } else {
-                    return ver >= firstTXM
-                }
-            }
-
+        guard let ver = ProcessInfo.processInfo.deviceVersion(from: hardwareIdentifier) else {
             return false
         }
 
-        return hasTXMClassic
+        if hardwareIdentifier.hasPrefix("iPad") {
+            return ver >= iPadTXM
+        }
+
+        return ver >= firstTXM
     }
 
     func deviceVersion(from identifier: String) -> Double? {
@@ -74,19 +72,16 @@ public extension ProcessInfo {
         return extractVersion(iPhonePattern) ?? extractVersion(iPadPattern)
     }
 
-    private static func detectLocalTXM() -> Bool {
-        if let boot = FileManager.default.filePath(atPath: "/System/Volumes/Preboot", withLength: 36),
-           let file = FileManager.default.filePath(atPath: "\(boot)/boot", withLength: 96) {
-            return access("\(file)/usr/standalone/firmware/FUD/Ap,TrustedExecutionMonitor.img4", F_OK) == 0
+    private static var isIOS26OrNewer: Bool {
+        if #available(iOS 26.0, *) {
+            return true
         }
 
-        return FileManager.default.filePath(atPath: "/private/preboot", withLength: 96).map {
-            access("\($0)/usr/standalone/firmware/FUD/Ap,TrustedExecutionMonitor.img4", F_OK) == 0
-        } ?? false
+        return false
     }
 
-    private static var isIOS266OrNewer: Bool {
-        if #available(iOS 26.6, *) {
+    private static var isIOS27OrNewer: Bool {
+        if #available(iOS 27.0, *) {
             return true
         }
 
