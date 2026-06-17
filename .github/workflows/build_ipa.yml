@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: 1. Fetch Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 2. Configure Xcode Environment
         uses: maxim-lobanov/setup-xcode@v1
