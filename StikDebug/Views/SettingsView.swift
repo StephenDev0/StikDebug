@@ -21,6 +21,7 @@ struct SettingsView: View {
     @AppStorage(UserDefaults.Keys.targetDeviceIP) private var targetDeviceIP = DeviceConnectionContext.defaultTargetIPAddress
 
     @State private var isShowingPairingFilePicker = false
+    @State private var isShowingLocalPairing = false
     @State private var isImportingFile = false
     @State private var pairingImportMessage: (text: String, isError: Bool)?
     @State private var showDDIConfirmation = false
@@ -66,6 +67,14 @@ struct SettingsView: View {
                         Label("Import Pairing File", systemImage: "doc.badge.plus")
                     }
                     .disabled(isImportingFile)
+
+                    if #available(iOS 27.0, *) {
+                        Button {
+                            isShowingLocalPairing = true
+                        } label: {
+                            Label("Pair Using Local Server", systemImage: "antenna.radiowaves.left.and.right")
+                        }
+                    }
 
                     if isImportingFile {
                         HStack(spacing: 10) {
@@ -208,6 +217,11 @@ struct SettingsView: View {
                 isImportingFile = false
                 pairingImportMessage = ("Import failed: \(error.localizedDescription)", true)
                 schedulePairingStatusDismiss()
+            }
+        }
+        .fullScreenCover(isPresented: $isShowingLocalPairing) {
+            if #available(iOS 27.0, *) {
+                PairingView()
             }
         }
         .confirmationDialog("Redownload DDI Files?", isPresented: $showDDIConfirmation, titleVisibility: .visible) {

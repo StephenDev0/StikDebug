@@ -1,0 +1,4 @@
+module StikPairFFI {
+    header "stikpair.h"
+    export *
+}

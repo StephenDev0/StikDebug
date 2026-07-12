@@ -13,6 +13,7 @@ final class BackgroundAudioManager {
     private var isRunning = false
     private var persistentEnabled = false
     private var activityCount = 0
+    private var forcedActivityCount = 0
     private var healthCheckTimer: Timer?
 
     private init() {
@@ -40,18 +41,28 @@ final class BackgroundAudioManager {
         refreshRunningState()
     }
 
-    func requestStart() {
-        activityCount += 1
+    func requestStart(force: Bool = false) {
+        if force {
+            forcedActivityCount += 1
+        } else {
+            activityCount += 1
+        }
         refreshRunningState()
     }
 
-    func requestStop() {
-        activityCount = max(activityCount - 1, 0)
+    func requestStop(force: Bool = false) {
+        if force {
+            forcedActivityCount = max(forcedActivityCount - 1, 0)
+        } else {
+            activityCount = max(activityCount - 1, 0)
+        }
         refreshRunningState()
     }
 
     private func refreshRunningState() {
-        let shouldRun = persistentEnabled || (activityCount > 0 && UserDefaults.standard.bool(forKey: "keepAliveAudio"))
+        let shouldRun = persistentEnabled
+            || forcedActivityCount > 0
+            || (activityCount > 0 && UserDefaults.standard.bool(forKey: "keepAliveAudio"))
         guard shouldRun != isRunning else {
             if shouldRun {
                 recoverIfNeeded()

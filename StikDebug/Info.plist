@@ -20,6 +20,12 @@
 	<array>
 		<string>_stikdebug._tcp</string>
 		<string>_stikdebug._udp</string>
+		<string>_remotepairing-pairable-host._tcp</string>
+		<string>_stikdebugpair._tcp</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).pairing</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

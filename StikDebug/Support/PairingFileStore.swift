@@ -36,13 +36,23 @@ enum PairingFileStore {
 
     static func replace(with sourceURL: URL, fileManager: FileManager = .default) throws {
         let destination = prepareURL(fileManager: fileManager)
-        if fileManager.fileExists(atPath: destination.path) {
-            try fileManager.removeItem(at: destination)
-        }
+        let stagedURL = directoryURL.appendingPathComponent("\(UUID().uuidString).tmp")
 
-        removeLegacyCopies(fileManager: fileManager)
-        try fileManager.copyItem(at: sourceURL, to: destination)
-        protectPairingFile(at: destination, fileManager: fileManager)
+        do {
+            try fileManager.copyItem(at: sourceURL, to: stagedURL)
+
+            if fileManager.fileExists(atPath: destination.path) {
+                _ = try fileManager.replaceItemAt(destination, withItemAt: stagedURL)
+            } else {
+                try fileManager.moveItem(at: stagedURL, to: destination)
+            }
+
+            removeLegacyCopies(fileManager: fileManager)
+            protectPairingFile(at: destination, fileManager: fileManager)
+        } catch {
+            try? fileManager.removeItem(at: stagedURL)
+            throw error
+        }
     }
 
     static func importFromPicker(_ sourceURL: URL, fileManager: FileManager = .default) throws {

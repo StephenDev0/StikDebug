@@ -10,6 +10,7 @@ import UIKit
 enum AppBootstrapper {
     static func configure() {
         registerDefaultSettings()
+        PairingController.registerBackgroundTask()
         startConfiguredKeepAliveServices()
         applyDocumentPickerCopyWorkaround()
     }
@@ -23,7 +24,9 @@ enum AppBootstrapper {
             UserDefaults.Keys.txmOverride: false,
             UserDefaults.Keys.confirmExternalJITRequests: true,
             "keepAliveAudio": true,
-            "keepAliveLocation": true
+            "keepAliveLocation": true,
+            "pairingKeepAliveAudio": true,
+            "pairingKeepAliveLocation": false
         ])
     }
 

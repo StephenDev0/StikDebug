@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "StikPair-iOS-Default-1024@1x.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
