@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Foundation
+import CoreLocation
 
 private enum ExternalLocationAction: Identifiable {
     case simulate(URL, Double, Double)
@@ -223,6 +224,14 @@ struct MainTabView: View {
 
             DispatchQueue.main.async {
                 if code == 0 {
+                    // Hold it, so a URL-scheme simulation survives backgrounding
+                    // the same way one set from the map does.
+                    LocationSimulationKeepAlive.shared.hold(
+                        CLLocationCoordinate2D(
+                            latitude: coordinate.latitude,
+                            longitude: coordinate.longitude
+                        )
+                    )
                     BackgroundLocationManager.shared.requestStart()
                     LogManager.shared.addInfoLog(
                         String(format: "Simulated location from URL: %.6f, %.6f", coordinate.latitude, coordinate.longitude)
@@ -239,6 +248,9 @@ struct MainTabView: View {
     }
 
     private func clearSimulatedLocation() {
+        // Release before clearing: a queued resend would otherwise re-apply the
+        // location a few seconds after it was cleared.
+        LocationSimulationKeepAlive.shared.release()
         LocationSimulationCommandQueue.shared.async {
             let code = clear_simulated_location()
             DispatchQueue.main.async {

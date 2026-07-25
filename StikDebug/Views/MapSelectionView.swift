@@ -728,7 +728,6 @@ struct LocationSimulationView: View {
     @State private var position: MapCameraPosition = .userLocation(fallback: .automatic)
 
     @State private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
-    @State private var resendTimer: Timer?
     @State private var routeLoadTask: Task<Void, Never>?
     @State private var routeSpeedPrefetchTask: Task<Void, Never>?
     @State private var routePlaybackTask: Task<Void, Never>?
@@ -1025,6 +1024,14 @@ struct LocationSimulationView: View {
         }
         .onAppear {
             loadBookmarks()
+            // The hold outlives this view now, so @State can come back empty
+            // while a simulation is still running. Re-adopt it so the UI shows
+            // the active location instead of looking idle.
+            if simulatedCoordinate == nil,
+               let held = LocationSimulationKeepAlive.shared.activeCoordinate {
+                simulatedCoordinate = held
+                coordinate = held
+            }
         }
         .onDisappear {
             routeLoadTask?.cancel()
@@ -1032,7 +1039,9 @@ struct LocationSimulationView: View {
             routeSpeedPrefetchTask?.cancel()
             routeSpeedPrefetchTask = nil
             cancelRoutePlayback(resetMarker: true)
-            stopResendLoop()
+            // Deliberately does NOT stop the simulation. A held location has to
+            // outlive this screen — leaving the tab used to snap the device back
+            // to its real location. Only an explicit Clear releases the hold.
             if backgroundTaskID != .invalid {
                 BackgroundLocationManager.shared.requestStop()
             }
@@ -1379,18 +1388,13 @@ struct LocationSimulationView: View {
 
     private func startResendLoop(with coordinate: CLLocationCoordinate2D) {
         simulatedCoordinate = coordinate
-        resendTimer?.invalidate()
-        resendTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: true) { _ in
-            guard let simulatedCoordinate else { return }
-            LocationSimulationCommandQueue.shared.async {
-                _ = locationUpdateCode(for: simulatedCoordinate)
-            }
-        }
+        // Owned by the service, not this view: a main-runloop Timer stops when
+        // the app is suspended, and @State dies with the screen.
+        LocationSimulationKeepAlive.shared.hold(coordinate)
     }
 
     private func stopResendLoop() {
-        resendTimer?.invalidate()
-        resendTimer = nil
+        LocationSimulationKeepAlive.shared.release()
         simulatedCoordinate = nil
     }
 
