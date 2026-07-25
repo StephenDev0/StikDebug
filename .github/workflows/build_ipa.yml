@@ -2,7 +2,7 @@ name: Build Debug IPA
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "cellular-fix", "location-persistence" ]
     tags: [ "[0-9]*" ]
   pull_request:
     branches: [ "main" ]
@@ -31,7 +31,10 @@ jobs:
       - name: 2. Configure Xcode Environment
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '26.6'
+          # Pinned versions vanish from the runner images over time, and this pin
+          # has already had to be bumped twice. latest-stable avoids a build
+          # failure that is really just a missing toolchain.
+          xcode-version: 'latest-stable'
 
       - name: 3. Compile Project Archive
         run: |
