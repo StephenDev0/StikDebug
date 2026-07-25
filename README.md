@@ -75,6 +75,7 @@ StikDebug enables **JIT** for sideloaded apps on iOS 17.4+ without needing a com
 **Troubleshooting**  
 - "Connection dropped" or loopback errors → Check iOS version compatibility / beta warnings.  
 - Heartbeat errors → Ensure that LocalDevVPN is on. Any network works (Wi-Fi **or** cellular); the tunnel rides the VPN, so cellular-only is supported. It may also be a pairing file issue.
+- Session drops after switching to another app → Keep the background keep-alive enabled (Settings → Background Keep-Alive). While a JIT/debug session is active, StikDebug plays inaudible audio and holds a background assertion so the session survives being switched out of the app instead of timing out.
 - Pairing file issues → Replace file with device unlocked & trusted.  
 - Still stuck? Join the [Discord](https://discord.gg/ZnNcrRT3M8) with logs/screenshots.
 

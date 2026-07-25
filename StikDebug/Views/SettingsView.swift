@@ -105,8 +105,8 @@ struct SettingsView: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
-                    .onChange(of: keepAliveLocation) { _, enabled in
-                        if !enabled { BackgroundLocationManager.shared.stop() }
+                    .onChange(of: keepAliveLocation) { _, _ in
+                        BackgroundLocationManager.shared.refreshFromSettings()
                     }
 
                 } header: {

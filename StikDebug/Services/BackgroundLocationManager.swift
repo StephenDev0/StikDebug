@@ -11,6 +11,7 @@ final class BackgroundLocationManager: NSObject, CLLocationManagerDelegate {
     private let locationManager = CLLocationManager()
     private var isRunning = false
     private var activityCount = 0
+    private var forcedActivityCount = 0
 
     private override init() {
         super.init()
@@ -40,16 +41,41 @@ final class BackgroundLocationManager: NSObject, CLLocationManagerDelegate {
         locationManager.stopUpdatingLocation()
     }
 
-    func requestStart() {
-        activityCount += 1
-        if activityCount == 1, UserDefaults.standard.bool(forKey: "keepAliveLocation") {
-            start()
+    /// Request that the app be kept alive by background location updates.
+    ///
+    /// Pass `force: true` for an active debug session that must keep running
+    /// regardless of the user's "Background Location" toggle. Forced holds
+    /// bypass the setting so a session survives being switched out.
+    func requestStart(force: Bool = false) {
+        if force {
+            forcedActivityCount += 1
+        } else {
+            activityCount += 1
         }
+        refreshRunningState()
     }
 
-    func requestStop() {
-        activityCount = max(activityCount - 1, 0)
-        if activityCount == 0 {
+    func requestStop(force: Bool = false) {
+        if force {
+            forcedActivityCount = max(forcedActivityCount - 1, 0)
+        } else {
+            activityCount = max(activityCount - 1, 0)
+        }
+        refreshRunningState()
+    }
+
+    /// Re-evaluate whether location should be running. Call after the user
+    /// toggles the "Background Location" setting.
+    func refreshFromSettings() {
+        refreshRunningState()
+    }
+
+    private func refreshRunningState() {
+        let shouldRun = forcedActivityCount > 0
+            || (activityCount > 0 && UserDefaults.standard.bool(forKey: "keepAliveLocation"))
+        if shouldRun {
+            start()
+        } else if isRunning {
             stop()
         }
     }
