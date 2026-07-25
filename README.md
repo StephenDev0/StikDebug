@@ -74,7 +74,7 @@ StikDebug enables **JIT** for sideloaded apps on iOS 17.4+ without needing a com
 
 **Troubleshooting**  
 - "Connection dropped" or loopback errors → Check iOS version compatibility / beta warnings.  
-- Heartbeat errors → Ensure that the VPN is on and that you are connecected to Wi-Fi. It may be a pairing file issue.
+- Heartbeat errors → Ensure that LocalDevVPN is on. Any network works (Wi-Fi **or** cellular); the tunnel rides the VPN, so cellular-only is supported. It may also be a pairing file issue.
 - Pairing file issues → Replace file with device unlocked & trusted.  
 - Still stuck? Join the [Discord](https://discord.gg/ZnNcrRT3M8) with logs/screenshots.
 

@@ -12,6 +12,7 @@ enum AppBootstrapper {
         registerDefaultSettings()
         startConfiguredKeepAliveServices()
         applyDocumentPickerCopyWorkaround()
+        NetworkPathMonitor.shared.start()
     }
 
     private static func registerDefaultSettings() {
