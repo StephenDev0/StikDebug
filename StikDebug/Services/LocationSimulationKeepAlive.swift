@@ -29,6 +29,10 @@ final class LocationSimulationKeepAlive {
     /// interval the view's timer used.
     private static let resendInterval: TimeInterval = 4
 
+    /// Remembers the held coordinate across launches, so a location survives the
+    /// app being killed or the device rebooting.
+    private static let storageKey = "heldSimulatedLocation"
+
     private let stateLock = NSLock()
     private let timerQueue = DispatchQueue(label: "com.stik.location-keepalive")
 
@@ -63,11 +67,52 @@ final class LocationSimulationKeepAlive {
         coordinate = newCoordinate
         stateLock.unlock()
 
+        persist(newCoordinate)
         acquireKeepAlive()
         startTimer()
 
         if isFirstHold {
             LogManager.shared.addInfoLog("Holding simulated location (resending every \(Int(Self.resendInterval))s)")
+        }
+    }
+
+    /// Re-arm a location that was still held when the app last stopped running.
+    ///
+    /// iOS gives sideloaded apps no way to launch themselves, so a reboot or a
+    /// kill always ends the simulation. The next best thing is to pick it straight
+    /// back up on launch: the resend loop tolerates failures, so this can be armed
+    /// before LocalDevVPN is connected and will take hold once it is.
+    func restoreIfNeeded() {
+        guard !isActive else { return }
+
+        guard let values = UserDefaults.standard.array(forKey: Self.storageKey) as? [Double],
+              values.count == 2 else {
+            return
+        }
+
+        let restored = CLLocationCoordinate2D(latitude: values[0], longitude: values[1])
+        guard CLLocationCoordinate2DIsValid(restored) else {
+            UserDefaults.standard.removeObject(forKey: Self.storageKey)
+            return
+        }
+
+        // Without a pairing file nothing can ever succeed, and retrying forever
+        // would just burn battery.
+        guard FileManager.default.fileExists(atPath: PairingFileStore.prepareURL().path) else {
+            return
+        }
+
+        LogManager.shared.addInfoLog(
+            String(format: "Restoring held simulated location: %.6f, %.6f", restored.latitude, restored.longitude)
+        )
+        hold(restored)
+    }
+
+    private func persist(_ value: CLLocationCoordinate2D?) {
+        if let value {
+            UserDefaults.standard.set([value.latitude, value.longitude], forKey: Self.storageKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: Self.storageKey)
         }
     }
 
@@ -83,6 +128,7 @@ final class LocationSimulationKeepAlive {
         timer = nil
         stateLock.unlock()
 
+        persist(nil)
         releaseKeepAlive()
 
         if wasActive {

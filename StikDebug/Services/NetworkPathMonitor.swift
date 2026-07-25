@@ -76,7 +76,15 @@ final class NetworkPathMonitor {
         // A utun (VPN) interface reports as `.other`; treat its presence as an
         // active VPN. The primary usable interface is the first one actually in use.
         let usesVPN = path.availableInterfaces.contains { $0.type == .other }
-        let interface = path.availableInterfaces.first(where: { path.usesInterfaceType($0.type) })?.type
+
+        // Ignore .other (the utun VPN interface) when deciding which interface we
+        // are actually on. LocalDevVPN is always present and always "in use", so
+        // letting it win would report "Other" no matter what — a Wi-Fi↔cellular
+        // handoff would produce an identical signature, look like no change at
+        // all, and never trigger a reconnect.
+        let physical = path.availableInterfaces.filter { $0.type != .other }
+        let interface = physical.first(where: { path.usesInterfaceType($0.type) })?.type
+            ?? physical.first?.type
             ?? path.availableInterfaces.first?.type
 
         let status = Status(

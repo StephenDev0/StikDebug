@@ -13,6 +13,7 @@ enum AppBootstrapper {
         startConfiguredKeepAliveServices()
         applyDocumentPickerCopyWorkaround()
         NetworkPathMonitor.shared.start()
+        LocationSimulationKeepAlive.shared.restoreIfNeeded()
     }
 
     private static func registerDefaultSettings() {

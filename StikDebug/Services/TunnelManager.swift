@@ -12,6 +12,7 @@ final class TunnelManager: ObservableObject {
 
     private var isStarting = false
     private var pathChangeWorkItem: DispatchWorkItem?
+    private var lastInterfaceName: String?
 
     private init() {
         // Reconnect when the network path changes (e.g. a Wi-Fi↔cellular handoff)
@@ -124,9 +125,25 @@ final class TunnelManager: ObservableObject {
         let status = NetworkPathMonitor.shared.status
         guard status.isReachable else { return }
 
-        // Re-establish the primary tunnel if it dropped during the change.
-        guard !isConnected else { return }
-        LogManager.shared.addInfoLog("Network path changed (\(status.description)); reconnecting tunnel")
+        let previous = lastInterfaceName
+        lastInterfaceName = status.interfaceName
+
+        if !isConnected {
+            LogManager.shared.addInfoLog("Network path changed (\(status.description)); connecting tunnel")
+            start(showErrorUI: false)
+            return
+        }
+
+        // isConnected only means "the last connect succeeded" — nothing in the app
+        // notices a tunnel that died quietly, which is exactly what a handoff does.
+        // So don't trust it: if the physical interface actually changed, treat the
+        // old tunnel as dead and rebuild. startTunnel() is semaphore-guarded and
+        // recreates its adapter, so reconnecting a live tunnel is safe.
+        guard let previous, previous != status.interfaceName else { return }
+        LogManager.shared.addInfoLog(
+            "Interface changed (\(previous) → \(status.interfaceName)); rebuilding tunnel"
+        )
+        markDisconnected()
         start(showErrorUI: false)
     }
 
