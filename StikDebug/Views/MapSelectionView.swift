@@ -767,6 +767,8 @@ struct LocationSimulationView: View {
     @State private var showSaveBookmark = false
     @State private var newBookmarkName = ""
 
+    @AppStorage("cnCoordinateCorrection") private var cnCoordinateCorrection = false
+
     private var pairingFilePath: String {
         PairingFileStore.prepareURL().path
     }
@@ -1568,7 +1570,13 @@ struct LocationSimulationView: View {
     }
 
     private func locationUpdateCode(for coordinate: CLLocationCoordinate2D) -> Int32 {
-        simulate_location(deviceIP, coordinate.latitude, coordinate.longitude, pairingFilePath)
+        let adjusted: CLLocationCoordinate2D
+        if cnCoordinateCorrection {
+            adjusted = CoordinateConverter.gcj02ToWGS84(coordinate)
+        } else {
+            adjusted = coordinate
+        }
+        return simulate_location(deviceIP, adjusted.latitude, adjusted.longitude, pairingFilePath)
     }
 }
 

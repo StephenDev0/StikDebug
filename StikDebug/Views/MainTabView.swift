@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Foundation
+import CoreLocation
 
 private enum ExternalLocationAction: Identifiable {
     case simulate(URL, Double, Double)
@@ -54,6 +55,7 @@ struct MainTabView: View {
     @State private var detachedFeature: AppFeature?
     @State private var didSetInitialHome = false
     @State private var pendingLocationAction: ExternalLocationAction?
+    @AppStorage("cnCoordinateCorrection") private var cnCoordinateCorrection = false
 
     var body: some View {
         ZStack {
@@ -213,11 +215,24 @@ struct MainTabView: View {
             return
         }
 
-        LocationSimulationCommandQueue.shared.async {
+        let simLat: Double
+        let simLon: Double
+        if cnCoordinateCorrection {
+            let corrected = CoordinateConverter.gcj02ToWGS84(
+                CLLocationCoordinate2D(latitude: coordinate.latitude, longitude: coordinate.longitude)
+            )
+            simLat = corrected.latitude
+            simLon = corrected.longitude
+        } else {
+            simLat = coordinate.latitude
+            simLon = coordinate.longitude
+        }
+
+        let workItem = DispatchWorkItem {
             let code = simulate_location(
                 DeviceConnectionContext.targetIPAddress,
-                coordinate.latitude,
-                coordinate.longitude,
+                simLat,
+                simLon,
                 pairingFile.path
             )
 
@@ -236,10 +251,11 @@ struct MainTabView: View {
                 }
             }
         }
+        LocationSimulationCommandQueue.shared.async(execute: workItem)
     }
 
     private func clearSimulatedLocation() {
-        LocationSimulationCommandQueue.shared.async {
+        let workItem = DispatchWorkItem {
             let code = clear_simulated_location()
             DispatchQueue.main.async {
                 if code == 0 {
@@ -254,6 +270,7 @@ struct MainTabView: View {
                 }
             }
         }
+        LocationSimulationCommandQueue.shared.async(execute: workItem)
     }
 
     private func coordinate(from url: URL) -> (latitude: Double, longitude: Double)? {

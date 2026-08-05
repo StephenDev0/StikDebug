@@ -18,6 +18,7 @@ struct SettingsView: View {
     @AppStorage(UserDefaults.Keys.confirmExternalJITRequests) private var confirmExternalJITRequests = true
     @AppStorage("keepAliveAudio") private var keepAliveAudio = true
     @AppStorage("keepAliveLocation") private var keepAliveLocation = true
+    @AppStorage("cnCoordinateCorrection") private var cnCoordinateCorrection = false
     @AppStorage(UserDefaults.Keys.targetDeviceIP) private var targetDeviceIP = DeviceConnectionContext.defaultTargetIPAddress
 
     @State private var isShowingPairingFilePicker = false
@@ -129,6 +130,18 @@ struct SettingsView: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
+                }
+
+                Section {
+                    Toggle(isOn: $cnCoordinateCorrection) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("China Coordinate Correction")
+                            Text("Fix offset issue of location simulation in China region")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Location")
                 }
 
                 Section("Advanced") {
