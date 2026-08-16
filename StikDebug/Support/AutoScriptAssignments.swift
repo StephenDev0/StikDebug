@@ -13,6 +13,8 @@ extension ScriptStore {
         AutoScriptAssignment(
             appNames: [
                 "Amethyst",
+                "PocketJ Launcher",
+                "掌上Java启动器",
                 "MeloNX",
                 "Melo",
                 "XeniOS",
