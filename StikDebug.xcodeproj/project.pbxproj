@@ -9,6 +9,10 @@
 /* Begin PBXBuildFile section */
 		68D569BE2E1B415700A5BA36 /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = 68D569BD2E1B415700A5BA36 /* CodeEditorView */; };
 		68D569C02E1B415700A5BA36 /* LanguageSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 68D569BF2E1B415700A5BA36 /* LanguageSupport */; };
+		A1B2C3D40123456789ABC001 /* StikDebugTunnelConfiguration.swift in StikDebugTunnel Sources */ = {isa = PBXBuildFile; fileRef = A3B2C3D40123456789ABC003 /* StikDebugTunnelConfiguration.swift */; };
+		A1B2C3D40123456789ABC002 /* IPv4PacketRewriter.swift in StikDebugTunnel Sources */ = {isa = PBXBuildFile; fileRef = A3B2C3D40123456789ABC004 /* IPv4PacketRewriter.swift */; };
+		A1B2C3D40123456789ABC003 /* NetworkExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3B2C3D40123456789ABC002 /* NetworkExtension.framework */; };
+		A1B2C3D40123456789ABC004 /* StikDebugTunnel.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A3B2C3D40123456789ABC001 /* StikDebugTunnel.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -26,6 +30,13 @@
 			remoteGlobalIDString = DC6F1D362D94EADD0071B2B6;
 			remoteInfo = StikJIT;
 		};
+		A2B2C3D40123456789ABC001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DC6F1D2F2D94EADD0071B2B6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A5B2C3D40123456789ABC001;
+			remoteInfo = StikDebugTunnel;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -35,6 +46,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
+				A1B2C3D40123456789ABC004 /* StikDebugTunnel.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -47,6 +59,10 @@
 		DC6F1D372D94EADD0071B2B6 /* StikDebug.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StikDebug.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DC6F1D482D94EADF0071B2B6 /* StikDebugTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StikDebugTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DC6F1D522D94EADF0071B2B6 /* StikDebugUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StikDebugUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A3B2C3D40123456789ABC001 /* StikDebugTunnel.appex */ = {isa = PBXFileReference; explicitFileType = wrapper.app-extension; includeInIndex = 0; path = StikDebugTunnel.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A3B2C3D40123456789ABC002 /* NetworkExtension.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NetworkExtension.framework; path = System/Library/Frameworks/NetworkExtension.framework; sourceTree = SDKROOT; };
+		A3B2C3D40123456789ABC003 /* StikDebugTunnelConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StikJIT/Tunnel/StikDebugTunnelConfiguration.swift; sourceTree = "<group>"; };
+		A3B2C3D40123456789ABC004 /* IPv4PacketRewriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StikJIT/Tunnel/IPv4PacketRewriter.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -78,6 +94,11 @@
 			path = StikJITUITests;
 			sourceTree = "<group>";
 		};
+		A4B2C3D40123456789ABC001 /* StikDebugTunnel */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = StikDebugTunnel;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +123,14 @@
 			buildActionMask = 2147483647;
 			files = (
 			);
+			 runOnlyForDeploymentPostprocessing = 0;
+		};
+		A6B2C3D40123456789ABC002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1B2C3D40123456789ABC003 /* NetworkExtension.framework in Frameworks */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -111,6 +140,9 @@
 			isa = PBXGroup;
 			children = (
 				DC6F1D392D94EADD0071B2B6 /* StikJIT */,
+				A4B2C3D40123456789ABC001 /* StikDebugTunnel */,
+				A3B2C3D40123456789ABC003 /* StikDebugTunnelConfiguration.swift */,
+				A3B2C3D40123456789ABC004 /* IPv4PacketRewriter.swift */,
 				DC6F1D4B2D94EADF0071B2B6 /* StikJITTests */,
 				DC6F1D552D94EADF0071B2B6 /* StikJITUITests */,
 				DC6F1D752D94EB620071B2B6 /* Frameworks */,
@@ -124,6 +156,7 @@
 				DC6F1D372D94EADD0071B2B6 /* StikDebug.app */,
 				DC6F1D482D94EADF0071B2B6 /* StikDebugTests.xctest */,
 				DC6F1D522D94EADF0071B2B6 /* StikDebugUITests.xctest */,
+				A3B2C3D40123456789ABC001 /* StikDebugTunnel.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -133,6 +166,7 @@
 			children = (
 				DC139F6D2DE97EA400F63846 /* WidgetKit.framework */,
 				DC139F6F2DE97EA400F63846 /* SwiftUI.framework */,
+				A3B2C3D40123456789ABC002 /* NetworkExtension.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -152,6 +186,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				A7B2C3D40123456789ABC001 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				DC6F1D392D94EADD0071B2B6 /* StikJIT */,
@@ -211,6 +246,26 @@
 			productReference = DC6F1D522D94EADF0071B2B6 /* StikDebugUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		A5B2C3D40123456789ABC001 /* StikDebugTunnel */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A9B2C3D40123456789ABC001 /* Build configuration list for PBXNativeTarget "StikDebugTunnel" */;
+			buildPhases = (
+				A6B2C3D40123456789ABC001 /* Sources */,
+				A6B2C3D40123456789ABC002 /* Frameworks */,
+				A6B2C3D40123456789ABC003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A4B2C3D40123456789ABC001 /* StikDebugTunnel */,
+			);
+			name = StikDebugTunnel;
+			productName = StikDebugTunnel;
+			productReference = A3B2C3D40123456789ABC001 /* StikDebugTunnel.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -232,6 +287,9 @@
 					DC6F1D512D94EADF0071B2B6 = {
 						CreatedOnToolsVersion = 16.2;
 						TestTargetID = DC6F1D362D94EADD0071B2B6;
+					};
+					A5B2C3D40123456789ABC001 = {
+						CreatedOnToolsVersion = 16.2;
 					};
 				};
 			};
@@ -257,6 +315,7 @@
 				DC6F1D362D94EADD0071B2B6 /* StikDebug */,
 				DC6F1D472D94EADF0071B2B6 /* StikDebugTests */,
 				DC6F1D512D94EADF0071B2B6 /* StikDebugUITests */,
+				A5B2C3D40123456789ABC001 /* StikDebugTunnel */,
 			);
 		};
 /* End PBXProject section */
@@ -277,6 +336,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		DC6F1D502D94EADF0071B2B6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A6B2C3D40123456789ABC003 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -307,6 +373,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A6B2C3D40123456789ABC001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1B2C3D40123456789ABC001 /* StikDebugTunnelConfiguration.swift in StikDebugTunnel Sources */,
+				A1B2C3D40123456789ABC002 /* IPv4PacketRewriter.swift in StikDebugTunnel Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -320,9 +395,58 @@
 			target = DC6F1D362D94EADD0071B2B6 /* StikDebug */;
 			targetProxy = DC6F1D532D94EADF0071B2B6 /* PBXContainerItemProxy */;
 		};
+		A7B2C3D40123456789ABC001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A5B2C3D40123456789ABC001 /* StikDebugTunnel */;
+			targetProxy = A2B2C3D40123456789ABC001 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		A8B2C3D40123456789ABC001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = StikDebugTunnel/StikDebugTunnel.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = StikDebugTunnel/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.stik.stikdebug.tunnel;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A8B2C3D40123456789ABC002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = StikDebugTunnel/StikDebugTunnel.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = StikDebugTunnel/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.stik.stikdebug.tunnel;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		DC6F1D5A2D94EADF0071B2B6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -703,6 +827,15 @@
 			buildConfigurations = (
 				DC6F1D632D94EADF0071B2B6 /* Debug */,
 				DC6F1D642D94EADF0071B2B6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A9B2C3D40123456789ABC001 /* Build configuration list for PBXNativeTarget "StikDebugTunnel" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A8B2C3D40123456789ABC001 /* Debug */,
+				A8B2C3D40123456789ABC002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
