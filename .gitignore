@@ -92,5 +92,6 @@ fastlane/test_output
 
 iOSInjectionProject/
 .DS_Store
+.worktrees/
 .vscode/settings.json
 .vscode 
