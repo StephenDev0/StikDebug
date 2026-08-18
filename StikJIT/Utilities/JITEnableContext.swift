@@ -7,7 +7,6 @@
 
 import Foundation
 import idevice
-import Darwin
 
 typealias LogFunc = (String?) -> Void
 typealias DebugAppCallback = (_ pid: Int32, _ debugProxy: OpaquePointer?, _ remoteServer: OpaquePointer?, _ semaphore: DispatchSemaphore) -> Void
@@ -17,24 +16,9 @@ typealias SyslogErrorHandler = (NSError?) -> Void
 final class JITEnableContext {
     static let shared = JITEnableContext()
 
-    private struct TunnelHandles {
-        var adapter: OpaquePointer?
-        var handshake: OpaquePointer?
-
-        mutating func free() {
-            if let handshake {
-                rsd_handshake_free(handshake)
-                self.handshake = nil
-            }
-            if let adapter {
-                adapter_free(adapter)
-                self.adapter = nil
-            }
-        }
-    }
-
     private var adapter: OpaquePointer?
     private var handshake: OpaquePointer?
+    private let transport: DeviceTransport = EmbeddedDeviceTransport.shared
 
     private let tunnelLock = NSLock()
     private var tunnelConnecting = false
@@ -113,72 +97,12 @@ final class JITEnableContext {
         logger?(message)
     }
 
-    private func getPairingFile() throws -> OpaquePointer {
-        let pairingFileURL = PairingFileStore.prepareURL()
-
-        guard FileManager.default.fileExists(atPath: pairingFileURL.path) else {
-            throw makeError("Pairing file not found!", code: -17)
-        }
-
-        var pairingFile: OpaquePointer?
-        let ffiError = pairingFileURL.path.withCString { path in
-            rp_pairing_file_read(path, &pairingFile)
-        }
-
-        if let ffiError {
-            throw error(from: ffiError, fallback: "Failed to read pairing file!")
-        }
-
-        guard let pairingFile else {
-            throw makeError("Failed to read pairing file!", code: -17)
-        }
-
-        return pairingFile
-    }
-
-    private func createTunnel(hostname: String) throws -> TunnelHandles {
-        let pairingFile = try getPairingFile()
-        defer { rp_pairing_file_free(pairingFile) }
-
-        var addr = sockaddr_in()
-        addr.sin_family = sa_family_t(AF_INET)
-        addr.sin_port = in_port_t(49152).bigEndian
-
-        let deviceIP = DeviceConnectionContext.targetIPAddress
-        let parseResult = deviceIP.withCString { inet_pton(AF_INET, $0, &addr.sin_addr) }
-        guard parseResult == 1 else {
-            throw makeError("Failed to parse target IP address.", code: -18)
-        }
-
-        var tunnel = TunnelHandles()
-        let ffiError = hostname.withCString { hostname in
-            withUnsafePointer(to: &addr) { pointer in
-                pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                    tunnel_create_rppairing(
-                        $0,
-                        socklen_t(MemoryLayout<sockaddr_in>.stride),
-                        hostname,
-                        pairingFile,
-                        nil,
-                        nil,
-                        &tunnel.adapter,
-                        &tunnel.handshake
-                    )
-                }
-            }
-        }
-
-        if let ffiError {
-            throw error(from: ffiError, fallback: "Failed to create tunnel")
-        }
-
-        guard tunnel.adapter != nil, tunnel.handshake != nil else {
-            var incompleteTunnel = tunnel
-            incompleteTunnel.free()
-            throw makeError("Tunnel was created without valid handles")
-        }
-
-        return tunnel
+    private func createTunnel(hostname: String) throws -> RPPairingTunnel {
+        try transport.makeRPPairingTunnel(
+            hostname: hostname,
+            targetIPAddress: DeviceConnectionContext.targetIPAddress,
+            pairingFileURL: PairingFileStore.prepareURL()
+        )
     }
 
     func startTunnel() throws {
@@ -281,16 +205,16 @@ final class JITEnableContext {
         private let startupSemaphore = DispatchSemaphore(value: 0)
         private let stoppedSemaphore = DispatchSemaphore(value: 0)
         private let logger: LogFunc?
-        private let makeClient: () throws -> (client: OpaquePointer, tunnel: TunnelHandles)
+        private let makeClient: () throws -> (client: OpaquePointer, tunnel: RPPairingTunnel)
         private let errorBuilder: (UnsafeMutablePointer<IdeviceFfiError>?, String) -> NSError
         private var startupError: NSError?
         private var client: OpaquePointer?
-        private var tunnel: TunnelHandles?
+        private var tunnel: RPPairingTunnel?
         private var stopRequested = false
 
         init(
             logger: LogFunc?,
-            makeClient: @escaping () throws -> (client: OpaquePointer, tunnel: TunnelHandles),
+            makeClient: @escaping () throws -> (client: OpaquePointer, tunnel: RPPairingTunnel),
             errorBuilder: @escaping (UnsafeMutablePointer<IdeviceFfiError>?, String) -> NSError
         ) {
             self.logger = logger

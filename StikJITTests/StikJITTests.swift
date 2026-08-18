@@ -11,6 +11,26 @@ import Testing
 
 struct StikJITTests {
 
+    @Test func transportEndpointUsesRPPairingPort() throws {
+        let endpoint = try RPPairingEndpoint(ip: "10.7.0.1")
+
+        #expect(endpoint.port == 49152)
+        #expect(endpoint.ip == "10.7.0.1")
+    }
+
+    @Test func transportEndpointRejectsMalformedIPv4() {
+        #expect(throws: DeviceTransportError.self) {
+            try RPPairingEndpoint(ip: "not-an-ip")
+        }
+    }
+
+    @Test func transportErrorsDoNotReportWiFiAsTheRootCause() {
+        let message = DeviceTransportError.vpnUnavailable("permission denied").errorDescription ?? ""
+
+        #expect(!message.localizedCaseInsensitiveContains("wifi"))
+        #expect(message.localizedCaseInsensitiveContains("vpn"))
+    }
+
     @Test func vpnStatusMappingRecognizesConnectedAndReasserting() {
         #expect(StikDebugVPNStatus(neStatus: .connected) == .connected)
         #expect(StikDebugVPNStatus(neStatus: .reasserting) == .connecting)
