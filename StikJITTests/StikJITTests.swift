@@ -11,6 +11,36 @@ import Testing
 
 struct StikJITTests {
 
+    @Test func embeddedTunnelDefaultsMatchLocalDevVPNEndpoint() {
+        let configuration = StikDebugTunnelConfiguration.default
+
+        #expect(configuration.interfaceIP == "10.7.0.0")
+        #expect(configuration.peerIP == "10.7.0.1")
+        #expect(configuration.peerPrefixLength == 32)
+        #expect(configuration.providerConfiguration["interfaceIP"] == "10.7.0.0")
+        #expect(configuration.providerConfiguration["peerIP"] == "10.7.0.1")
+    }
+
+    @Test func ipv4PacketRewriterSwapsPacketEndpoints() {
+        var packet = [UInt8](repeating: 0, count: 20)
+        packet.replaceSubrange(12..<16, with: [10, 7, 0, 2])
+        packet.replaceSubrange(16..<20, with: [10, 7, 0, 1])
+
+        IPv4PacketRewriter.swapEndpoints(in: &packet)
+
+        #expect(Array(packet[12..<16]) == [10, 7, 0, 1])
+        #expect(Array(packet[16..<20]) == [10, 7, 0, 2])
+    }
+
+    @Test func ipv4PacketRewriterLeavesShortPacketsUnchanged() {
+        var packet = [UInt8](repeating: 0, count: 19)
+        let original = packet
+
+        IPv4PacketRewriter.swapEndpoints(in: &packet)
+
+        #expect(packet == original)
+    }
+
     @Test func txmDetectionIgnoresFirmwareFileBeforeIOS26() async throws {
         let isSupported = ProcessInfo.hasTXMSupport(
             operatingSystemVersion: OperatingSystemVersion(majorVersion: 18, minorVersion: 7, patchVersion: 2),
