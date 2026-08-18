@@ -9,7 +9,6 @@ import UIKit
 private enum SettingsLinks {
     static let githubStars = URL(string: "https://github.com/StephenDev0/StikDebug/stargazers")!
     static let pairingFileGuide = URL(string: "https://github.com/StephenDev0/StikDebug-Guide/blob/main/pairing_file.md")!
-    static let localDevVPN = URL(string: "https://apps.apple.com/us/app/localdevvpn/id6755608044")!
     static let discord = URL(string: "https://discord.gg/qahjXNTDwS")!
 }
 
@@ -19,6 +18,7 @@ struct SettingsView: View {
     @AppStorage("keepAliveLocation") private var keepAliveLocation = true
     @AppStorage("customTargetIP") private var customTargetIP = ""
     @Environment(LanguageManager.self) private var langManager
+    @StateObject private var vpnManager = StikDebugVPNManager.shared
 
     @State private var isShowingPairingFilePicker = false
     @State private var isImportingFile = false
@@ -28,6 +28,7 @@ struct SettingsView: View {
     @State private var ddiDownloadProgress: Double = 0.0
     @State private var ddiStatusMessage: String = ""
     @State private var ddiResultMessage: (text: String, isError: Bool)?
+    @State private var vpnErrorMessage: String?
 
     private var appVersion: String {
         let marketingVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -93,6 +94,38 @@ struct SettingsView: View {
                         )
                         .font(.caption)
                         .foregroundStyle(pairingImportMessage.isError ? .red : .green)
+                    }
+                }
+
+                Section("Embedded VPN".localized) {
+                    HStack {
+                        Label(vpnStatusTitle.localized, systemImage: vpnStatusIcon)
+                        Spacer()
+                        Circle()
+                            .fill(vpnStatusColor)
+                            .frame(width: 9, height: 9)
+                    }
+
+                    if vpnManager.currentStatus == .connected || vpnManager.currentStatus == .connecting {
+                        Button {
+                            vpnManager.stop()
+                            vpnErrorMessage = nil
+                        } label: {
+                            Label("Stop VPN".localized, systemImage: "stop.circle")
+                        }
+                    } else {
+                        Button {
+                            startEmbeddedVPN()
+                        } label: {
+                            Label("Start VPN".localized, systemImage: "play.circle")
+                        }
+                        .disabled(vpnManager.currentStatus == .connecting)
+                    }
+
+                    if let vpnErrorMessage {
+                        Text(vpnErrorMessage)
+                            .font(.caption)
+                            .foregroundStyle(.red)
                     }
                 }
 
@@ -163,9 +196,6 @@ struct SettingsView: View {
                     Link(destination: SettingsLinks.pairingFileGuide) {
                         Label("Pairing File Guide".localized, systemImage: "questionmark.circle")
                     }
-                    Link(destination: SettingsLinks.localDevVPN) {
-                        Label("Download LocalDevVPN".localized, systemImage: "arrow.down.circle")
-                    }
                     Link(destination: SettingsLinks.discord) {
                         Label("Discord Support".localized, systemImage: "bubble.left.and.bubble.right")
                     }
@@ -229,6 +259,60 @@ struct SettingsView: View {
             txmLabel = processInfo.hasTXM ? "TXM" : "Non TXM"
         }
         return "Version \(appVersion) • iOS \(UIDevice.current.systemVersion) • \(txmLabel)"
+    }
+
+    private var vpnStatusTitle: String {
+        switch vpnManager.currentStatus {
+        case .connected:
+            return "VPN connected"
+        case .connecting:
+            return "VPN connecting"
+        case .disconnecting:
+            return "VPN connecting"
+        case .failed:
+            return "VPN failed"
+        case .disconnected:
+            return "VPN disconnected"
+        }
+    }
+
+    private var vpnStatusIcon: String {
+        switch vpnManager.currentStatus {
+        case .connected:
+            return "checkmark.shield.fill"
+        case .connecting, .disconnecting:
+            return "arrow.triangle.2.circlepath"
+        case .failed:
+            return "exclamationmark.shield.fill"
+        case .disconnected:
+            return "shield.slash"
+        }
+    }
+
+    private var vpnStatusColor: Color {
+        switch vpnManager.currentStatus {
+        case .connected:
+            return .green
+        case .connecting, .disconnecting:
+            return .orange
+        case .failed:
+            return .red
+        case .disconnected:
+            return .secondary
+        }
+    }
+
+    private func startEmbeddedVPN() {
+        vpnErrorMessage = nil
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                try vpnManager.start()
+            } catch {
+                DispatchQueue.main.async {
+                    vpnErrorMessage = error.localizedDescription
+                }
+            }
+        }
     }
 
     // MARK: - Business Logic

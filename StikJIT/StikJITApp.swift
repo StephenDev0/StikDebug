@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import Network
 import idevice
 
 // Register default settings before the app starts
@@ -18,101 +17,6 @@ private func registerAdvancedOptionsDefault() {
     UserDefaults.standard.register(defaults: [UserDefaults.Keys.txmOverride: false])
     UserDefaults.standard.register(defaults: ["keepAliveAudio": true])
     UserDefaults.standard.register(defaults: ["keepAliveLocation": true])
-}
-
-// MARK: - DNS Checker
-
-class DNSChecker: ObservableObject {
-    @Published var appleIP: String?
-    @Published var controlIP: String?
-    @Published var dnsError: String?
-    
-    func checkDNS() {
-        checkIfConnectedToWifi { [weak self] wifiConnected in
-            guard let self = self else { return }
-            if wifiConnected {
-                let group = DispatchGroup()
-                
-                group.enter()
-                self.lookupIPAddress(for: "gs.apple.com") { ip in
-                    DispatchQueue.main.async {
-                        self.appleIP = ip
-                    }
-                    group.leave()
-                }
-                
-                group.enter()
-                self.lookupIPAddress(for: "google.com") { ip in
-                    DispatchQueue.main.async {
-                        self.controlIP = ip
-                    }
-                    group.leave()
-                }
-                
-                group.notify(queue: .main) {
-                    if self.controlIP == nil {
-                        self.dnsError = "No internet connection."
-                    } else if self.appleIP == nil {
-                        self.dnsError = "Apple DNS blocked. Your network might be filtering Apple traffic."
-                    } else {
-                        self.dnsError = nil
-                    }
-                }
-            } else {
-                DispatchQueue.main.async {
-                    self.dnsError = nil
-                }
-            }
-        }
-    }
-    
-    private func checkIfConnectedToWifi(completion: @escaping (Bool) -> Void) {
-        let monitor = NWPathMonitor(requiredInterfaceType: .wifi)
-        monitor.pathUpdateHandler = { path in
-            completion(path.status == .satisfied)
-            monitor.cancel()
-        }
-        let queue = DispatchQueue.global(qos: .background)
-        monitor.start(queue: queue)
-    }
-    
-    private func lookupIPAddress(for host: String, completion: @escaping (String?) -> Void) {
-        DispatchQueue.global(qos: .background).async {
-            var hints = addrinfo(
-                ai_flags: 0,
-                ai_family: AF_UNSPEC,
-                ai_socktype: SOCK_STREAM,
-                ai_protocol: 0,
-                ai_addrlen: 0,
-                ai_canonname: nil,
-                ai_addr: nil,
-                ai_next: nil
-            )
-            var res: UnsafeMutablePointer<addrinfo>?
-            let err = getaddrinfo(host, nil, &hints, &res)
-            if err != 0 {
-                DispatchQueue.main.async { completion(nil) }
-                return
-            }
-            
-            var ipAddress: String?
-            var ptr = res
-            while ptr != nil {
-                if let addr = ptr?.pointee.ai_addr {
-                    var hostBuffer = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-                    if getnameinfo(addr, ptr!.pointee.ai_addrlen,
-                                   &hostBuffer, socklen_t(hostBuffer.count),
-                                   nil, 0, NI_NUMERICHOST) == 0 {
-                        ipAddress = String(cString: hostBuffer)
-                        break
-                    }
-                }
-                ptr = ptr?.pointee.ai_next
-            }
-            freeaddrinfo(res)
-            DispatchQueue.main.async { completion(ipAddress) }
-        }
-    }
 }
 
 // MARK: - Main App
@@ -342,7 +246,7 @@ func startTunnelInBackground(showErrorUI: Bool = true) {
                 } else {
                     showAlert(
                         title: "Connection Error",
-                        message: "\(error.localizedDescription)\n\nMake sure Wi‑Fi and LocalDevVPN are connected and that the device is reachable.",
+                        message: "\(error.localizedDescription)\n\nCheck that the embedded VPN is connected and that the pairing file is current.",
                         showOk: false,
                         showTryAgain: true
                     ) { shouldTryAgain in
@@ -358,51 +262,6 @@ func startTunnelInBackground(showErrorUI: Bool = true) {
     }
     
 
-}
-
-func checkDeviceConnection(callback: @escaping (Bool, String?) -> Void) {
-    let targetIP = DeviceConnectionContext.targetIPAddress
-    let host = NWEndpoint.Host(targetIP)
-    let port = NWEndpoint.Port(rawValue: 62078)!
-    let connection = NWConnection(host: host, port: port, using: .tcp)
-    var timeoutWorkItem: DispatchWorkItem?
-    
-    timeoutWorkItem = DispatchWorkItem { [weak connection] in
-        if connection?.state != .ready {
-            connection?.cancel()
-            DispatchQueue.main.async {
-                if timeoutWorkItem?.isCancelled == false {
-                    let message = "[TIMEOUT] Could not reach the device at \(targetIP). Make sure it’s online and on the same network."
-                    callback(false, message)
-                }
-            }
-        }
-    }
-    
-    connection.stateUpdateHandler = { [weak connection] state in
-        switch state {
-        case .ready:
-            timeoutWorkItem?.cancel()
-            connection?.cancel()
-            DispatchQueue.main.async {
-                callback(true, nil)
-            }
-        case .failed(let error):
-            timeoutWorkItem?.cancel()
-            connection?.cancel()
-            DispatchQueue.main.async {
-                let message = "Could not reach the device at \(targetIP): \(error.localizedDescription)"
-                callback(false, message)
-            }
-        default:
-            break
-        }
-    }
-    
-    connection.start(queue: .global())
-    if let workItem = timeoutWorkItem {
-        DispatchQueue.global().asyncAfter(deadline: .now() + 20, execute: workItem)
-    }
 }
 
 public func showAlert(title: String, message: String, showOk: Bool, showTryAgain: Bool = false, primaryButtonText: String? = nil, completion: ((Bool) -> Void)? = nil) {

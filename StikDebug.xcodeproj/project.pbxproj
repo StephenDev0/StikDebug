@@ -13,6 +13,7 @@
 		A1B2C3D40123456789ABC002 /* IPv4PacketRewriter.swift in StikDebugTunnel Sources */ = {isa = PBXBuildFile; fileRef = A3B2C3D40123456789ABC004 /* IPv4PacketRewriter.swift */; };
 		A1B2C3D40123456789ABC003 /* NetworkExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3B2C3D40123456789ABC002 /* NetworkExtension.framework */; };
 		A1B2C3D40123456789ABC004 /* StikDebugTunnel.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A3B2C3D40123456789ABC001 /* StikDebugTunnel.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A1B2C3D40123456789ABC005 /* NetworkExtension.framework in StikDebug Frameworks */ = {isa = PBXBuildFile; fileRef = A3B2C3D40123456789ABC002 /* NetworkExtension.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -108,6 +109,7 @@
 			files = (
 				68D569C02E1B415700A5BA36 /* LanguageSupport in Frameworks */,
 				68D569BE2E1B415700A5BA36 /* CodeEditorView in Frameworks */,
+				A1B2C3D40123456789ABC005 /* NetworkExtension.framework in StikDebug Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

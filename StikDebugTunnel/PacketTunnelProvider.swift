@@ -3,6 +3,7 @@
 //  StikDebugTunnel
 //
 
+import Darwin
 import NetworkExtension
 
 final class PacketTunnelProvider: NEPacketTunnelProvider {

@@ -44,11 +44,11 @@ enum StikDebugVPNError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .profileLoadFailed(let message):
-            return "Unable to load the embedded VPN profile: (message)"
+            return "Unable to load the embedded VPN profile: \(message)"
         case .profileSaveFailed(let message):
-            return "Unable to save the embedded VPN profile: (message)"
+            return "Unable to save the embedded VPN profile: \(message)"
         case .permissionDenied(let message):
-            return "The embedded VPN permission was denied: (message)"
+            return "The embedded VPN permission was denied: \(message)"
         case .competingVPN:
             return "Another VPN is active. Stop it before starting the StikDebug local tunnel."
         case .timeout:

@@ -53,6 +53,9 @@ final class StikDebugVPNManager: ObservableObject {
             lastEnsureError = ensureError
             startingWaiter = nil
             stateLock.unlock()
+            if ensureError != nil {
+                publish(.failed)
+            }
             waiter.signal()
         }
 

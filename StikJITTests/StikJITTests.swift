@@ -59,6 +59,7 @@ struct StikJITTests {
 
     @Test func ipv4PacketRewriterSwapsPacketEndpoints() {
         var packet = [UInt8](repeating: 0, count: 20)
+        packet[0] = 0x45
         packet.replaceSubrange(12..<16, with: [10, 7, 0, 2])
         packet.replaceSubrange(16..<20, with: [10, 7, 0, 1])
 

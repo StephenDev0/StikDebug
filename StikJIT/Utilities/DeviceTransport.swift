@@ -69,15 +69,15 @@ enum DeviceTransportError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .invalidIPAddress(let ip):
-            return "Invalid RPPairing IPv4 address: (ip)"
+            return "Invalid RPPairing IPv4 address: \(ip)"
         case .pairingFileMissing(let path):
-            return "Pairing file not found at (path)"
+            return "Pairing file not found at \(path)"
         case .pairingFileReadFailed(let message):
-            return "Failed to read the RPPairing file: (message)"
+            return "Failed to read the RPPairing file: \(message)"
         case .vpnUnavailable(let message):
-            return "Embedded VPN unavailable: (message)"
+            return "Embedded VPN unavailable: \(message)"
         case .ffiFailure(let message):
-            return "RPPairing tunnel creation failed: (message)"
+            return "RPPairing tunnel creation failed: \(message)"
         case .incompleteTunnel:
             return "RPPairing returned incomplete tunnel handles"
         }

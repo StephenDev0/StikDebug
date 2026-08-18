@@ -62,22 +62,22 @@ StikDebug enables **JIT** for sideloaded apps on iOS 17.4+ without needing a com
 - StikDebug installed (via AltSource, direct .ipa, or self-built)
 - A valid **pairing file** (.plist / .mobiledevicepairing) for your device
 - SideStore / AltStore / similar sideload tool (for app refreshing)
-- A loopback VPN such as [LocalDevVPN](https://apps.apple.com/us/app/localdevvpn/id6755608044)
+- Permission to install and run StikDebug's embedded Network Extension VPN
 
 ### Steps
 1. **Obtain a pairing file**  
    - Detailed guide: [Pairing File Instructions](https://github.com/StephenDev0/StikDebug-Guide/blob/main/pairing_file.md) (or ask in Discord).
 
-2. **Set up VPN**  
-   - Launch LocalDevVPN and enable the VPN.
+2. **Set up the embedded VPN**
+   - Open StikDebug's Settings and tap **Start VPN**. The app creates and controls its own local loopback tunnel.
 
-4. **Enable JIT for an app**  
-   - Launch StikDebug and tapp the `Enable JIT` button.
+3. **Enable JIT for an app**
+   - Launch StikDebug and tap the `Enable JIT` button.
    - Select your sideloaded app from the list in StikDebug.  
 
 **Troubleshooting**  
 - "Connection dropped" or loopback errors → Check iOS version compatibility / beta warnings.  
-- Heartbeat errors → Ensure that the VPN is on and that you are connecected to Wi-Fi. It may be a pairing file issue.
+- Heartbeat errors → Ensure that the embedded VPN is connected. It may be a pairing file issue.
 - Pairing file issues → Replace file with device unlocked & trusted.  
 - Still stuck? Join the [Discord](https://discord.gg/ZnNcrRT3M8) with logs/screenshots.
 
