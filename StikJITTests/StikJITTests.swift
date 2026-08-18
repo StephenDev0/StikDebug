@@ -11,6 +11,22 @@ import Testing
 
 struct StikJITTests {
 
+    @Test func vpnStatusMappingRecognizesConnectedAndReasserting() {
+        #expect(StikDebugVPNStatus(neStatus: .connected) == .connected)
+        #expect(StikDebugVPNStatus(neStatus: .reasserting) == .connecting)
+        #expect(StikDebugVPNStatus(neStatus: .disconnected) == .disconnected)
+    }
+
+    @Test func vpnManagerConfigurationUsesEmbeddedExtension() {
+        let configuration = StikDebugVPNManager.makeProviderConfiguration(
+            for: .default
+        )
+
+        #expect(configuration[StikDebugTunnelConfiguration.interfaceIPKey] == "10.7.0.0")
+        #expect(configuration[StikDebugTunnelConfiguration.peerIPKey] == "10.7.0.1")
+        #expect(StikDebugVPNManager.providerBundleIdentifier == "com.stik.stikdebug.tunnel")
+    }
+
     @Test func embeddedTunnelDefaultsMatchLocalDevVPNEndpoint() {
         let configuration = StikDebugTunnelConfiguration.default
 
