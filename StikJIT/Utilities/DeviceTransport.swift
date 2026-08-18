@@ -126,6 +126,9 @@ final class EmbeddedDeviceTransport: DeviceTransport {
             rp_pairing_file_read(path, &pairingFile)
         }
         if let pairingError {
+            if let pairingFile {
+                rp_pairing_file_free(pairingFile)
+            }
             throw DeviceTransportError.pairingFileReadFailed(
                 consumeFFIError(pairingError, fallback: "unknown pairing-file error")
             )

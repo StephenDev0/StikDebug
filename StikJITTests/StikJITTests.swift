@@ -31,6 +31,12 @@ struct StikJITTests {
         #expect(message.localizedCaseInsensitiveContains("vpn"))
     }
 
+    @Test func vpnStartErrorPreservesUnderlyingMessage() {
+        let message = StikDebugVPNError.startFailed("permission denied").errorDescription ?? ""
+
+        #expect(message.localizedCaseInsensitiveContains("permission denied"))
+    }
+
     @Test func vpnStatusMappingRecognizesConnectedAndReasserting() {
         #expect(StikDebugVPNStatus(neStatus: .connected) == .connected)
         #expect(StikDebugVPNStatus(neStatus: .reasserting) == .connecting)
@@ -67,6 +73,12 @@ struct StikJITTests {
 
         #expect(Array(packet[12..<16]) == [10, 7, 0, 1])
         #expect(Array(packet[16..<20]) == [10, 7, 0, 2])
+    }
+
+    @Test func ipv4PacketRewriterRecognizesOnlyCompleteIPv4Packets() {
+        #expect(IPv4PacketRewriter.isIPv4Packet([UInt8(0x45)] + [UInt8](repeating: 0, count: 19)))
+        #expect(!IPv4PacketRewriter.isIPv4Packet([UInt8(0x60)] + [UInt8](repeating: 0, count: 19)))
+        #expect(!IPv4PacketRewriter.isIPv4Packet([UInt8(0x45)] + [UInt8](repeating: 0, count: 18)))
     }
 
     @Test func ipv4PacketRewriterLeavesShortPacketsUnchanged() {

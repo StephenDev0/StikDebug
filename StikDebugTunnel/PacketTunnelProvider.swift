@@ -4,6 +4,7 @@
 //
 
 import Darwin
+import Foundation
 import NetworkExtension
 
 final class PacketTunnelProvider: NEPacketTunnelProvider {
@@ -73,25 +74,24 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         packetFlow.readPackets { [weak self] packets, protocols in
             guard let self, self.packetLoopActive else { return }
 
-            var rewrittenPackets = packets
-            for index in rewrittenPackets.indices {
-                guard protocols[index].int32Value == AF_INET else { continue }
-                rewrittenPackets[index].withUnsafeMutableBytes { rawBuffer in
-                    guard let baseAddress = rawBuffer.baseAddress else { return }
-                    var packet = Array(
-                        UnsafeRawBufferPointer(
-                            start: baseAddress,
-                            count: rawBuffer.count
-                        )
-                    )
-                    IPv4PacketRewriter.swapEndpoints(in: &packet)
-                    packet.withUnsafeBytes { rewrittenBuffer in
-                        rawBuffer.copyBytes(from: rewrittenBuffer)
-                    }
-                }
+            var rewrittenPackets: [Data] = []
+            var rewrittenProtocols: [NSNumber] = []
+            for (packet, proto) in zip(packets, protocols) {
+                guard proto.int32Value == AF_INET else { continue }
+
+                var bytes = [UInt8](packet)
+                guard IPv4PacketRewriter.isIPv4Packet(bytes) else { continue }
+                IPv4PacketRewriter.swapEndpoints(in: &bytes)
+                rewrittenPackets.append(Data(bytes))
+                rewrittenProtocols.append(proto)
             }
 
-            self.packetFlow.writePackets(rewrittenPackets, withProtocols: protocols)
+            if !rewrittenPackets.isEmpty {
+                self.packetFlow.writePackets(
+                    rewrittenPackets,
+                    withProtocols: rewrittenProtocols
+                )
+            }
             self.readPackets()
         }
     }

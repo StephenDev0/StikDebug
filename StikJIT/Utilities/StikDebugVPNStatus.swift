@@ -36,7 +36,7 @@ enum StikDebugVPNError: LocalizedError, Equatable {
     case profileLoadFailed(String)
     case profileSaveFailed(String)
     case permissionDenied(String)
-    case competingVPN
+    case mustRunOffMainThread
     case timeout
     case startFailed(String)
     case disconnected
@@ -49,12 +49,12 @@ enum StikDebugVPNError: LocalizedError, Equatable {
             return "Unable to save the embedded VPN profile: \(message)"
         case .permissionDenied(let message):
             return "The embedded VPN permission was denied: \(message)"
-        case .competingVPN:
-            return "Another VPN is active. Stop it before starting the StikDebug local tunnel."
+        case .mustRunOffMainThread:
+            return "The embedded VPN must be started from a background queue."
         case .timeout:
             return "The embedded VPN did not become connected before the timeout."
         case .startFailed(let message):
-            return "The embedded VPN could not start: (message)"
+            return "The embedded VPN could not start: \(message)"
         case .disconnected:
             return "The embedded VPN disconnected before the device tunnel was ready."
         }

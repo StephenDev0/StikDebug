@@ -755,6 +755,11 @@ enum LocationSimulationCommandQueue {
 }
 
 func simulate_location(_ deviceIP: String, _ latitude: Double, _ longitude: Double, _ pairingFile: String) -> Int32 {
+    if LocationSimulationState.locationSimulation != nil
+        && !StikDebugVPNManager.shared.isTunnelReady() {
+        LocationSimulationState.cleanup()
+    }
+
     if let locationSimulation = LocationSimulationState.locationSimulation {
         if let ffiError = location_simulation_set(locationSimulation, latitude, longitude) {
             idevice_error_free(ffiError)
@@ -829,6 +834,11 @@ func simulate_location(_ deviceIP: String, _ latitude: Double, _ longitude: Doub
 }
 
 func clear_simulated_location() -> Int32 {
+    if !StikDebugVPNManager.shared.isTunnelReady() {
+        LocationSimulationState.cleanup()
+        return LocationSimulationStatus.locationClear
+    }
+
     guard let locationSimulation = LocationSimulationState.locationSimulation else {
         return LocationSimulationStatus.locationClear
     }

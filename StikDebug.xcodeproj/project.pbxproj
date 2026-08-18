@@ -95,8 +95,18 @@
 			path = StikJITUITests;
 			sourceTree = "<group>";
 		};
+		A4B2C3D40123456789ABC002 /* Exceptions for "StikDebugTunnel" folder in "StikDebugTunnel" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A5B2C3D40123456789ABC001 /* StikDebugTunnel */;
+		};
 		A4B2C3D40123456789ABC001 /* StikDebugTunnel */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A4B2C3D40123456789ABC002 /* Exceptions for "StikDebugTunnel" folder in "StikDebugTunnel" target */,
+			);
 			path = StikDebugTunnel;
 			sourceTree = "<group>";
 		};

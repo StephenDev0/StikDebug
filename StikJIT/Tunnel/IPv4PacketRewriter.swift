@@ -4,8 +4,12 @@
 //
 
 enum IPv4PacketRewriter {
+    static func isIPv4Packet(_ packet: [UInt8]) -> Bool {
+        packet.count >= 20 && packet[0] >> 4 == 4
+    }
+
     static func swapEndpoints(in packet: inout [UInt8]) {
-        guard packet.count >= 20, packet[0] >> 4 == 4 else {
+        guard isIPv4Packet(packet) else {
             return
         }
 

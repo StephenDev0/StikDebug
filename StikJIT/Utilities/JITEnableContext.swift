@@ -31,8 +31,15 @@ final class JITEnableContext {
     private var syslogLineHandler: SyslogLineHandler?
     private var syslogErrorHandler: SyslogErrorHandler?
 
-    var adapterHandle: OpaquePointer? { adapter }
-    var handshakeHandle: OpaquePointer? { handshake }
+    var adapterHandle: OpaquePointer? {
+        guard StikDebugVPNManager.shared.isTunnelReady() else { return nil }
+        return adapter
+    }
+
+    var handshakeHandle: OpaquePointer? {
+        guard StikDebugVPNManager.shared.isTunnelReady() else { return nil }
+        return handshake
+    }
 
     private init() {
         let logURL = FileManager.default
@@ -161,7 +168,7 @@ final class JITEnableContext {
     }
 
     func ensureTunnel() throws {
-        if adapter == nil || handshake == nil {
+        if adapter == nil || handshake == nil || !StikDebugVPNManager.shared.isTunnelReady() {
             try startTunnel()
         }
     }

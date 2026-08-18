@@ -31,6 +31,10 @@ final class StikDebugVPNManager: ObservableObject {
     }
 
     func ensureReady() throws {
+        guard !Thread.isMainThread else {
+            throw StikDebugVPNError.mustRunOffMainThread
+        }
+
         stateLock.lock()
         if let startingWaiter {
             stateLock.unlock()
@@ -90,12 +94,6 @@ final class StikDebugVPNManager: ObservableObject {
         )
         let managers = try loadManagers()
 
-        if managers.contains(where: { manager in
-            isActive(manager) && !isOwned(manager)
-        }) {
-            throw StikDebugVPNError.competingVPN
-        }
-
         let selectedManager: NETunnelProviderManager
         if let existing = managers.first(where: isOwned) {
             selectedManager = existing
@@ -106,11 +104,15 @@ final class StikDebugVPNManager: ObservableObject {
 
         let status = selectedManager.connection.status
         publish(StikDebugVPNStatus(neStatus: status))
-        if status == .connected {
+        if status == .connected && isConfigured(selectedManager, with: configured) {
             stateLock.lock()
             manager = selectedManager
             stateLock.unlock()
             return
+        }
+
+        if isActive(selectedManager) {
+            try stopAndWait(selectedManager)
         }
 
         configure(selectedManager, with: configured)
@@ -152,16 +154,10 @@ final class StikDebugVPNManager: ObservableObject {
         manager.protocolConfiguration = protocolConfiguration
         manager.localizedDescription = "StikDebug Local Tunnel"
 
-        let onDemandRule = NEOnDemandRuleEvaluateConnection()
-        onDemandRule.interfaceTypeMatch = .any
-        onDemandRule.connectionRules = [
-            NEEvaluateConnectionRule(
-                matchDomains: [configuration.peerIP],
-                andAction: .connectIfNeeded
-            )
-        ]
-        manager.onDemandRules = [onDemandRule]
-        manager.isOnDemandEnabled = true
+        // RPPairing connects to a raw sockaddr, so automatic destination
+        // matching is not reliable. Start explicitly from the transport layer.
+        manager.onDemandRules = nil
+        manager.isOnDemandEnabled = false
     }
 
     private func isOwned(_ manager: NETunnelProviderManager) -> Bool {
@@ -180,7 +176,40 @@ final class StikDebugVPNManager: ObservableObject {
         }
     }
 
+    private func isConfigured(
+        _ manager: NETunnelProviderManager,
+        with configuration: StikDebugTunnelConfiguration
+    ) -> Bool {
+        guard let providerConfiguration =
+            (manager.protocolConfiguration as? NETunnelProviderProtocol)?.providerConfiguration
+        else {
+            return false
+        }
+
+        return providerConfiguration[StikDebugTunnelConfiguration.interfaceIPKey] as? String
+            == configuration.interfaceIP
+            && providerConfiguration[StikDebugTunnelConfiguration.peerIPKey] as? String
+            == configuration.peerIP
+            && !manager.isOnDemandEnabled
+    }
+
+    private func stopAndWait(_ manager: NETunnelProviderManager) throws {
+        guard isActive(manager) else { return }
+        manager.connection.stopVPNTunnel()
+        _ = try waitForStatus(manager) { status in
+            status == .disconnected || status == .invalid
+        }
+    }
+
     private func waitForConnection(_ manager: NETunnelProviderManager) throws {
+        let finalStatus = try waitForStatus(manager) { $0 == .connected }
+        publish(StikDebugVPNStatus(neStatus: finalStatus))
+    }
+
+    private func waitForStatus(
+        _ manager: NETunnelProviderManager,
+        matching predicate: @escaping (NEVPNStatus) -> Bool
+    ) throws -> NEVPNStatus {
         let semaphore = DispatchSemaphore(value: 0)
         let connection = manager.connection
         let observer = NotificationCenter.default.addObserver(
@@ -190,15 +219,14 @@ final class StikDebugVPNManager: ObservableObject {
         ) { [weak self] _ in
             let status = connection.status
             self?.publish(StikDebugVPNStatus(neStatus: status))
-            if status == .connected || status == .disconnected || status == .invalid {
+            if predicate(status) || status == .disconnected || status == .invalid {
                 semaphore.signal()
             }
         }
 
-        if connection.status == .connected {
+        if predicate(connection.status) {
             NotificationCenter.default.removeObserver(observer)
-            publish(.connected)
-            return
+            return connection.status
         }
 
         DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 10) {
@@ -208,13 +236,13 @@ final class StikDebugVPNManager: ObservableObject {
         NotificationCenter.default.removeObserver(observer)
 
         let finalStatus = connection.status
-        publish(StikDebugVPNStatus(neStatus: finalStatus))
-        guard finalStatus == .connected else {
+        guard predicate(finalStatus) else {
             if finalStatus == .disconnected || finalStatus == .invalid {
                 throw StikDebugVPNError.disconnected
             }
             throw StikDebugVPNError.timeout
         }
+        return finalStatus
     }
 
     private func loadManagers() throws -> [NETunnelProviderManager] {
