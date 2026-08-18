@@ -57,7 +57,11 @@ enum DeviceTransportState {
 
 protocol DeviceTransport {
     func ensureReady() throws
-    func makeRPPairingTunnel(hostname: String) throws -> RPPairingTunnel
+    func makeRPPairingTunnel(
+        hostname: String,
+        targetIPAddress: String,
+        pairingFileURL: URL
+    ) throws -> RPPairingTunnel
 }
 ```
 
