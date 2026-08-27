@@ -83,7 +83,9 @@ struct InstalledAppsListView: View {
             handleLoadingChange(isLoading)
         }
         .onReceive(NotificationCenter.default.publisher(for: .pairingFileImported)) { _ in
-            viewModel.refreshAppLists()
+            if TunnelManager.shared.isConnected {
+                viewModel.refreshAppLists()
+            }
         }
     }
 

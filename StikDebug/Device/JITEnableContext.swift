@@ -188,7 +188,9 @@ final class JITEnableContext {
             tunnelLock.unlock()
 
             if let waitSemaphore {
-                waitSemaphore.wait()
+                guard waitSemaphore.wait(timeout: .now() + .seconds(15)) == .success else {
+                    throw makeError("Timed out waiting for the tunnel connection", code: -19)
+                }
                 waitSemaphore.signal()
             }
 

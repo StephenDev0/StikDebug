@@ -20,10 +20,15 @@ final class InstalledAppsViewModel: ObservableObject {
     private let cacheKeyDebuggable = "cachedDebuggableApps"
     private let cacheKeyNonDebuggable = "cachedNonDebuggableApps"
     private let cacheKeySystem = "cachedSystemApps"
+    private var cancellables: Set<AnyCancellable> = []
 
     init() {
         loadCachedApps()
-        refreshAppLists()
+        TunnelManager.shared.$isConnected
+            .removeDuplicates()
+            .filter { $0 }
+            .sink { [weak self] _ in self?.refreshAppLists() }
+            .store(in: &cancellables)
     }
 
     func refreshAppLists() {

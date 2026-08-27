@@ -13,11 +13,29 @@ final class MountingProgress: ObservableObject {
     @Published private(set) var mountingThread: Thread?
     @Published private(set) var coolisMounted: Bool = false
 
+    private let mountCheckLock = NSLock()
+    private var mountCheckInProgress = false
+
     private init() {}
 
     func checkforMounted() {
+        guard TunnelManager.shared.isConnected else { return }
+
+        mountCheckLock.lock()
+        guard !mountCheckInProgress else {
+            mountCheckLock.unlock()
+            return
+        }
+        mountCheckInProgress = true
+        mountCheckLock.unlock()
+
         DispatchQueue.global(qos: .utility).async {
             let mounted = isMounted()
+
+            self.mountCheckLock.lock()
+            self.mountCheckInProgress = false
+            self.mountCheckLock.unlock()
+
             DispatchQueue.main.async {
                 self.coolisMounted = mounted
             }
@@ -32,6 +50,8 @@ final class MountingProgress: ObservableObject {
     }
 
     func pubMount() {
+        guard TunnelManager.shared.isConnected else { return }
+
         DispatchQueue.global(qos: .utility).async { [weak self] in
             self?.mount()
         }
