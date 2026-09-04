@@ -127,23 +127,37 @@ final class TunnelManager: ObservableObject {
 
         let previous = lastInterfaceName
         lastInterfaceName = status.interfaceName
+        let interfaceChanged = previous != nil && previous != status.interfaceName
 
-        if !isConnected {
-            LogManager.shared.addInfoLog("Network path changed (\(status.description)); connecting tunnel")
-            start(showErrorUI: false)
+        // A tunnel established earlier survives a Wi-Fi↔cellular handoff: the
+        // connection rides LocalDevVPN's loopback, so the physical interface
+        // underneath it doesn't matter (verified on device — an active session
+        // kept working across the switch). Rebuilding here would tear down a
+        // live tunnel and, on cellular, fail to replace it.
+        guard !isConnected else {
+            if interfaceChanged {
+                LogManager.shared.addInfoLog(
+                    "Interface changed (\(previous ?? "?") → \(status.interfaceName)); keeping existing tunnel"
+                )
+            }
             return
         }
 
-        // isConnected only means "the last connect succeeded" — nothing in the app
-        // notices a tunnel that died quietly, which is exactly what a handoff does.
-        // So don't trust it: if the physical interface actually changed, treat the
-        // old tunnel as dead and rebuild. startTunnel() is semaphore-guarded and
-        // recreates its adapter, so reconnecting a live tunnel is safe.
-        guard let previous, previous != status.interfaceName else { return }
-        LogManager.shared.addInfoLog(
-            "Interface changed (\(previous) → \(status.interfaceName)); rebuilding tunnel"
-        )
-        markDisconnected()
+        // A fresh connect needs the on-device service listening on port 49152,
+        // and iOS only binds it when a real local network interface exists.
+        // Cellular-only refuses the connect outright, so an automatic retry
+        // cycle just burns battery. Manual attempts (the user tapping) still go
+        // through start() directly.
+        guard status.interface != .cellular else {
+            if interfaceChanged {
+                LogManager.shared.addInfoLog(
+                    "On cellular without Wi-Fi; deferring tunnel reconnect until a local network is available"
+                )
+            }
+            return
+        }
+
+        LogManager.shared.addInfoLog("Network path changed (\(status.description)); reconnecting tunnel")
         start(showErrorUI: false)
     }
 

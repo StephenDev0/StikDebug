@@ -39,6 +39,7 @@ final class LocationSimulationKeepAlive {
     private var coordinate: CLLocationCoordinate2D?
     private var timer: DispatchSourceTimer?
     private var isHolding = false
+    private var consecutiveResendFailures = 0
 
     /// Main-thread only, mirroring `DebugKeepAliveLease`.
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
@@ -65,6 +66,9 @@ final class LocationSimulationKeepAlive {
         stateLock.lock()
         let isFirstHold = coordinate == nil
         coordinate = newCoordinate
+        if isFirstHold {
+            consecutiveResendFailures = 0
+        }
         stateLock.unlock()
 
         persist(newCoordinate)
@@ -126,6 +130,7 @@ final class LocationSimulationKeepAlive {
         coordinate = nil
         timer?.cancel()
         timer = nil
+        consecutiveResendFailures = 0
         stateLock.unlock()
 
         persist(nil)
@@ -170,12 +175,39 @@ final class LocationSimulationKeepAlive {
         // set fails, so a dropped tunnel (e.g. a Wi-Fi<->cellular handoff) heals
         // on the next tick. A failure here is expected and transient; the next
         // resend retries.
-        LocationSimulationCommandQueue.shared.async {
-            _ = simulate_location(
+        LocationSimulationCommandQueue.shared.async { [weak self] in
+            let code = simulate_location(
                 DeviceConnectionContext.targetIPAddress,
                 target.latitude,
                 target.longitude,
                 PairingFileStore.prepareURL().path
+            )
+            self?.noteResendResult(code)
+        }
+    }
+
+    /// Surfaces hold health in the log without spamming it: the first failure,
+    /// the recovery, and a heartbeat roughly every five minutes while failing.
+    private func noteResendResult(_ code: Int32) {
+        stateLock.lock()
+        let previousFailures = consecutiveResendFailures
+        consecutiveResendFailures = code == 0 ? 0 : previousFailures + 1
+        let failures = consecutiveResendFailures
+        stateLock.unlock()
+
+        if code == 0 {
+            if previousFailures > 0 {
+                LogManager.shared.addInfoLog(
+                    "Simulated location resend recovered after \(previousFailures) failed attempt(s)"
+                )
+            }
+        } else if failures == 1 {
+            LogManager.shared.addWarningLog(
+                "Simulated location resend failed (error \(code)); retrying every \(Int(Self.resendInterval))s"
+            )
+        } else if failures % 75 == 0 {
+            LogManager.shared.addWarningLog(
+                "Simulated location resend still failing after \(failures) attempts (error \(code)) — the held location is NOT being applied"
             )
         }
     }
