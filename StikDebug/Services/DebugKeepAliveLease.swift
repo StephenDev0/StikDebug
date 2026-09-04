@@ -25,7 +25,6 @@ final class DebugKeepAliveLease {
         stateLock.unlock()
 
         runOnMain {
-            BackgroundAudioManager.shared.requestStop()
             BackgroundLocationManager.shared.requestStop()
 
             if self.backgroundTaskID != .invalid {
@@ -45,7 +44,6 @@ final class DebugKeepAliveLease {
         stateLock.unlock()
 
         runOnMain {
-            BackgroundAudioManager.shared.requestStart()
             BackgroundLocationManager.shared.requestStart()
             self.backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "StikDebugDebugSession") { [weak self] in
                 LogManager.shared.addWarningLog("Debug session background task expired")

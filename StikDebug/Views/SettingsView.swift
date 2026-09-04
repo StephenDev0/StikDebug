@@ -16,7 +16,6 @@ private enum SettingsLinks {
 struct SettingsView: View {
     @AppStorage(UserDefaults.Keys.txmOverride) private var overrideTXMDetection = false
     @AppStorage(UserDefaults.Keys.confirmExternalJITRequests) private var confirmExternalJITRequests = true
-    @AppStorage("keepAliveAudio") private var keepAliveAudio = true
     @AppStorage("keepAliveLocation") private var keepAliveLocation = true
     @AppStorage(UserDefaults.Keys.targetDeviceIP) private var targetDeviceIP = DeviceConnectionContext.defaultTargetIPAddress
 
@@ -86,18 +85,6 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Toggle(isOn: $keepAliveAudio) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Silent Audio")
-                            Text("Plays inaudible audio so iOS keeps the app running.")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    .onChange(of: keepAliveAudio) { _, enabled in
-                        if enabled { BackgroundAudioManager.shared.start() }
-                        else { BackgroundAudioManager.shared.stop() }
-                    }
-
                     Toggle(isOn: $keepAliveLocation) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Background Location")
